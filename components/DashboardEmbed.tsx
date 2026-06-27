@@ -493,13 +493,16 @@ export default function DashboardEmbed({
             gridLayout.style.setProperty("width", `${availW}px`, "important");
 
             // ── Height ─────────────────────────────────────────────────────
-            // Only scale once header cards are hidden (isHeaderGridCard guard).
-            // This prevents storing stale positions while the header is still visible.
             const allCards = Array.from(gridLayout.children) as HTMLElement[];
             const visibleCards = allCards.filter(
               (c) => getComputedStyle(c).display !== "none"
             );
-            const anyHeaderStillVisible = visibleCards.some((c) => isHeaderGridCard(c));
+            // A card is a "real" branding header only if it has no data grid
+            // inside it. Content cards (tables) may contain "right at school"
+            // in their title but are NOT header cards.
+            const anyHeaderStillVisible = visibleCards.some(
+              (c) => isHeaderGridCard(c) && !c.querySelector('[role="grid"], table, [role="table"]')
+            );
 
             if (visibleCards.length > 0 && !anyHeaderStillVisible) {
               // Capture original layout positions exactly once so repeated fix()

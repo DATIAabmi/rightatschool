@@ -505,44 +505,45 @@ export default function DashboardEmbed({
             );
 
             if (visibleCards.length > 0 && !anyHeaderStillVisible) {
-              // Capture original layout positions exactly once so repeated fix()
-              // calls use consistent base values rather than already-scaled ones.
+              // Capture original layout positions exactly once — before any of
+              // our overrides — so repeated fix() calls use stable base values.
+              // Guard: only store when the card actually has height (fully rendered).
               for (const card of visibleCards) {
-                if (!card.dataset.origTop) {
+                if (!card.dataset.origTop && card.offsetHeight > 4) {
                   card.dataset.origTop = String(card.offsetTop);
                   card.dataset.origH   = String(card.offsetHeight);
                 }
               }
 
-              const origTops = visibleCards.map((c) => parseFloat(c.dataset.origTop!));
-              const origHs   = visibleCards.map((c) => parseFloat(c.dataset.origH!));
-              const minTop   = Math.min(...origTops);
-              const maxBtm   = Math.max(...origTops.map((t, i) => t + origHs[i]));
-              const naturalH = maxBtm - minTop;
+              const captured = visibleCards.filter((c) => c.dataset.origTop !== undefined);
+              if (captured.length === visibleCards.length) {
+                // All cards have captured positions — proceed with scaling.
+                const origTops = captured.map((c) => parseFloat(c.dataset.origTop!));
+                const origHs   = captured.map((c) => parseFloat(c.dataset.origH!));
+                const minTop   = Math.min(...origTops);
+                const maxBtm   = Math.max(...origTops.map((t, i) => t + origHs[i]));
+                const naturalH = maxBtm - minTop;
 
-              if (naturalH > 4) {
-                const scaleH = availH / naturalH;
-                // Grid must be tall enough to contain all repositioned cards.
-                gridLayout.style.setProperty("height", `${minTop + availH}px`, "important");
+                if (naturalH > 4) {
+                  const scaleH = availH / naturalH;
+                  gridLayout.style.setProperty("height", `${minTop + availH}px`, "important");
 
-                visibleCards.forEach((card, i) => {
-                  // newTop keeps the cards stacked in the same relative order,
-                  // scaled so the last card's bottom lands exactly at availH.
-                  const newTop = minTop + (origTops[i] - minTop) * scaleH;
-                  const newH   = origHs[i] * scaleH;
-                  card.style.setProperty("top",    `${newTop}px`, "important");
-                  card.style.setProperty("height", `${newH}px`,   "important");
-                  card.style.setProperty("width",  `${availW}px`, "important");
-                  card.style.setProperty("left",   "0",           "important");
-                });
+                  captured.forEach((card, i) => {
+                    const newTop = minTop + (origTops[i] - minTop) * scaleH;
+                    const newH   = origHs[i] * scaleH;
+                    card.style.setProperty("top",    `${newTop}px`, "important");
+                    card.style.setProperty("height", `${newH}px`,   "important");
+                    card.style.setProperty("width",  `${availW}px`, "important");
+                    card.style.setProperty("left",   "0",           "important");
+                  });
+                }
               }
-            } else {
-              // Header not yet hidden — just do width for now.
-              visibleCards.forEach((card) => {
-                card.style.setProperty("width", `${availW}px`, "important");
-                card.style.setProperty("left",  "0",           "important");
-              });
             }
+            // Width-only pass while waiting for header to clear or cards to render.
+            visibleCards.forEach((card) => {
+              card.style.setProperty("width", `${availW}px`, "important");
+              card.style.setProperty("left",  "0",           "important");
+            });
 
             // Make the Metabase table grid fill its dashcard horizontally.
             container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((g) => {

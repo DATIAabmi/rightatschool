@@ -7,10 +7,23 @@ import DashboardEmbed from "@/components/DashboardEmbed";
 export default function Page() {
   return (
     <MetabaseProviderWrapper>
-      {/* -m-8 cancels the p-8 on <main> so this div sits flush against the
-          sidebar and top edge. overflow-hidden prevents scroll bleed. */}
-      <div className="-m-8 overflow-hidden" style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ flexShrink: 0, padding: "24px 32px 12px" }}>
+      {/*
+        position:fixed fills exactly the viewport area to the right of the
+        sidebar (w-64 = 16rem) from top to bottom — no dependency on parent
+        padding or flex chains that can produce unexpected clientHeight values.
+      */}
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: "16rem",
+        right: 0,
+        bottom: 0,
+        display: "flex",
+        flexDirection: "column",
+        background: "#f9fafb",
+        zIndex: 1,
+      }}>
+        <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
           <DashboardHeader />
         </div>
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>

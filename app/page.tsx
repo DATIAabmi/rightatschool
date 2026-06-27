@@ -1,14 +1,25 @@
+"use client";
+
+import { useState } from "react";
+import MetabaseProviderWrapper from "@/components/MetabaseProvider";
+import DashboardHeader from "@/components/DashboardHeader";
+import EcosystemFunnel from "@/components/EcosystemFunnel";
+import ChannelPerformanceChart from "@/components/ChannelPerformanceChart";
+
 export default function Home() {
+  const [campaign, setCampaign] = useState<string | null>(null);
+
   return (
-    <div className="flex items-center justify-center min-h-[80vh]">
-      <div className="text-center">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-          Ecosystem Insights
-        </h2>
-        <p className="text-gray-400 text-sm">
-          Select a dashboard from the sidebar to get started.
-        </p>
+    <MetabaseProviderWrapper>
+      <DashboardHeader campaign={campaign} />
+      <div className="flex gap-6 items-stretch">
+        <div className="w-1/2 min-w-0">
+          <EcosystemFunnel campaign={campaign} onCampaignChange={setCampaign} />
+        </div>
+        <div className="w-1/2 min-w-0">
+          <ChannelPerformanceChart campaign={campaign} />
+        </div>
       </div>
-    </div>
+    </MetabaseProviderWrapper>
   );
 }

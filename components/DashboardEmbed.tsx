@@ -481,6 +481,31 @@ export default function DashboardEmbed({
           el.style.setProperty("min-height", "44px", "important");
         });
 
+      // Stretch the react-grid-layout and every dashcard to fill the full
+      // container width, then let CSS flex distribute cells across each row.
+      if (stretchColumns) {
+        const w = container.clientWidth;
+        if (w > 0) {
+          const gridLayout = container.querySelector<HTMLElement>(".react-grid-layout");
+          if (gridLayout) {
+            gridLayout.style.setProperty("width", `${w}px`, "important");
+          }
+          container
+            .querySelectorAll<HTMLElement>('[class*="DashCard"], [class*="dashcard-container"]')
+            .forEach((card) => {
+              card.style.setProperty("width", `${w}px`, "important");
+              card.style.setProperty("left", "0", "important");
+            });
+          // Make the table scroll container fill the dashcard horizontally
+          container
+            .querySelectorAll<HTMLElement>('[role="grid"]')
+            .forEach((grid) => {
+              grid.style.setProperty("width", "100%", "important");
+              grid.style.setProperty("min-width", "0", "important");
+            });
+        }
+      }
+
       // Scale the table so all columns fit the container without horizontal scrolling.
       if (compact) {
         // Hide Metabase's filter-parameter bar — district is pre-populated via URL
@@ -554,7 +579,7 @@ export default function DashboardEmbed({
 
     fix();
     return () => { observer.disconnect(); clearInterval(interval); };
-  }, [dashboardId, compact]);
+  }, [dashboardId, compact, stretchColumns]);
 
   const outerClass = fill ? "" : "h-[calc(100vh-4rem)] -m-8";
   // Keep embed hidden until the header is confirmed removed.

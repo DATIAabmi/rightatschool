@@ -507,12 +507,25 @@ export default function DashboardEmbed({
 
       // Fill the FULL available space — both width and height — with zero dead space.
       if (stretchColumns) {
+        // Hide Metabase's filter/parameter bar — our header drives all filters.
+        container
+          .querySelectorAll<HTMLElement>(
+            '[data-testid="dashboard-parameters-widget-container"], ' +
+            '[class*="ParametersWidget"], ' +
+            '[class*="ParameterWidget"], ' +
+            '[class*="DashboardParameterList"], ' +
+            '[class*="DashboardFilterList"]'
+          )
+          .forEach((el) => el.style.setProperty("display", "none", "important"));
+
         const availW = container.clientWidth;
         const availH = container.clientHeight;
 
         if (availW > 0 && availH > 0) {
           const gridLayout = container.querySelector<HTMLElement>(".react-grid-layout");
           if (gridLayout) {
+            const gridRect = gridLayout.getBoundingClientRect();
+
             // ── Width ──────────────────────────────────────────────────────
             gridLayout.style.setProperty("width", `${availW}px`, "important");
 
@@ -521,10 +534,6 @@ export default function DashboardEmbed({
             const visibleCards = allCards.filter(
               (c) => getComputedStyle(c).display !== "none"
             );
-            // Block height scaling while any header or skip card is still
-            // visible (not yet hidden by hideMetabaseHeaderCards).
-            // Exclude cards that contain a data grid — those are content cards
-            // whose title may incidentally match a header text pattern.
             const anyHeaderStillVisible = visibleCards.some(
               (c) =>
                 (isHeaderGridCard(c) || isSkipContentCard(c)) &&
@@ -532,19 +541,21 @@ export default function DashboardEmbed({
             );
 
             if (visibleCards.length > 0 && !anyHeaderStillVisible) {
-              // Capture original layout positions exactly once — before any of
-              // our overrides — so repeated fix() calls use stable base values.
-              // Guard: only store when the card actually has height (fully rendered).
+              // react-grid-layout positions cards via CSS transform: translate(x,y),
+              // NOT via top/left. So card.offsetTop is always 0.
+              // Use getBoundingClientRect relative to the grid for true positions.
               for (const card of visibleCards) {
-                if (!card.dataset.origTop && card.offsetHeight > 4) {
-                  card.dataset.origTop = String(card.offsetTop);
-                  card.dataset.origH   = String(card.offsetHeight);
+                if (!card.dataset.origTop) {
+                  const r = card.getBoundingClientRect();
+                  if (r.height > 4) {
+                    card.dataset.origTop = String(r.top - gridRect.top);
+                    card.dataset.origH   = String(r.height);
+                  }
                 }
               }
 
               const captured = visibleCards.filter((c) => c.dataset.origTop !== undefined);
               if (captured.length === visibleCards.length) {
-                // All cards have captured positions — proceed with scaling.
                 const origTops = captured.map((c) => parseFloat(c.dataset.origTop!));
                 const origHs   = captured.map((c) => parseFloat(c.dataset.origH!));
                 const minTop   = Math.min(...origTops);
@@ -556,9 +567,16 @@ export default function DashboardEmbed({
                   gridLayout.style.setProperty("height", `${minTop + availH}px`, "important");
 
                   captured.forEach((card, i) => {
-                    const newTop = minTop + (origTops[i] - minTop) * scaleH;
-                    const newH   = origHs[i] * scaleH;
-                    card.style.setProperty("top",    `${newTop}px`, "important");
+                    const newRelTop = minTop + (origTops[i] - minTop) * scaleH;
+                    const newH      = origHs[i] * scaleH;
+                    // Cards are transform-positioned — modify the Y translation
+                    // directly instead of setting top (which has no visual effect).
+                    const m = new DOMMatrix(getComputedStyle(card).transform);
+                    card.style.setProperty(
+                      "transform",
+                      `translate(${m.m41}px, ${newRelTop}px)`,
+                      "important"
+                    );
                     card.style.setProperty("height", `${newH}px`,   "important");
                     card.style.setProperty("width",  `${availW}px`, "important");
                     card.style.setProperty("left",   "0",           "important");
@@ -571,14 +589,68 @@ export default function DashboardEmbed({
               card.style.setProperty("width", `${availW}px`, "important");
               card.style.setProperty("left",  "0",           "important");
             });
-
-            // Make the Metabase table grid fill its dashcard horizontally.
-            container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((g) => {
-              g.style.setProperty("width",     "100%", "important");
-              g.style.setProperty("min-width", "0",    "important");
-            });
           }
         }
+
+        // ── Double column widths in each data table ─────────────────────────
+        // Metabase's virtual table uses absolute positioning; the CSS flex rules
+        // above have no effect. We capture each column's natural pixel width once
+        // and apply 2× to the header, each data cell's width, and each cell's
+        // cumulative left offset so columns don't overlap.
+        container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((gridTable) => {
+          // Grid container total width
+          if (!gridTable.dataset.origGridW) {
+            const nat = gridTable.scrollWidth;
+            if (nat > 10) gridTable.dataset.origGridW = String(nat);
+          }
+          if (gridTable.dataset.origGridW) {
+            const nat = parseFloat(gridTable.dataset.origGridW);
+            gridTable.style.setProperty("width",     `${nat * 2}px`, "important");
+            gridTable.style.setProperty("min-width", `${nat * 2}px`, "important");
+          }
+
+          // Column headers
+          gridTable.querySelectorAll<HTMLElement>('[role="columnheader"]').forEach((h) => {
+            if (!h.dataset.origW) {
+              const w = h.offsetWidth;
+              if (w > 0) h.dataset.origW = String(w);
+            }
+            if (h.dataset.origW) {
+              const w = parseFloat(h.dataset.origW);
+              h.style.setProperty("width",     `${w * 2}px`, "important");
+              h.style.setProperty("min-width", `${w * 2}px`, "important");
+            }
+          });
+
+          // Rows and data cells
+          gridTable.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
+            if (!row.dataset.origW) {
+              const w = row.offsetWidth || row.scrollWidth;
+              if (w > 0) row.dataset.origW = String(w);
+            }
+            if (row.dataset.origW) {
+              row.style.setProperty("width", `${parseFloat(row.dataset.origW) * 2}px`, "important");
+            }
+
+            row.querySelectorAll<HTMLElement>('[role="gridcell"]').forEach((cell) => {
+              if (!cell.dataset.origW) {
+                const w = cell.offsetWidth;
+                if (w > 0) cell.dataset.origW = String(w);
+              }
+              // Left offset is cumulative (sum of preceding column widths).
+              // Doubling every column width means doubling the cumulative left too.
+              if (!cell.dataset.origL) {
+                cell.dataset.origL = cell.style.left || "0";
+              }
+              if (cell.dataset.origW) {
+                cell.style.setProperty("width", `${parseFloat(cell.dataset.origW) * 2}px`, "important");
+              }
+              if (cell.dataset.origL) {
+                cell.style.setProperty("left", `${parseFloat(cell.dataset.origL) * 2}px`, "important");
+              }
+            });
+          });
+        });
       }
 
       // Scale the table so all columns fit the container without horizontal scrolling.
@@ -716,23 +788,6 @@ export default function DashboardEmbed({
         /* stretchColumns: let JS control exact pixel widths/heights on grid + cards */
         .mb-embed-stretch .react-grid-layout {
           overflow: visible !important;
-        }
-
-        /* ── stretchColumns: make all table columns fill the full container ── */
-        .mb-embed-stretch [role="grid"] {
-          width: 100% !important;
-          min-width: 100% !important;
-        }
-        .mb-embed-stretch [role="rowgroup"] > [role="row"] {
-          width: 100% !important;
-          min-width: 0 !important;
-        }
-        .mb-embed-stretch [role="columnheader"],
-        .mb-embed-stretch [role="gridcell"] {
-          flex: 1 1 0 !important;
-          width: auto !important;
-          min-width: 50px !important;
-          max-width: none !important;
         }
 
 

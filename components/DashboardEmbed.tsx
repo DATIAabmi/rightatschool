@@ -481,28 +481,72 @@ export default function DashboardEmbed({
           el.style.setProperty("min-height", "44px", "important");
         });
 
-      // Stretch the react-grid-layout and every dashcard to fill the full
-      // container width, then let CSS flex distribute cells across each row.
+      // Fill the FULL available space — both width and height — with zero dead space.
       if (stretchColumns) {
-        const w = container.clientWidth;
-        if (w > 0) {
+        const availW = container.clientWidth;
+        const availH = container.clientHeight;
+
+        if (availW > 0 && availH > 0) {
           const gridLayout = container.querySelector<HTMLElement>(".react-grid-layout");
           if (gridLayout) {
-            gridLayout.style.setProperty("width", `${w}px`, "important");
+            // ── Width ──────────────────────────────────────────────────────
+            gridLayout.style.setProperty("width", `${availW}px`, "important");
+
+            // ── Height ─────────────────────────────────────────────────────
+            // Only scale once header cards are hidden (isHeaderGridCard guard).
+            // This prevents storing stale positions while the header is still visible.
+            const allCards = Array.from(gridLayout.children) as HTMLElement[];
+            const visibleCards = allCards.filter(
+              (c) => getComputedStyle(c).display !== "none"
+            );
+            const anyHeaderStillVisible = visibleCards.some((c) => isHeaderGridCard(c));
+
+            if (visibleCards.length > 0 && !anyHeaderStillVisible) {
+              // Capture original layout positions exactly once so repeated fix()
+              // calls use consistent base values rather than already-scaled ones.
+              for (const card of visibleCards) {
+                if (!card.dataset.origTop) {
+                  card.dataset.origTop = String(card.offsetTop);
+                  card.dataset.origH   = String(card.offsetHeight);
+                }
+              }
+
+              const origTops = visibleCards.map((c) => parseFloat(c.dataset.origTop!));
+              const origHs   = visibleCards.map((c) => parseFloat(c.dataset.origH!));
+              const minTop   = Math.min(...origTops);
+              const maxBtm   = Math.max(...origTops.map((t, i) => t + origHs[i]));
+              const naturalH = maxBtm - minTop;
+
+              if (naturalH > 4) {
+                const scaleH = availH / naturalH;
+                // Grid must be tall enough to contain all repositioned cards.
+                gridLayout.style.setProperty("height", `${minTop + availH}px`, "important");
+
+                visibleCards.forEach((card, i) => {
+                  // newTop keeps the cards stacked in the same relative order,
+                  // scaled so the last card's bottom lands exactly at availH.
+                  const newTop = minTop + (origTops[i] - minTop) * scaleH;
+                  const newH   = origHs[i] * scaleH;
+                  card.style.setProperty("top",    `${newTop}px`, "important");
+                  card.style.setProperty("height", `${newH}px`,   "important");
+                  card.style.setProperty("width",  `${availW}px`, "important");
+                  card.style.setProperty("left",   "0",           "important");
+                });
+              }
+            } else {
+              // Header not yet hidden — just do width for now.
+              visibleCards.forEach((card) => {
+                card.style.setProperty("width", `${availW}px`, "important");
+                card.style.setProperty("left",  "0",           "important");
+              });
+            }
+
+            // Make the Metabase table grid fill its dashcard horizontally.
+            container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((g) => {
+              g.style.setProperty("width",     "100%", "important");
+              g.style.setProperty("min-width", "0",    "important");
+            });
           }
-          container
-            .querySelectorAll<HTMLElement>('[class*="DashCard"], [class*="dashcard-container"]')
-            .forEach((card) => {
-              card.style.setProperty("width", `${w}px`, "important");
-              card.style.setProperty("left", "0", "important");
-            });
-          // Make the table scroll container fill the dashcard horizontally
-          container
-            .querySelectorAll<HTMLElement>('[role="grid"]')
-            .forEach((grid) => {
-              grid.style.setProperty("width", "100%", "important");
-              grid.style.setProperty("min-width", "0", "important");
-            });
         }
       }
 
@@ -638,19 +682,9 @@ export default function DashboardEmbed({
           font-size: 14px !important;
         }
 
-        /* Center the react-grid-layout grid horizontally so the table card
-           sits in the middle of the embed rather than being left-aligned. */
-        .mb-embed .react-grid-layout {
-          margin-left: auto !important;
-          margin-right: auto !important;
-        }
-        /* Stretch dashboard cards to the full grid width so there are no
-           asymmetric side gaps. */
-        .mb-embed [class*="DashCard"],
-        .mb-embed [class*="dashcard-container"] {
-          left: 0 !important;
-          right: 0 !important;
-          width: 100% !important;
+        /* stretchColumns: let JS control exact pixel widths/heights on grid + cards */
+        .mb-embed-stretch .react-grid-layout {
+          overflow: visible !important;
         }
 
         /* ── stretchColumns: make all table columns fill the full container ── */

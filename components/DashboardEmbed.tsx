@@ -651,11 +651,33 @@ export default function DashboardEmbed({
         });
 
         // ── Double column widths in each data table ─────────────────────────
-        // Metabase's virtual table uses absolute positioning; CSS flex is ignored.
-        // Each column header AND each cell need their left offset doubled too —
-        // left offsets are cumulative sums of column widths, so they scale 1:1
-        // with width when every column doubles uniformly.
+        // Derive all positions from column header widths as the single source of
+        // truth. Column headers may be flex- or absolutely-positioned; data cells
+        // are absolutely positioned with cumulative left offsets. By computing
+        // cumulative lefts from header widths and applying them to BOTH headers
+        // (forcing position:absolute) and cells, every header lands exactly above
+        // its data column regardless of the original layout mechanism.
         container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((gridTable) => {
+          const headers = Array.from(
+            gridTable.querySelectorAll<HTMLElement>('[role="columnheader"]')
+          );
+          if (headers.length === 0) return;
+
+          // Capture original widths once (skip until all headers are rendered).
+          headers.forEach(h => {
+            if (!h.dataset.origW) {
+              const w = h.offsetWidth;
+              if (w > 0) h.dataset.origW = String(w);
+            }
+          });
+          const origWidths = headers.map(h => parseFloat(h.dataset.origW || "0"));
+          if (origWidths.some(w => w === 0)) return; // not yet rendered
+
+          // Compute cumulative left offsets (same formula Metabase uses for cells).
+          const origLefts = origWidths.map((_, ci) =>
+            origWidths.slice(0, ci).reduce((s, w) => s + w, 0)
+          );
+
           // Grid container total width
           if (!gridTable.dataset.origGridW) {
             const nat = gridTable.scrollWidth;
@@ -667,8 +689,32 @@ export default function DashboardEmbed({
             gridTable.style.setProperty("min-width", `${nat * 2}px`, "important");
           }
 
-          // Process every row (header row + data rows) in one pass.
+          // Apply 2× to column headers with explicit absolute positioning so the
+          // left values we set are actually used (flex-children ignore left:).
+          const headerRow = headers[0].closest<HTMLElement>('[role="row"]');
+          if (headerRow) {
+            headerRow.style.setProperty("position", "relative", "important");
+            if (!headerRow.dataset.origW) {
+              const w = headerRow.offsetWidth || headerRow.scrollWidth;
+              if (w > 0) headerRow.dataset.origW = String(w);
+            }
+            if (headerRow.dataset.origW) {
+              headerRow.style.setProperty(
+                "width", `${parseFloat(headerRow.dataset.origW) * 2}px`, "important"
+              );
+            }
+          }
+          headers.forEach((h, ci) => {
+            h.style.setProperty("position",  "absolute",                `important`);
+            h.style.setProperty("left",      `${origLefts[ci] * 2}px`, "important");
+            h.style.setProperty("width",     `${origWidths[ci] * 2}px`, "important");
+            h.style.setProperty("min-width", `${origWidths[ci] * 2}px`, "important");
+          });
+
+          // Apply 2× to data rows and their cells using the same derived positions.
           gridTable.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
+            if (row.querySelector('[role="columnheader"]')) return; // skip header row
+
             if (!row.dataset.origW) {
               const w = row.offsetWidth || row.scrollWidth;
               if (w > 0) row.dataset.origW = String(w);
@@ -677,39 +723,11 @@ export default function DashboardEmbed({
               row.style.setProperty("width", `${parseFloat(row.dataset.origW) * 2}px`, "important");
             }
 
-            // Column headers (header row children) — double width AND left.
-            row.querySelectorAll<HTMLElement>('[role="columnheader"]').forEach((h) => {
-              if (!h.dataset.origW) {
-                const w = h.offsetWidth;
-                if (w > 0) h.dataset.origW = String(w);
-              }
-              if (!h.dataset.origL) {
-                h.dataset.origL = h.style.left || "0";
-              }
-              if (h.dataset.origW) {
-                h.style.setProperty("width",     `${parseFloat(h.dataset.origW) * 2}px`, "important");
-                h.style.setProperty("min-width", `${parseFloat(h.dataset.origW) * 2}px`, "important");
-              }
-              if (h.dataset.origL) {
-                h.style.setProperty("left", `${parseFloat(h.dataset.origL) * 2}px`, "important");
-              }
-            });
-
-            // Data cells (data row children) — double width AND left.
-            row.querySelectorAll<HTMLElement>('[role="gridcell"]').forEach((cell) => {
-              if (!cell.dataset.origW) {
-                const w = cell.offsetWidth;
-                if (w > 0) cell.dataset.origW = String(w);
-              }
-              if (!cell.dataset.origL) {
-                cell.dataset.origL = cell.style.left || "0";
-              }
-              if (cell.dataset.origW) {
-                cell.style.setProperty("width", `${parseFloat(cell.dataset.origW) * 2}px`, "important");
-              }
-              if (cell.dataset.origL) {
-                cell.style.setProperty("left", `${parseFloat(cell.dataset.origL) * 2}px`, "important");
-              }
+            const cells = Array.from(row.querySelectorAll<HTMLElement>('[role="gridcell"]'));
+            cells.forEach((cell, ci) => {
+              if (ci >= origWidths.length) return;
+              cell.style.setProperty("width", `${origWidths[ci] * 2}px`, "important");
+              cell.style.setProperty("left",  `${origLefts[ci] * 2}px`, "important");
             });
           });
         });

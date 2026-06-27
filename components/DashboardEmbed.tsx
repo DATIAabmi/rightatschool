@@ -122,6 +122,7 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
   //    Fallback: use .react-grid-layout directly (tabs like 166 that have no
   //    branding header but still need skip-content cards hidden).
   let gridEl: HTMLElement | null = null;
+  let usedFallback = false;
   for (const el of container.querySelectorAll<HTMLElement>("*")) {
     if (el.childElementCount > 4) continue;
     if ((el.textContent ?? "").trim() !== "ABMi Always On") continue;
@@ -140,6 +141,7 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
   }
   if (!gridEl) {
     gridEl = container.querySelector<HTMLElement>(".react-grid-layout");
+    usedFallback = true;
   }
   if (!gridEl) return false;
 
@@ -147,16 +149,21 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
   const gridRect = gridEl.getBoundingClientRect();
 
   // 2. Find the bottom of all VISIBLE header/skip cards.
-  //    Track separately whether any REAL branding header cards were found so
-  //    step 4 can apply the +30 px textThreshold buffer only when there is
-  //    an actual header section (not just a skip-content instruction card).
+  //
+  //    PRIMARY PATH: safe to use HEADER_CARD_TEXTS — the grid was found via
+  //    "ABMi Always On" so we know it contains branding header cards.
+  //
+  //    FALLBACK PATH: do NOT use HEADER_CARD_TEXTS. Texts like "right at school"
+  //    appear in data card titles (e.g. card 405 on tab 166) and would cause
+  //    those data cards to be misidentified as header cards, ultimately hiding
+  //    them. On fallback tabs, only skip-content cards need to be accounted for.
   let headerBottom = 0;
   let hasRealHeaderCards = false;
   for (const child of children) {
     const rect = child.getBoundingClientRect();
     if (rect.height === 0) continue;
     const text = (child.textContent ?? "").toLowerCase();
-    if (HEADER_CARD_TEXTS.some((h) => text.includes(h))) {
+    if (!usedFallback && HEADER_CARD_TEXTS.some((h) => text.includes(h))) {
       if (rect.bottom > headerBottom) headerBottom = rect.bottom;
       hasRealHeaderCards = true;
     } else if (isSkipContentCard(child)) {
@@ -164,9 +171,9 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
     }
   }
 
-  // 3. When headerBottom === 0, all text-identified header cards are already
-  //    hidden. Fall back to the stored contentStart to re-apply the transform
-  //    and re-hide any header card whose display:none was inadvertently reset.
+  // 3. When headerBottom === 0, all header/skip cards are already hidden.
+  //    Re-apply the stored translateY and re-hide any card whose display:none
+  //    was inadvertently reset by a React re-render.
   if (headerBottom === 0) {
     const stored = gridEl.dataset.contentStart
       ? parseFloat(gridEl.dataset.contentStart)
@@ -174,11 +181,15 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
     if (stored <= 0) return false; // not yet initialised
 
     for (const child of children) {
-      if (
-        child.getBoundingClientRect().height > 0 &&
-        (isHeaderGridCard(child) || isSkipContentCard(child)) &&
-        !child.querySelector('[role="grid"], table, [role="table"]')
-      ) {
+      if (child.getBoundingClientRect().height === 0) continue;
+      // On the fallback path, only skip-content cards were explicitly hidden —
+      // never re-hide cards that merely match HEADER_CARD_TEXTS, because data
+      // card titles (e.g. "...Right at School") would match too.
+      const shouldRehide = usedFallback
+        ? isSkipContentCard(child)
+        : (isHeaderGridCard(child) || isSkipContentCard(child)) &&
+          !child.querySelector('[role="grid"], table, [role="table"]');
+      if (shouldRehide) {
         child.style.setProperty("display", "none", "important");
       }
     }
@@ -190,13 +201,9 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
   }
 
   // 4. Hide every grid child that belongs to the header section.
-  //    +30 px textThreshold catches cards in the same row but with slightly
-  //    different tops — only applied when real branding header cards are present.
-  //    When the tab has only skip-content cards (e.g. tab 166's instruction
-  //    text), skip-only cards are hidden via isSkipContentCard and NO threshold
-  //    is applied to content cards (which can start right at headerBottom).
-  //    +120 px (image-only) catches the DATIA K12 / Right at School logo cards
-  //    that sit in a row BELOW the last text-identified header card.
+  //    +30 px textThreshold catches cards in the same row with slightly different
+  //    tops — only applied on the primary path where real branding headers exist.
+  //    +120 px (imgOnly) catches logo cards below the last text-identified header.
   const textThreshold = headerBottom + 30;
   const logoThreshold = headerBottom + 120;
   let contentStart = Infinity;

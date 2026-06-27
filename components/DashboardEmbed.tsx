@@ -176,7 +176,8 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
     for (const child of children) {
       if (
         child.getBoundingClientRect().height > 0 &&
-        (isHeaderGridCard(child) || isSkipContentCard(child))
+        (isHeaderGridCard(child) || isSkipContentCard(child)) &&
+        !child.querySelector('[role="grid"], table, [role="table"]')
       ) {
         child.style.setProperty("display", "none", "important");
       }

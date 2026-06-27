@@ -117,7 +117,10 @@ function isSkipContentCard(child: HTMLElement): boolean {
 }
 
 function hideMetabaseHeaderCards(container: HTMLElement): boolean {
-  // 1. Find the react-grid-layout grid via "ABMi Always On" text card.
+  // 1. Find the react-grid-layout grid.
+  //    Primary: locate via "ABMi Always On" text card (dashboards that have it).
+  //    Fallback: use .react-grid-layout directly (tabs like 166 that have no
+  //    branding header but still need skip-content cards hidden).
   let gridEl: HTMLElement | null = null;
   for (const el of container.querySelectorAll<HTMLElement>("*")) {
     if (el.childElementCount > 4) continue;
@@ -135,19 +138,27 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
     }
     break;
   }
+  if (!gridEl) {
+    gridEl = container.querySelector<HTMLElement>(".react-grid-layout");
+  }
   if (!gridEl) return false;
 
   const children = Array.from(gridEl.children) as HTMLElement[];
   const gridRect = gridEl.getBoundingClientRect();
 
-  // 2. Find the bottom of all VISIBLE text-identified header cards.
-  //    display:none cards have height=0 — they're skipped here.
+  // 2. Find the bottom of all VISIBLE header/skip cards.
+  //    Includes HEADER_CARD_TEXTS matches AND isSkipContentCard matches so
+  //    that tabs with no branding header (e.g. tab 166) still hide the
+  //    instruction text card and compute a correct contentStart.
   let headerBottom = 0;
   for (const child of children) {
     const rect = child.getBoundingClientRect();
     if (rect.height === 0) continue;
     const text = (child.textContent ?? "").toLowerCase();
-    if (HEADER_CARD_TEXTS.some((h) => text.includes(h))) {
+    if (
+      HEADER_CARD_TEXTS.some((h) => text.includes(h)) ||
+      isSkipContentCard(child)
+    ) {
       if (rect.bottom > headerBottom) headerBottom = rect.bottom;
     }
   }
@@ -497,11 +508,14 @@ export default function DashboardEmbed({
             const visibleCards = allCards.filter(
               (c) => getComputedStyle(c).display !== "none"
             );
-            // A card is a "real" branding header only if it has no data grid
-            // inside it. Content cards (tables) may contain "right at school"
-            // in their title but are NOT header cards.
+            // Block height scaling while any header or skip card is still
+            // visible (not yet hidden by hideMetabaseHeaderCards).
+            // Exclude cards that contain a data grid — those are content cards
+            // whose title may incidentally match a header text pattern.
             const anyHeaderStillVisible = visibleCards.some(
-              (c) => isHeaderGridCard(c) && !c.querySelector('[role="grid"], table, [role="table"]')
+              (c) =>
+                (isHeaderGridCard(c) || isSkipContentCard(c)) &&
+                !c.querySelector('[role="grid"], table, [role="table"]')
             );
 
             if (visibleCards.length > 0 && !anyHeaderStillVisible) {

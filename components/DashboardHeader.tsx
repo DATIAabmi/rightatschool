@@ -14,7 +14,7 @@ const CAMPAIGN_PERIODS: Record<string, string> = {
   "C1: April - May 2025": "Apr 2025 – May 2025",
 };
 
-export default function DashboardHeader() {
+export default function DashboardHeader({ legend }: { legend?: string }) {
   const [lastUpdated, setLastUpdated] = useState("");
   const { dateStart, dateEnd, setDateStart, setDateEnd, campaign, setCampaign } = useFilter();
 
@@ -55,7 +55,7 @@ export default function DashboardHeader() {
 
         {/* Center: Campaign title */}
         <div className="text-center flex-1 px-8">
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-none">
+          <h1 className="font-bold text-gray-900 tracking-tight leading-none" style={{ fontFamily: "'Lato', sans-serif", fontSize: "20px" }}>
             ABMi Always On
           </h1>
           <p className="text-sm text-gray-400 mt-2 tracking-wide">
@@ -170,6 +170,16 @@ export default function DashboardHeader() {
           </div>
         </div>
       </div>
+
+      {legend && (
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-0.5" style={{ fontFamily: "'Lato', sans-serif" }}>
+          {legend.split(" | ").map((line, i) => (
+            <p key={i} className="text-xs text-gray-400 leading-relaxed">
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

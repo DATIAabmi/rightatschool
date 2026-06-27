@@ -24,7 +24,7 @@ export default function Page() {
         zIndex: 1,
       }}>
         <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
-          <DashboardHeader />
+          <DashboardHeader legend="SBM - School Board Minutes. The SBM Link directs to the school board minutes document. | Topic is the intent signals based on content consumption. See Topic Insights dashboard. | Engagements are the number of clicks on your ads, email opens and lead downloads. | Intent Score is a numerical value that indicates a lead/district's likelihood to be in market derived from district data and total engagement on and off the DATIA K12 channels." />
         </div>
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
           <DashboardEmbed

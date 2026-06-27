@@ -569,17 +569,62 @@ export default function DashboardEmbed({
                   captured.forEach((card, i) => {
                     const newRelTop = minTop + (origTops[i] - minTop) * scaleH;
                     const newH      = origHs[i] * scaleH;
-                    // Cards are transform-positioned — modify the Y translation
-                    // directly instead of setting top (which has no visual effect).
                     const m = new DOMMatrix(getComputedStyle(card).transform);
                     card.style.setProperty(
                       "transform",
                       `translate(${m.m41}px, ${newRelTop}px)`,
                       "important"
                     );
-                    card.style.setProperty("height", `${newH}px`,   "important");
-                    card.style.setProperty("width",  `${availW}px`, "important");
-                    card.style.setProperty("left",   "0",           "important");
+                    card.style.setProperty("height",   `${newH}px`,  "important");
+                    card.style.setProperty("width",    `${availW}px`, "important");
+                    card.style.setProperty("left",     "0",           "important");
+                    card.style.setProperty("overflow", "visible",     "important");
+
+                    // Scale data rows so they all fit in newH without internal scroll.
+                    const grid = card.querySelector<HTMLElement>('[role="grid"]');
+                    if (grid) {
+                      const headerH = 45;
+                      // Data rows = rows that contain gridcells (not the header row).
+                      const allRows = Array.from(
+                        grid.querySelectorAll<HTMLElement>('[role="row"]')
+                      );
+                      const dataRows = allRows.filter(r =>
+                        r.querySelector('[role="gridcell"]') !== null
+                      );
+
+                      // Release overflow on every wrapper between grid and the dashcard
+                      // so rows aren't clipped by an inner scroll container.
+                      let anc: HTMLElement | null = grid.parentElement;
+                      while (anc && anc !== card) {
+                        anc.style.setProperty("height",     "auto",    "important");
+                        anc.style.setProperty("max-height", "none",    "important");
+                        anc.style.setProperty("overflow",   "visible", "important");
+                        anc = anc.parentElement;
+                      }
+
+                      if (dataRows.length > 0) {
+                        const rowH = Math.max((newH - headerH) / dataRows.length, 20);
+                        dataRows.forEach((row, ri) => {
+                          row.style.setProperty("height",     `${rowH}px`, "important");
+                          row.style.setProperty("min-height", `${rowH}px`, "important");
+                          row.style.setProperty("top",        `${ri * rowH}px`, "important");
+                          row.querySelectorAll<HTMLElement>('[role="gridcell"]').forEach(cell => {
+                            cell.style.setProperty("height", `${rowH}px`, "important");
+                          });
+                        });
+
+                        // Update rowgroup(s) and grid heights to match.
+                        grid.querySelectorAll<HTMLElement>('[role="rowgroup"]').forEach((rg, rgi) => {
+                          if (rgi === 0) return; // skip header rowgroup
+                          const n = rg.querySelectorAll('[role="row"]').length;
+                          rg.style.setProperty("height",     `${n * rowH}px`, "important");
+                          rg.style.setProperty("max-height", "none",           "important");
+                          rg.style.setProperty("overflow",   "visible",        "important");
+                        });
+                        grid.style.setProperty("height",   `${newH}px`,  "important");
+                        grid.style.setProperty("overflow", "visible",     "important");
+                      }
+                    }
                   });
                 }
               }
@@ -592,11 +637,24 @@ export default function DashboardEmbed({
           }
         }
 
+        // ── 45px column header rows ──────────────────────────────────────────
+        // Overrides the general height:auto set above for all embeds.
+        // Use the header row that actually contains columnheaders (avoids
+        // :first-of-type which matches by element type, not ARIA role).
+        container.querySelectorAll<HTMLElement>('[role="columnheader"]').forEach(h => {
+          const row = h.closest<HTMLElement>('[role="row"]');
+          if (row) {
+            row.style.setProperty("height",     "45px", "important");
+            row.style.setProperty("min-height", "45px", "important");
+            row.style.setProperty("max-height", "45px", "important");
+          }
+        });
+
         // ── Double column widths in each data table ─────────────────────────
-        // Metabase's virtual table uses absolute positioning; the CSS flex rules
-        // above have no effect. We capture each column's natural pixel width once
-        // and apply 2× to the header, each data cell's width, and each cell's
-        // cumulative left offset so columns don't overlap.
+        // Metabase's virtual table uses absolute positioning; CSS flex is ignored.
+        // Each column header AND each cell need their left offset doubled too —
+        // left offsets are cumulative sums of column widths, so they scale 1:1
+        // with width when every column doubles uniformly.
         container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((gridTable) => {
           // Grid container total width
           if (!gridTable.dataset.origGridW) {
@@ -609,20 +667,7 @@ export default function DashboardEmbed({
             gridTable.style.setProperty("min-width", `${nat * 2}px`, "important");
           }
 
-          // Column headers
-          gridTable.querySelectorAll<HTMLElement>('[role="columnheader"]').forEach((h) => {
-            if (!h.dataset.origW) {
-              const w = h.offsetWidth;
-              if (w > 0) h.dataset.origW = String(w);
-            }
-            if (h.dataset.origW) {
-              const w = parseFloat(h.dataset.origW);
-              h.style.setProperty("width",     `${w * 2}px`, "important");
-              h.style.setProperty("min-width", `${w * 2}px`, "important");
-            }
-          });
-
-          // Rows and data cells
+          // Process every row (header row + data rows) in one pass.
           gridTable.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
             if (!row.dataset.origW) {
               const w = row.offsetWidth || row.scrollWidth;
@@ -632,13 +677,30 @@ export default function DashboardEmbed({
               row.style.setProperty("width", `${parseFloat(row.dataset.origW) * 2}px`, "important");
             }
 
+            // Column headers (header row children) — double width AND left.
+            row.querySelectorAll<HTMLElement>('[role="columnheader"]').forEach((h) => {
+              if (!h.dataset.origW) {
+                const w = h.offsetWidth;
+                if (w > 0) h.dataset.origW = String(w);
+              }
+              if (!h.dataset.origL) {
+                h.dataset.origL = h.style.left || "0";
+              }
+              if (h.dataset.origW) {
+                h.style.setProperty("width",     `${parseFloat(h.dataset.origW) * 2}px`, "important");
+                h.style.setProperty("min-width", `${parseFloat(h.dataset.origW) * 2}px`, "important");
+              }
+              if (h.dataset.origL) {
+                h.style.setProperty("left", `${parseFloat(h.dataset.origL) * 2}px`, "important");
+              }
+            });
+
+            // Data cells (data row children) — double width AND left.
             row.querySelectorAll<HTMLElement>('[role="gridcell"]').forEach((cell) => {
               if (!cell.dataset.origW) {
                 const w = cell.offsetWidth;
                 if (w > 0) cell.dataset.origW = String(w);
               }
-              // Left offset is cumulative (sum of preceding column widths).
-              // Doubling every column width means doubling the cumulative left too.
               if (!cell.dataset.origL) {
                 cell.dataset.origL = cell.style.left || "0";
               }
@@ -783,6 +845,15 @@ export default function DashboardEmbed({
           justify-content: center !important;
           font-family: 'Lato', sans-serif !important;
           font-size: 14px !important;
+        }
+
+        /* stretchColumns: fixed 45px column header row */
+        .mb-embed-stretch [role="rowgroup"]:first-of-type [role="row"],
+        .mb-embed-stretch [role="grid"] > div:first-child [role="row"] {
+          height: 45px !important;
+          min-height: 45px !important;
+          max-height: 45px !important;
+          overflow: hidden !important;
         }
 
         /* stretchColumns: let JS control exact pixel widths/heights on grid + cards */

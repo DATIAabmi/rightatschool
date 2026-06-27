@@ -147,18 +147,19 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
   const gridRect = gridEl.getBoundingClientRect();
 
   // 2. Find the bottom of all VISIBLE header/skip cards.
-  //    Includes HEADER_CARD_TEXTS matches AND isSkipContentCard matches so
-  //    that tabs with no branding header (e.g. tab 166) still hide the
-  //    instruction text card and compute a correct contentStart.
+  //    Track separately whether any REAL branding header cards were found so
+  //    step 4 can apply the +30 px textThreshold buffer only when there is
+  //    an actual header section (not just a skip-content instruction card).
   let headerBottom = 0;
+  let hasRealHeaderCards = false;
   for (const child of children) {
     const rect = child.getBoundingClientRect();
     if (rect.height === 0) continue;
     const text = (child.textContent ?? "").toLowerCase();
-    if (
-      HEADER_CARD_TEXTS.some((h) => text.includes(h)) ||
-      isSkipContentCard(child)
-    ) {
+    if (HEADER_CARD_TEXTS.some((h) => text.includes(h))) {
+      if (rect.bottom > headerBottom) headerBottom = rect.bottom;
+      hasRealHeaderCards = true;
+    } else if (isSkipContentCard(child)) {
       if (rect.bottom > headerBottom) headerBottom = rect.bottom;
     }
   }
@@ -188,7 +189,11 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
   }
 
   // 4. Hide every grid child that belongs to the header section.
-  //    +30 px catches cards in the same row but with slightly different tops.
+  //    +30 px textThreshold catches cards in the same row but with slightly
+  //    different tops — only applied when real branding header cards are present.
+  //    When the tab has only skip-content cards (e.g. tab 166's instruction
+  //    text), skip-only cards are hidden via isSkipContentCard and NO threshold
+  //    is applied to content cards (which can start right at headerBottom).
   //    +120 px (image-only) catches the DATIA K12 / Right at School logo cards
   //    that sit in a row BELOW the last text-identified header card.
   const textThreshold = headerBottom + 30;
@@ -204,7 +209,7 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
       child.querySelector("img") !== null;
 
     if (
-      rect.top < textThreshold ||
+      (hasRealHeaderCards && rect.top < textThreshold) ||
       (imgOnly && rect.top < logoThreshold) ||
       isSkipContentCard(child)
     ) {

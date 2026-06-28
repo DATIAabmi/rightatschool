@@ -32,6 +32,12 @@ interface Props {
    */
   rowColorColumn?: string;
   /**
+   * Metabase dashboard tab ID to open directly (e.g. 104 for Ad Samples).
+   * Passed as dashboardTabId to InteractiveDashboard — no autoTab click needed.
+   * Use together with hideHeader to suppress the branding section.
+   */
+  tabId?: number;
+  /**
    * When true, hides the Metabase branding header and keeps the embed hidden
    * until the header is confirmed gone. Use on dashboards without autoTab that
    * still embed the "ABMi Always On" header section.
@@ -251,6 +257,7 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
 
 export default function DashboardEmbed({
   dashboardId,
+  tabId,
   dateParamSlug,
   extraParameters,
   fill,
@@ -845,9 +852,11 @@ export default function DashboardEmbed({
   const outerClass = fill ? "" : "h-[calc(100vh-4rem)] -m-8";
   // Keep embed hidden until the header is confirmed removed.
   // autoTab embeds also wait for the tab click + load to complete.
+  // tabId embeds skip the click wait — the SDK navigates directly.
   const needsHeaderGate = !!(autoTab || hideHeader);
+  const tabReady = autoTab ? tabClicked : true;
   const visibility =
-    needsHeaderGate && (!tabClicked || !headerReady) ? "hidden" : "visible";
+    needsHeaderGate && (!tabReady || !headerReady) ? "hidden" : "visible";
 
   return (
     <div
@@ -990,6 +999,7 @@ export default function DashboardEmbed({
         <InteractiveDashboard
           key={JSON.stringify(initialParameters)}
           dashboardId={dashboardId}
+          {...(tabId !== undefined ? { dashboardTabId: tabId } : {})}
           initialParameters={initialParameters}
           withTitle={false}
           style={{ height: "100%" }}

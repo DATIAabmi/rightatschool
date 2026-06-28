@@ -8,56 +8,74 @@ import { useFilter } from "@/components/FilterContext";
 
 const TAB_LABEL = "Ad Samples";
 
-function hideTabBarAndHeader(container: HTMLElement) {
+/** Returns true if header cards were found and hidden. */
+function cleanAdSamples(container: HTMLElement): boolean {
   // 1. Hide the tab bar — click already happened so this is safe
   container.querySelectorAll<HTMLElement>(
     '[role="tablist"], [data-testid="dashboard-tabs"], [class*="DashboardTabs"]'
   ).forEach((el) => { el.style.display = "none"; });
 
-  // 2. Hide the ABMi Always On branding header cards
-  const cards = container.querySelectorAll<HTMLElement>(
+  const cards = Array.from(container.querySelectorAll<HTMLElement>(
     '[class*="DashCard"], [class*="dashcard"], [data-testid*="dashcard"]'
-  );
+  ));
 
-  // Find the Y bottom of the branding row (cards containing known header text)
-  // visibility:hidden keeps layout so getBoundingClientRect() works here
+  if (cards.length === 0) return false;
+
+  const containerRect = container.getBoundingClientRect();
+
+  // 2. Identify the header row bottom via text-based cards
   let headerBottom = 0;
   for (const card of cards) {
     const text = (card.textContent ?? "").trim();
     if (text.includes("ABMi Always On") || text.includes("Last Update")) {
       const rect = card.getBoundingClientRect();
-      const parentRect = container.getBoundingClientRect();
-      headerBottom = Math.max(headerBottom, rect.bottom - parentRect.top);
+      headerBottom = Math.max(headerBottom, rect.bottom - containerRect.top);
     }
   }
 
-  const headerZone = headerBottom > 0 ? headerBottom : 0;
+  if (headerBottom === 0) return false; // cards not rendered yet — caller should retry
 
-  // Pass 1: hide cards whose top is within the header text row
-  if (headerZone > 0) {
-    for (const card of cards) {
-      const rect = card.getBoundingClientRect();
-      const parentRect = container.getBoundingClientRect();
-      if (rect.top - parentRect.top < headerZone) {
-        (card as HTMLElement).style.visibility = "hidden";
-      }
-    }
-  }
-
-  // Pass 2: catch logo-only cards (image, no meaningful text) that sit just
-  // below the text cards — e.g. the DATIA K12 logo card positioned slightly lower.
-  const scanZone = Math.max(headerZone * 2, 280);
+  // 3. Pass 1: hide every card that starts within the header row
   for (const card of cards) {
-    if ((card as HTMLElement).style.visibility === "hidden") continue;
+    const rect = card.getBoundingClientRect();
+    if (rect.top - containerRect.top < headerBottom) {
+      card.style.visibility = "hidden";
+    }
+  }
+
+  // 4. Pass 2: catch logo-only cards positioned just below (e.g. DATIA K12)
+  const scanZone = Math.max(headerBottom * 2, 280);
+  for (const card of cards) {
+    if (card.style.visibility === "hidden") continue;
     const text = (card.textContent ?? "").trim();
     const hasImg = card.querySelector("img") !== null;
     if (!hasImg || text.length > 20) continue;
     const rect = card.getBoundingClientRect();
-    const parentRect = container.getBoundingClientRect();
-    if (rect.top - parentRect.top < scanZone) {
-      (card as HTMLElement).style.visibility = "hidden";
+    if (rect.top - containerRect.top < scanZone) {
+      card.style.visibility = "hidden";
     }
   }
+
+  // 5. Eliminate the whitespace left by hidden cards.
+  //    Find the topmost visible content card, then shift the grid up
+  //    by that offset so content starts right at the top.
+  let contentTop = Infinity;
+  for (const card of cards) {
+    if (card.style.visibility === "hidden") continue;
+    const rect = card.getBoundingClientRect();
+    contentTop = Math.min(contentTop, rect.top - containerRect.top);
+  }
+
+  if (contentTop > 0 && contentTop !== Infinity) {
+    const gridEl = container.querySelector<HTMLElement>(
+      '[class*="react-grid-layout"], [data-testid="dashboard-grid"] > *'
+    );
+    if (gridEl) {
+      gridEl.style.marginTop = `-${Math.round(contentTop)}px`;
+    }
+  }
+
+  return true;
 }
 
 function AdSamplesEmbed() {
@@ -79,46 +97,54 @@ function AdSamplesEmbed() {
     const container = containerRef.current;
     if (!container) return;
 
-    let done = false;
+    let clickDone = false;
+    let cleanDone = false;
 
-    const tryClick = () => {
-      if (done) return;
-
-      const candidates = container.querySelectorAll<HTMLElement>(
-        '[role="tab"], button, a'
-      );
+    // Step 1: poll for the "Ad Samples" tab button and click it
+    const clickInterval = setInterval(() => {
+      if (clickDone) return;
+      const candidates = container.querySelectorAll<HTMLElement>('[role="tab"], button, a');
       for (const el of candidates) {
         if (el.textContent?.trim() === TAB_LABEL) {
           el.click();
-          done = true;
+          clickDone = true;
+          clearInterval(clickInterval);
 
-          // Wait for Metabase to swap the tab content, then clean up and reveal
-          setTimeout(() => {
-            hideTabBarAndHeader(container);
-            setReady(true);
-          }, 1200);
-
-          return;
+          // Step 2: after click, retry cleanAdSamples until cards are measured
+          let attempts = 0;
+          const tryClean = () => {
+            if (cleanDone) return;
+            const ok = cleanAdSamples(container);
+            attempts++;
+            if (ok || attempts >= 10) {
+              cleanDone = true;
+              setReady(true);
+            } else {
+              setTimeout(tryClean, 400);
+            }
+          };
+          setTimeout(tryClean, 1000); // initial wait for tab content to render
+          break;
         }
       }
-    };
+    }, 150);
 
-    const interval = setInterval(tryClick, 150);
+    // Safety fallback: show after 10 s no matter what
     const fallback = setTimeout(() => {
-      if (!done) {
-        done = true;
-        if (containerRef.current) hideTabBarAndHeader(containerRef.current);
+      if (!cleanDone) {
+        cleanDone = true;
+        if (containerRef.current) cleanAdSamples(containerRef.current);
         setReady(true);
       }
-    }, 8000);
+    }, 10_000);
 
-    return () => { clearInterval(interval); clearTimeout(fallback); };
+    return () => { clearInterval(clickInterval); clearTimeout(fallback); };
   }, [campaign]);
 
   return (
     <>
       <style>{`
-        /* Hide native filter bar — campaign comes from our DashboardHeader */
+        /* Hide native Metabase filter bar */
         .ad-samples-embed [data-testid="dashboard-parameters-widget-container"],
         .ad-samples-embed [class*="ParametersWidget"],
         .ad-samples-embed [class*="parameters-widget"],

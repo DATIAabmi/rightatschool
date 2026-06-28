@@ -16,8 +16,10 @@
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "devDependencies": {
-    "@next/swc-darwin-arm64": "^16.2.6",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",

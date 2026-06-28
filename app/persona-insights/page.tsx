@@ -2,22 +2,31 @@
 
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import DashboardHeader from "@/components/DashboardHeader";
-import DashboardEmbed from "@/components/DashboardEmbed";
+import QuestionEmbed from "@/components/QuestionEmbed";
 
 export default function Page() {
   return (
     <MetabaseProviderWrapper>
-      <div className="-m-8 flex flex-col" style={{ height: "100vh" }}>
-        <div className="px-8 pt-8 pb-4 flex-shrink-0">
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: "16rem",
+        right: 0,
+        bottom: 0,
+        display: "flex",
+        flexDirection: "column",
+        background: "#f9fafb",
+        zIndex: 1,
+      }}>
+        <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
           <DashboardHeader />
         </div>
-        <div className="flex-1 min-h-0">
-          <DashboardEmbed
-            dashboardId={35}
-            autoTab="Persona Insights"
-            dateParamSlug="select_date_range"
-            campaignParamSlug="abmi_campaign_"
-            fill
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <QuestionEmbed
+            questionId={168}
+            districtSqlKey="user_district"
+            dateStartSqlKey="Last_Updated.start"
+            dateEndSqlKey="Last_Updated.end"
           />
         </div>
       </div>

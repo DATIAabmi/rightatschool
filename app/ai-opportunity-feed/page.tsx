@@ -2,7 +2,7 @@
 
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import DashboardHeader from "@/components/DashboardHeader";
-import DashboardEmbed from "@/components/DashboardEmbed";
+import { Sparkles } from "lucide-react";
 
 export default function Page() {
   return (
@@ -21,14 +21,19 @@ export default function Page() {
         <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
           <DashboardHeader />
         </div>
-        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          <DashboardEmbed
-            dashboardId={35}
-            autoTab="Ad Samples"
-            dateParamSlug="select_date_range"
-            campaignParamSlug="abmi_campaign_"
-            fill
-          />
+        <div style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 12,
+          color: "#9ca3af",
+        }}>
+          <Sparkles size={36} className="text-indigo-300" />
+          <p style={{ fontSize: 15, fontWeight: 500 }}>AI Opportunity Feed</p>
+          <p style={{ fontSize: 13 }}>Share the Metabase question URL to connect data here.</p>
         </div>
       </div>
     </MetabaseProviderWrapper>

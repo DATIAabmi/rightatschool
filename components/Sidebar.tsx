@@ -14,6 +14,7 @@ import {
   MonitorPlay,
   SlidersHorizontal,
   ScrollText,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { label: "Topic Insights", icon: BookOpen, href: "/topic-insights" },
   { label: "Content Insights", icon: FileText, href: "/content-insights" },
   { label: "Ad Samples", icon: MonitorPlay, href: "/ad-samples" },
+  { label: "AI Opportunity Feed", icon: Sparkles, href: "/ai-opportunity-feed" },
 ];
 
 export default function Sidebar() {

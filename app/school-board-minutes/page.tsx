@@ -1,30 +1,44 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import DashboardHeader from "@/components/DashboardHeader";
-import DashboardEmbed from "@/components/DashboardEmbed";
+import QuestionEmbed from "@/components/QuestionEmbed";
+import { useFilter } from "@/components/FilterContext";
 
 function SchoolBoardContent() {
   const searchParams = useSearchParams();
-  const district = searchParams.get("district");
+  const urlDistrict = searchParams.get("district");
+  const { setDistrict } = useFilter();
 
-  const extraParameters = district ? { topic_district: district } : undefined;
+  // When navigated here via district drill-through (?district=...), pre-populate
+  // the district field in the header and pass it into the question.
+  useEffect(() => {
+    if (urlDistrict) setDistrict(urlDistrict);
+  }, [urlDistrict, setDistrict]);
 
   return (
     <MetabaseProviderWrapper>
-      <div className="-m-8 flex flex-col" style={{ height: "100vh" }}>
-        <div className="px-8 pt-3 pb-1 flex-shrink-0">
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: "16rem",
+        right: 0,
+        bottom: 0,
+        display: "flex",
+        flexDirection: "column",
+        background: "#f9fafb",
+        zIndex: 1,
+      }}>
+        <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
           <DashboardHeader />
         </div>
-        <div className="flex-1 min-h-0">
-          <DashboardEmbed
-            dashboardId={77}
-            extraParameters={extraParameters}
-            hideHeader
-            fill
-            compact
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <QuestionEmbed
+            questionId={425}
+            campaignSqlKey="abmi_campaign"
+            districtSqlKey="District"
           />
         </div>
       </div>

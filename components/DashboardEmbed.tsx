@@ -55,6 +55,12 @@ interface Props {
    */
   campaignParamSlug?: string;
   /**
+   * Dashboard parameter slug for the District filter.
+   * When provided, the district search string from FilterContext is sent
+   * to the embed (e.g. "district" for dashboard 76).
+   */
+  districtParamSlug?: string;
+  /**
    * When true, stretches table columns to fill the full container width
    * instead of using their natural column widths.
    */
@@ -94,10 +100,9 @@ const HEADER_CARD_TEXTS = [
 
 // Cards that are not branding headers but produce large whitespace gaps
 // because their dashboard layout height far exceeds their content.
-// Identified by a distinctive substring of their text content.
-const SKIP_CONTENT_TEXTS = [
-  "sbm - school board minutes. the sbm link", // instruction card on Engaged Users tab
-];
+// NOTE: The SBM definitions text card on tab 166 is intentionally not listed —
+// it is shown natively so Metabase renders it with its own font/styling.
+const SKIP_CONTENT_TEXTS: string[] = [];
 
 // Returns true if a grid child is a branding header card.
 // Catches both text-identified cards and image-only logo cards (DATIA K12, Right at School).
@@ -212,9 +217,13 @@ function hideMetabaseHeaderCards(container: HTMLElement): boolean {
     const rect = child.getBoundingClientRect();
     if (rect.height === 0) continue;
 
+    // imgOnly: catches header logo cards (DATIA K12, Right at School).
+    // Height cap of 150 px prevents ad-image cards from being misidentified
+    // as logos and incorrectly hidden on tabs like Ad Samples.
     const imgOnly =
       (child.textContent ?? "").trim().length < 5 &&
-      child.querySelector("img") !== null;
+      child.querySelector("img") !== null &&
+      child.offsetHeight < 150;
 
     if (
       (hasRealHeaderCards && rect.top < textThreshold) ||
@@ -252,9 +261,10 @@ export default function DashboardEmbed({
   compact,
   onLinkClick,
   campaignParamSlug,
+  districtParamSlug,
   stretchColumns,
 }: Props) {
-  const { metabaseDateRange, campaign } = useFilter();
+  const { metabaseDateRange, campaign, district } = useFilter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [tabClicked, setTabClicked] = useState(false);
   const [headerReady, setHeaderReady] = useState(false);
@@ -269,6 +279,9 @@ export default function DashboardEmbed({
       : {}),
     ...(campaignParamSlug && campaign
       ? { [campaignParamSlug]: campaign }
+      : {}),
+    ...(districtParamSlug && district
+      ? { [districtParamSlug]: district }
       : {}),
   };
 
@@ -379,7 +392,7 @@ export default function DashboardEmbed({
     if (!container) return;
 
     const fix = () => {
-      // Hide Metabase title + tab bar (all known selectors)
+      // Hide Metabase navigation chrome for all embeds
       container
         .querySelectorAll<HTMLElement>(
           '[role="tablist"], ' +
@@ -394,23 +407,45 @@ export default function DashboardEmbed({
           el.style.setProperty("display", "none", "important")
         );
 
-      // Column headers: remove truncation, center text
+      // Hide individual card titles only when we own the layout —
+      // on content tabs like Ad Samples, card titles are part of the content.
+      if (hideHeader || stretchColumns) {
+        container
+          .querySelectorAll<HTMLElement>(
+            '[data-testid="legend-caption"], ' +
+            '[class*="LegendCaption"], ' +
+            '[class*="CardTitle"], ' +
+            '[class*="DashCard__title"], ' +
+            '[class*="dashcard-title"]'
+          )
+          .forEach((el) =>
+            el.style.setProperty("display", "none", "important")
+          );
+      }
+
+      // When we own the header (hideHeader or stretchColumns), also remove the
+      // Metabase filter/parameter bar — it duplicates our DashboardHeader controls.
+      if (hideHeader || stretchColumns) {
+        container
+          .querySelectorAll<HTMLElement>(
+            '[data-testid="dashboard-parameters-widget-container"], ' +
+            '[class*="ParametersWidget"], ' +
+            '[class*="ParameterWidget"], ' +
+            '[class*="DashboardParameterList"], ' +
+            '[class*="DashboardFilterList"]'
+          )
+          .forEach((el) => el.style.setProperty("display", "none", "important"));
+      }
+
+      // Column headers: font + alignment only — never touch height or whitespace.
+      // Metabase's virtual table pre-computes data-row Y positions from the
+      // native header height; overriding height breaks that calculation.
       container
-        .querySelectorAll<HTMLElement>(
-          '[role="columnheader"], [role="columnheader"] *'
-        )
+        .querySelectorAll<HTMLElement>('[role="columnheader"]')
         .forEach((el) => {
-          el.style.setProperty("white-space", "normal", "important");
-          el.style.setProperty("overflow", "visible", "important");
-          el.style.setProperty("text-overflow", "clip", "important");
-          el.style.setProperty("height", "auto", "important");
-          el.style.setProperty("max-height", "none", "important");
-          el.style.setProperty("word-break", "break-word", "important");
-          el.style.setProperty("line-height", "1.3", "important");
-          el.style.setProperty("padding-top", "6px", "important");
-          el.style.setProperty("padding-bottom", "6px", "important");
-          el.style.setProperty("text-align", "center", "important");
-          el.style.setProperty("justify-content", "center", "important");
+          el.style.setProperty("font-family", "'Lato', sans-serif", "important");
+          el.style.setProperty("font-size",   "12px",               "important");
+          el.style.setProperty("text-align",  "center",             "important");
         });
 
       // Center all data cells
@@ -495,15 +530,9 @@ export default function DashboardEmbed({
         }
       }
 
-      container
-        .querySelectorAll<HTMLElement>(
-          '[role="rowgroup"]:first-of-type [role="row"], ' +
-            '[role="grid"] > div:first-child [role="row"]'
-        )
-        .forEach((el) => {
-          el.style.setProperty("height", "auto", "important");
-          el.style.setProperty("min-height", "44px", "important");
-        });
+      // Do NOT override the header row height — Metabase's virtual table
+      // pre-computes data-row Y positions from the native header height.
+      // Any change here causes data rows to overlap the header.
 
       // Fill the FULL available space — both width and height — with zero dead space.
       if (stretchColumns) {
@@ -524,6 +553,19 @@ export default function DashboardEmbed({
         if (availW > 0 && availH > 0) {
           const gridLayout = container.querySelector<HTMLElement>(".react-grid-layout");
           if (gridLayout) {
+            // Strip any left margin/padding added by Metabase's dashboard wrapper
+            // so the grid starts flush at the container left edge.
+            let wrapperEl: HTMLElement | null = gridLayout.parentElement;
+            while (wrapperEl && wrapperEl !== container) {
+              wrapperEl.style.setProperty("padding-left",  "0", "important");
+              wrapperEl.style.setProperty("padding-right", "0", "important");
+              wrapperEl.style.setProperty("margin-left",   "0", "important");
+              wrapperEl.style.setProperty("margin-right",  "0", "important");
+              wrapperEl = wrapperEl.parentElement;
+            }
+            gridLayout.style.setProperty("margin",  "0", "important");
+            gridLayout.style.setProperty("padding", "0", "important");
+
             const gridRect = gridLayout.getBoundingClientRect();
 
             // ── Width ──────────────────────────────────────────────────────
@@ -569,61 +611,32 @@ export default function DashboardEmbed({
                   captured.forEach((card, i) => {
                     const newRelTop = minTop + (origTops[i] - minTop) * scaleH;
                     const newH      = origHs[i] * scaleH;
-                    const m = new DOMMatrix(getComputedStyle(card).transform);
+                    // Zero out the X component so the card sits flush at the left edge
+                    // (react-grid-layout's X offset would otherwise push the card in).
                     card.style.setProperty(
                       "transform",
-                      `translate(${m.m41}px, ${newRelTop}px)`,
+                      `translate(0px, ${newRelTop}px)`,
                       "important"
                     );
                     card.style.setProperty("height",   `${newH}px`,  "important");
                     card.style.setProperty("width",    `${availW}px`, "important");
                     card.style.setProperty("left",     "0",           "important");
-                    card.style.setProperty("overflow", "visible",     "important");
+                    card.style.setProperty("overflow", "visible", "important");
 
-                    // Scale data rows so they all fit in newH without internal scroll.
+                    // Expand every wrapper between the grid and the card to fill
+                    // the scaled card height. overflow:visible preserves the sticky
+                    // column header row — hidden/auto on an ancestor breaks sticky.
                     const grid = card.querySelector<HTMLElement>('[role="grid"]');
                     if (grid) {
-                      const headerH = 45;
-                      // Data rows = rows that contain gridcells (not the header row).
-                      const allRows = Array.from(
-                        grid.querySelectorAll<HTMLElement>('[role="row"]')
-                      );
-                      const dataRows = allRows.filter(r =>
-                        r.querySelector('[role="gridcell"]') !== null
-                      );
-
-                      // Release overflow on every wrapper between grid and the dashcard
-                      // so rows aren't clipped by an inner scroll container.
                       let anc: HTMLElement | null = grid.parentElement;
                       while (anc && anc !== card) {
-                        anc.style.setProperty("height",     "auto",    "important");
-                        anc.style.setProperty("max-height", "none",    "important");
-                        anc.style.setProperty("overflow",   "visible", "important");
+                        anc.style.setProperty("height",     `${newH}px`, "important");
+                        anc.style.setProperty("max-height", "none",      "important");
+                        anc.style.setProperty("overflow",   "visible",   "important");
                         anc = anc.parentElement;
                       }
-
-                      if (dataRows.length > 0) {
-                        const rowH = Math.max((newH - headerH) / dataRows.length, 20);
-                        dataRows.forEach((row, ri) => {
-                          row.style.setProperty("height",     `${rowH}px`, "important");
-                          row.style.setProperty("min-height", `${rowH}px`, "important");
-                          row.style.setProperty("top",        `${ri * rowH}px`, "important");
-                          row.querySelectorAll<HTMLElement>('[role="gridcell"]').forEach(cell => {
-                            cell.style.setProperty("height", `${rowH}px`, "important");
-                          });
-                        });
-
-                        // Update rowgroup(s) and grid heights to match.
-                        grid.querySelectorAll<HTMLElement>('[role="rowgroup"]').forEach((rg, rgi) => {
-                          if (rgi === 0) return; // skip header rowgroup
-                          const n = rg.querySelectorAll('[role="row"]').length;
-                          rg.style.setProperty("height",     `${n * rowH}px`, "important");
-                          rg.style.setProperty("max-height", "none",           "important");
-                          rg.style.setProperty("overflow",   "visible",        "important");
-                        });
-                        grid.style.setProperty("height",   `${newH}px`,  "important");
-                        grid.style.setProperty("overflow", "visible",     "important");
-                      }
+                      grid.style.setProperty("height",   `${newH}px`, "important");
+                      grid.style.setProperty("overflow",  "visible",   "important");
                     }
                   });
                 }
@@ -636,6 +649,15 @@ export default function DashboardEmbed({
             });
           }
         }
+
+        // ── Hide individual card titles ─────────────────────────────────────
+        container.querySelectorAll<HTMLElement>(
+          '[data-testid="legend-caption"], ' +
+          '[class*="LegendCaption"], ' +
+          '[class*="CardTitle"], ' +
+          '[class*="DashCard__title"], ' +
+          '[class*="dashcard-title"]'
+        ).forEach(el => el.style.setProperty("display", "none", "important"));
 
         // ── 45px column header rows ──────────────────────────────────────────
         // Overrides the general height:auto set above for all embeds.
@@ -650,84 +672,108 @@ export default function DashboardEmbed({
           }
         });
 
-        // ── Double column widths in each data table ─────────────────────────
-        // Derive all positions from column header widths as the single source of
-        // truth. Column headers may be flex- or absolutely-positioned; data cells
-        // are absolutely positioned with cumulative left offsets. By computing
-        // cumulative lefts from header widths and applying them to BOTH headers
-        // (forcing position:absolute) and cells, every header lands exactly above
-        // its data column regardless of the original layout mechanism.
+        // ── Scale columns to fill the full container width ───────────────────
+        // Source of truth: the first data row's ACTUAL cell style.left/width
+        // values as set by Metabase's virtual-table layout engine. Using those
+        // directly — rather than cumulative sums derived from header offsetWidth —
+        // guarantees pixel-perfect alignment between headers and cells even when
+        // Metabase's internal sizing includes borders, gaps, or padding that
+        // offsetWidth doesn't capture exactly.
         container.querySelectorAll<HTMLElement>('[role="grid"]').forEach((gridTable) => {
           const headers = Array.from(
             gridTable.querySelectorAll<HTMLElement>('[role="columnheader"]')
           );
           if (headers.length === 0) return;
 
-          // Capture original widths once (skip until all headers are rendered).
-          headers.forEach(h => {
-            if (!h.dataset.origW) {
-              const w = h.offsetWidth;
-              if (w > 0) h.dataset.origW = String(w);
+          // Locate the first rendered data row.
+          const refRow = Array.from(
+            gridTable.querySelectorAll<HTMLElement>('[role="row"]')
+          ).find(r => !r.querySelector('[role="columnheader"]') &&
+                      r.querySelector('[role="gridcell"]') !== null);
+          if (!refRow) return;
+
+          const refCells = Array.from(
+            refRow.querySelectorAll<HTMLElement>('[role="gridcell"]')
+          );
+          if (refCells.length === 0 || refCells.length !== headers.length) return;
+
+          // Capture native left/width ONCE (before our overrides pollute them).
+          refCells.forEach((cell) => {
+            if (!cell.dataset.origLeft) {
+              const l = parseFloat(cell.style.left);
+              if (!isNaN(l)) cell.dataset.origLeft = String(l);
+            }
+            if (!cell.dataset.origW) {
+              const w = parseFloat(cell.style.width);
+              cell.dataset.origW = String(!isNaN(w) && w > 0 ? w : cell.offsetWidth);
             }
           });
-          const origWidths = headers.map(h => parseFloat(h.dataset.origW || "0"));
-          if (origWidths.some(w => w === 0)) return; // not yet rendered
 
-          // Compute cumulative left offsets (same formula Metabase uses for cells).
-          const origLefts = origWidths.map((_, ci) =>
-            origWidths.slice(0, ci).reduce((s, w) => s + w, 0)
-          );
+          const origLefts = refCells.map(c => parseFloat(c.dataset.origLeft || "0"));
+          const origCellW = refCells.map(c => parseFloat(c.dataset.origW  || "0"));
+          if (origCellW.some(w => w === 0)) return;
 
-          // Grid container total width
-          if (!gridTable.dataset.origGridW) {
-            const nat = gridTable.scrollWidth;
-            if (nat > 10) gridTable.dataset.origGridW = String(nat);
+          // Natural table width = right edge of the last column.
+          const last = origCellW.length - 1;
+          const naturalTableW = origLefts[last] + origCellW[last];
+          if (naturalTableW === 0) return;
+
+          const colScale    = availW / naturalTableW;
+          const scaledLefts = origLefts.map(l => l * colScale);
+          const scaledWidths = origCellW.map(w => w * colScale);
+
+          // Grid fills full width.
+          gridTable.style.setProperty("width",     `${availW}px`, "important");
+          gridTable.style.setProperty("min-width", `${availW}px`, "important");
+
+          // Header rowgroup: not sticky — stays in flow with the data.
+          const headerRowgroup = headers[0].closest<HTMLElement>('[role="rowgroup"]');
+          if (headerRowgroup) {
+            headerRowgroup.style.setProperty("position", "relative", "important");
           }
-          if (gridTable.dataset.origGridW) {
-            const nat = parseFloat(gridTable.dataset.origGridW);
-            gridTable.style.setProperty("width",     `${nat * 2}px`, "important");
-            gridTable.style.setProperty("min-width", `${nat * 2}px`, "important");
-          }
 
-          // Apply 2× to column headers with explicit absolute positioning so the
-          // left values we set are actually used (flex-children ignore left:).
+          // Header row: relative container with explicit height so it doesn't
+          // collapse when all children are position:absolute.
           const headerRow = headers[0].closest<HTMLElement>('[role="row"]');
           if (headerRow) {
-            headerRow.style.setProperty("position", "relative", "important");
-            if (!headerRow.dataset.origW) {
-              const w = headerRow.offsetWidth || headerRow.scrollWidth;
-              if (w > 0) headerRow.dataset.origW = String(w);
-            }
-            if (headerRow.dataset.origW) {
-              headerRow.style.setProperty(
-                "width", `${parseFloat(headerRow.dataset.origW) * 2}px`, "important"
-              );
-            }
+            headerRow.style.setProperty("position",   "relative", "important");
+            headerRow.style.setProperty("width",      `${availW}px`, "important");
+            headerRow.style.setProperty("height",     "45px",     "important");
+            headerRow.style.setProperty("min-height", "45px",     "important");
+            headerRow.style.setProperty("overflow",   "visible",  "important");
           }
+
+          // Column headers at exactly the same left offsets as the data cells.
           headers.forEach((h, ci) => {
-            h.style.setProperty("position",  "absolute",                `important`);
-            h.style.setProperty("left",      `${origLefts[ci] * 2}px`, "important");
-            h.style.setProperty("width",     `${origWidths[ci] * 2}px`, "important");
-            h.style.setProperty("min-width", `${origWidths[ci] * 2}px`, "important");
+            h.style.setProperty("position",    "absolute",              "important");
+            h.style.setProperty("top",         "0",                     "important");
+            h.style.setProperty("left",        `${scaledLefts[ci]}px`, "important");
+            h.style.setProperty("width",       `${scaledWidths[ci]}px`,"important");
+            h.style.setProperty("min-width",   `${scaledWidths[ci]}px`,"important");
+            h.style.setProperty("height",      "45px",                  "important");
+            h.style.setProperty("overflow",    "hidden",                "important");
+            h.style.setProperty("padding-left","8px",                   "important");
+            h.style.setProperty("box-sizing",  "border-box",            "important");
+            h.style.setProperty("display",     "flex",                  "important");
+            h.style.setProperty("align-items", "center",                "important");
+            // Right border doubles as a column divider so customers can trace
+            // a column header down to its data.
+            h.style.setProperty("border-right", "1px solid rgba(0,0,0,0.12)", "important");
           });
 
-          // Apply 2× to data rows and their cells using the same derived positions.
+          // Data rows: same left/width per column index.
           gridTable.querySelectorAll<HTMLElement>('[role="row"]').forEach((row) => {
-            if (row.querySelector('[role="columnheader"]')) return; // skip header row
-
-            if (!row.dataset.origW) {
-              const w = row.offsetWidth || row.scrollWidth;
-              if (w > 0) row.dataset.origW = String(w);
-            }
-            if (row.dataset.origW) {
-              row.style.setProperty("width", `${parseFloat(row.dataset.origW) * 2}px`, "important");
-            }
-
+            if (row.querySelector('[role="columnheader"]')) return;
+            row.style.setProperty("width", `${availW}px`, "important");
             const cells = Array.from(row.querySelectorAll<HTMLElement>('[role="gridcell"]'));
             cells.forEach((cell, ci) => {
-              if (ci >= origWidths.length) return;
-              cell.style.setProperty("width", `${origWidths[ci] * 2}px`, "important");
-              cell.style.setProperty("left",  `${origLefts[ci] * 2}px`, "important");
+              if (ci >= scaledLefts.length) return;
+              cell.style.setProperty("left",         `${scaledLefts[ci]}px`, "important");
+              cell.style.setProperty("width",        `${scaledWidths[ci]}px`,"important");
+              cell.style.setProperty("padding-left", "8px",                  "important");
+              cell.style.setProperty("box-sizing",   "border-box",           "important");
+              // Match the header divider so the column boundary is continuous.
+              cell.style.setProperty("border-right", "1px solid rgba(0,0,0,0.06)", "important");
             });
           });
         });
@@ -735,18 +781,6 @@ export default function DashboardEmbed({
 
       // Scale the table so all columns fit the container without horizontal scrolling.
       if (compact) {
-        // Hide Metabase's filter-parameter bar — district is pre-populated via URL
-        // so the interactive filter chips just take up space the table could use.
-        container
-          .querySelectorAll<HTMLElement>(
-            '[data-testid="dashboard-parameters-widget-container"], ' +
-            '[class*="ParametersWidget"], ' +
-            '[class*="ParameterWidget"], ' +
-            '[class*="DashboardParameterList"], ' +
-            '[class*="DashboardFilterList"]'
-          )
-          .forEach((el) => el.style.setProperty("display", "none", "important"));
-
         const grid = container.querySelector<HTMLElement>('[role="grid"]');
         if (grid) {
           // [role="grid"] typically has overflow:hidden, so its scrollWidth only
@@ -806,7 +840,7 @@ export default function DashboardEmbed({
 
     fix();
     return () => { observer.disconnect(); clearInterval(interval); };
-  }, [dashboardId, compact, stretchColumns]);
+  }, [dashboardId, compact, stretchColumns, hideHeader]);
 
   const outerClass = fill ? "" : "h-[calc(100vh-4rem)] -m-8";
   // Keep embed hidden until the header is confirmed removed.
@@ -818,12 +852,12 @@ export default function DashboardEmbed({
   return (
     <div
       className={outerClass}
-      style={{ height: fill ? "100%" : undefined, overflow: "hidden" }}
+      style={{ height: fill ? "100%" : undefined, overflow: fill ? "auto" : "hidden" }}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
 
-        /* Hide Metabase title + tab bar — our sidebar handles navigation */
+        /* Hide Metabase navigation chrome (tab bar, dashboard title) for all embeds */
         .mb-embed [role="tablist"],
         .mb-embed [data-testid="dashboard-name-heading"],
         .mb-embed [data-testid="dashboard-tabs"],
@@ -833,25 +867,28 @@ export default function DashboardEmbed({
         .mb-embed [class*="DashboardTab__"] {
           display: none !important;
         }
-        /* Column headers: always show full text, centered, Lato 12 px */
-        .mb-embed [role="columnheader"],
-        .mb-embed [role="columnheader"] * {
-          white-space: normal !important;
-          overflow: visible !important;
-          text-overflow: clip !important;
-          height: auto !important;
-          max-height: none !important;
-          word-break: break-word !important;
-          line-height: 1.3 !important;
-          text-align: center !important;
-          justify-content: center !important;
+
+        /* Hide individual card titles only when we own the layout —
+           on content tabs like Ad Samples, card titles are part of the content. */
+        .mb-embed-noheader [data-testid="legend-caption"],
+        .mb-embed-noheader [class*="LegendCaption"],
+        .mb-embed-noheader [class*="CardTitle"],
+        .mb-embed-noheader [class*="DashCard__title"],
+        .mb-embed-noheader [class*="dashcard-title"],
+        .mb-embed-stretch [data-testid="legend-caption"],
+        .mb-embed-stretch [class*="LegendCaption"],
+        .mb-embed-stretch [class*="CardTitle"],
+        .mb-embed-stretch [class*="DashCard__title"],
+        .mb-embed-stretch [class*="dashcard-title"] {
+          display: none !important;
+        }
+        /* Column headers: font + alignment only.
+           Height and whitespace are left entirely to Metabase so the virtual
+           table's pre-computed data-row Y positions stay correct. */
+        .mb-embed [role="columnheader"] {
           font-family: 'Lato', sans-serif !important;
           font-size: 12px !important;
-        }
-        /* Header row itself must also be auto-height so wrapped text isn't clipped */
-        .mb-embed [role="rowgroup"]:first-of-type [role="row"] {
-          height: auto !important;
-          min-height: 36px !important;
+          text-align: center !important;
         }
 
         /* Table data cells — Lato 14 px, centered */
@@ -865,18 +902,56 @@ export default function DashboardEmbed({
           font-size: 14px !important;
         }
 
-        /* stretchColumns: fixed 45px column header row */
+        /* stretchColumns: break sticky on the header rowgroup */
+        .mb-embed-stretch [role="rowgroup"]:first-of-type {
+          position: relative !important;
+        }
+
+        /* stretchColumns: header row — relative container, explicit 45px height
+           so the row doesn't collapse when all column headers are position:absolute */
         .mb-embed-stretch [role="rowgroup"]:first-of-type [role="row"],
         .mb-embed-stretch [role="grid"] > div:first-child [role="row"] {
+          position: relative !important;
           height: 45px !important;
           min-height: 45px !important;
           max-height: 45px !important;
-          overflow: hidden !important;
+          overflow: visible !important;
         }
 
         /* stretchColumns: let JS control exact pixel widths/heights on grid + cards */
         .mb-embed-stretch .react-grid-layout {
           overflow: visible !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        /* stretchColumns: remove left/right padding from Metabase wrappers
+           so the grid sits flush at the left edge.
+           overflow:visible is intentional — hidden breaks position:sticky
+           on the column header row. */
+        .mb-embed-stretch > div,
+        .mb-embed-stretch > div > div,
+        .mb-embed-stretch > div > div > div {
+          padding-left:  0 !important;
+          padding-right: 0 !important;
+          margin-left:   0 !important;
+          margin-right:  0 !important;
+          overflow:      visible !important;
+        }
+
+        /* stretchColumns: hide individual card titles (table fills the card) */
+        .mb-embed-stretch [data-testid="legend-caption"],
+        .mb-embed-stretch [class*="LegendCaption"],
+        .mb-embed-stretch [class*="CardTitle"],
+        .mb-embed-stretch [class*="DashCard__title"],
+        .mb-embed-stretch [class*="dashcard-title"] {
+          display: none !important;
+        }
+
+        /* stretchColumns: remove card inner padding so table reaches the edges */
+        .mb-embed-stretch [class*="DashCard"],
+        .mb-embed-stretch [class*="dashcard"] {
+          padding: 0 !important;
         }
 
 
@@ -889,10 +964,27 @@ export default function DashboardEmbed({
           font-size: 2rem !important;
           line-height: 1.2 !important;
         }
+
+        /* hideHeader mode: remove Metabase filter bar and card chrome so the
+           table view matches the clean look of InteractiveQuestion embeds. */
+        .mb-embed-noheader [data-testid="dashboard-parameters-widget-container"],
+        .mb-embed-noheader [class*="ParametersWidget"],
+        .mb-embed-noheader [class*="ParameterWidget"],
+        .mb-embed-noheader [class*="DashboardParameterList"],
+        .mb-embed-noheader [class*="DashboardFilterList"] {
+          display: none !important;
+        }
+        .mb-embed-noheader [class*="DashCard"],
+        .mb-embed-noheader [class*="dashcard"] {
+          box-shadow: none !important;
+          border: none !important;
+          padding: 0 !important;
+          background: transparent !important;
+        }
       `}</style>
       <div
         ref={containerRef}
-        className={`mb-embed${stretchColumns ? " mb-embed-stretch" : ""}`}
+        className={`mb-embed${stretchColumns ? " mb-embed-stretch" : ""}${hideHeader ? " mb-embed-noheader" : ""}`}
         style={{ height: "100%", visibility }}
       >
         <InteractiveDashboard

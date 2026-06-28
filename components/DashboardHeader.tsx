@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Clock, Calendar, Activity, CalendarSearch, X } from "lucide-react";
+import { Clock, Calendar, Activity, CalendarSearch, X, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useFilter } from "./FilterContext";
 
@@ -16,7 +16,7 @@ const CAMPAIGN_PERIODS: Record<string, string> = {
 
 export default function DashboardHeader({ legend }: { legend?: string }) {
   const [lastUpdated, setLastUpdated] = useState("");
-  const { dateStart, dateEnd, setDateStart, setDateEnd, campaign, setCampaign } = useFilter();
+  const { dateStart, dateEnd, setDateStart, setDateEnd, campaign, setCampaign, district, setDistrict } = useFilter();
 
   useEffect(() => {
     const now = new Date();
@@ -77,7 +77,7 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
       </div>
 
       {/* Info cards row */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-5 gap-4">
         {/* Last Updated */}
         <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
           <div className="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
@@ -167,6 +167,36 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
                 placeholder="End date"
               />
             </div>
+          </div>
+        </div>
+
+        {/* District search */}
+        <div className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-xl p-4">
+          <div className="w-11 h-11 bg-indigo-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Search size={20} className="text-indigo-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                District
+              </p>
+              {district && (
+                <button
+                  onClick={() => setDistrict("")}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Clear district"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              placeholder="Search district…"
+              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 w-full text-gray-700"
+            />
           </div>
         </div>
       </div>

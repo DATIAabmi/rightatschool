@@ -12,6 +12,9 @@ interface FilterState {
   /** Selected ABMi campaign key, e.g. "C5: Nov 2025 - May 2026". Empty = Metabase default. */
   campaign: string;
   setCampaign: (c: string) => void;
+  /** District search string — passed as the Metabase district parameter. Empty = all districts. */
+  district: string;
+  setDistrict: (d: string) => void;
 }
 
 const FilterContext = createContext<FilterState>({
@@ -22,19 +25,23 @@ const FilterContext = createContext<FilterState>({
   metabaseDateRange: undefined,
   campaign: "",
   setCampaign: () => {},
+  district: "",
+  setDistrict: () => {},
 });
 
 export function FilterProvider({ children }: { children: ReactNode }) {
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
-  const [campaign, setCampaign] = useState("");
+  // Question 405 requires ABM_Campaign — default to current campaign so it never sends empty.
+  const [campaign, setCampaign] = useState("C5: Nov 2025 - May 2026");
+  const [district, setDistrict] = useState("");
 
   const metabaseDateRange =
     dateStart && dateEnd ? `${dateStart}~${dateEnd}` : undefined;
 
   return (
     <FilterContext.Provider
-      value={{ dateStart, dateEnd, setDateStart, setDateEnd, metabaseDateRange, campaign, setCampaign }}
+      value={{ dateStart, dateEnd, setDateStart, setDateEnd, metabaseDateRange, campaign, setCampaign, district, setDistrict }}
     >
       {children}
     </FilterContext.Provider>

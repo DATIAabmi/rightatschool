@@ -21,11 +21,26 @@ function AdSamplesEmbed() {
   return (
     <>
       <style>{`
+        /* Hide tab navigation — we're pinned to tab 104 */
         .ad-samples-embed [data-testid="dashboard-tabs"],
         .ad-samples-embed [role="tablist"],
         .ad-samples-embed [class*="DashboardTabs"],
         .ad-samples-embed [class*="Tab__"] {
           display: none !important;
+        }
+        /* Hide native Metabase filter bar — campaign comes from our DashboardHeader */
+        .ad-samples-embed [data-testid="dashboard-parameters-widget-container"],
+        .ad-samples-embed [class*="ParametersWidget"],
+        .ad-samples-embed [class*="parameters-widget"],
+        .ad-samples-embed [class*="ParameterWidget"] {
+          display: none !important;
+        }
+        /* Remove inner padding/margin so content fills the space */
+        .ad-samples-embed [class*="DashboardBody"],
+        .ad-samples-embed [class*="dashboard-body"],
+        .ad-samples-embed [data-testid="dashboard-grid"] {
+          padding-top: 0 !important;
+          margin-top: 0 !important;
         }
       `}</style>
       <div className="ad-samples-embed" style={{ height: "100%", width: "100%" }}>

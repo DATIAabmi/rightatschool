@@ -31,25 +31,31 @@ function hideTabBarAndHeader(container: HTMLElement) {
     }
   }
 
-  if (headerBottom > 0) {
-    // Hide every card whose TOP is within the header row.
-    // Logo cards are taller than text cards so their bottom exceeds the
-    // threshold, but they share the same top — checking top catches them.
+  const headerZone = headerBottom > 0 ? headerBottom : 0;
+
+  // Pass 1: hide cards whose top is within the header text row
+  if (headerZone > 0) {
     for (const card of cards) {
       const rect = card.getBoundingClientRect();
       const parentRect = container.getBoundingClientRect();
-      if (rect.top - parentRect.top < headerBottom) {
+      if (rect.top - parentRect.top < headerZone) {
         (card as HTMLElement).style.visibility = "hidden";
       }
     }
-  } else {
-    // Fallback: hide small image-only cards (logos) at the very top
-    for (const card of cards) {
-      const text = (card.textContent ?? "").trim();
-      const hasImg = card.querySelector("img") !== null;
-      if (hasImg && text.length < 10 && card.offsetHeight < 150) {
-        (card as HTMLElement).style.visibility = "hidden";
-      }
+  }
+
+  // Pass 2: catch logo-only cards (image, no meaningful text) that sit just
+  // below the text cards — e.g. the DATIA K12 logo card positioned slightly lower.
+  const scanZone = Math.max(headerZone * 2, 280);
+  for (const card of cards) {
+    if ((card as HTMLElement).style.visibility === "hidden") continue;
+    const text = (card.textContent ?? "").trim();
+    const hasImg = card.querySelector("img") !== null;
+    if (!hasImg || text.length > 20) continue;
+    const rect = card.getBoundingClientRect();
+    const parentRect = container.getBoundingClientRect();
+    if (rect.top - parentRect.top < scanZone) {
+      (card as HTMLElement).style.visibility = "hidden";
     }
   }
 }

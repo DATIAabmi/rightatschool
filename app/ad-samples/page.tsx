@@ -8,6 +8,50 @@ import { useFilter } from "@/components/FilterContext";
 
 const TAB_LABEL = "Ad Samples";
 
+function hideTabBarAndHeader(container: HTMLElement) {
+  // 1. Hide the tab bar — click already happened so this is safe
+  container.querySelectorAll<HTMLElement>(
+    '[role="tablist"], [data-testid="dashboard-tabs"], [class*="DashboardTabs"]'
+  ).forEach((el) => { el.style.display = "none"; });
+
+  // 2. Hide the ABMi Always On branding header cards
+  const cards = container.querySelectorAll<HTMLElement>(
+    '[class*="DashCard"], [class*="dashcard"], [data-testid*="dashcard"]'
+  );
+
+  // Find the Y bottom of the branding row (cards containing known header text)
+  // visibility:hidden keeps layout so getBoundingClientRect() works here
+  let headerBottom = 0;
+  for (const card of cards) {
+    const text = (card.textContent ?? "").trim();
+    if (text.includes("ABMi Always On") || text.includes("Last Update")) {
+      const rect = card.getBoundingClientRect();
+      const parentRect = container.getBoundingClientRect();
+      headerBottom = Math.max(headerBottom, rect.bottom - parentRect.top);
+    }
+  }
+
+  if (headerBottom > 0) {
+    // Hide every card whose bottom sits within the header row
+    for (const card of cards) {
+      const rect = card.getBoundingClientRect();
+      const parentRect = container.getBoundingClientRect();
+      if (rect.bottom - parentRect.top <= headerBottom + 20) {
+        (card as HTMLElement).style.visibility = "hidden";
+      }
+    }
+  } else {
+    // Fallback: hide small image-only cards (logos) at the very top
+    for (const card of cards) {
+      const text = (card.textContent ?? "").trim();
+      const hasImg = card.querySelector("img") !== null;
+      if (hasImg && text.length < 10 && card.offsetHeight < 150) {
+        (card as HTMLElement).style.visibility = "hidden";
+      }
+    }
+  }
+}
+
 function AdSamplesEmbed() {
   const { campaign } = useFilter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,7 +76,6 @@ function AdSamplesEmbed() {
     const tryClick = () => {
       if (done) return;
 
-      // Search all button/anchor/role=tab elements for "Ad Samples"
       const candidates = container.querySelectorAll<HTMLElement>(
         '[role="tab"], button, a'
       );
@@ -40,19 +83,25 @@ function AdSamplesEmbed() {
         if (el.textContent?.trim() === TAB_LABEL) {
           el.click();
           done = true;
-          // Give React/Metabase 800ms to swap the tab content, then show
-          setTimeout(() => setReady(true), 800);
+
+          // Wait for Metabase to swap the tab content, then clean up and reveal
+          setTimeout(() => {
+            hideTabBarAndHeader(container);
+            setReady(true);
+          }, 1200);
+
           return;
         }
       }
     };
 
-    // Poll every 150ms — tab buttons appear async after SDK renders
     const interval = setInterval(tryClick, 150);
-
-    // Safety: show after 8 s even if tab not found
     const fallback = setTimeout(() => {
-      if (!done) { done = true; setReady(true); }
+      if (!done) {
+        done = true;
+        if (containerRef.current) hideTabBarAndHeader(containerRef.current);
+        setReady(true);
+      }
     }, 8000);
 
     return () => { clearInterval(interval); clearTimeout(fallback); };

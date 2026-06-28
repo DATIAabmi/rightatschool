@@ -32,11 +32,13 @@ function hideTabBarAndHeader(container: HTMLElement) {
   }
 
   if (headerBottom > 0) {
-    // Hide every card whose bottom sits within the header row
+    // Hide every card whose TOP is within the header row.
+    // Logo cards are taller than text cards so their bottom exceeds the
+    // threshold, but they share the same top — checking top catches them.
     for (const card of cards) {
       const rect = card.getBoundingClientRect();
       const parentRect = container.getBoundingClientRect();
-      if (rect.bottom - parentRect.top <= headerBottom + 20) {
+      if (rect.top - parentRect.top < headerBottom) {
         (card as HTMLElement).style.visibility = "hidden";
       }
     }

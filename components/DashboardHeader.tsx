@@ -102,7 +102,6 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
               onChange={(e) => setCampaign(e.target.value)}
               className="text-sm font-bold text-gray-800 bg-transparent border-none outline-none w-full cursor-pointer truncate"
             >
-              <option value="">All Campaigns</option>
               {Object.keys(CAMPAIGN_PERIODS).map((key) => (
                 <option key={key} value={key}>{key}</option>
               ))}

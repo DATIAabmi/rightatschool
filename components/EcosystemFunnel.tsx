@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { StaticQuestion } from "@metabase/embedding-sdk-react";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, CalendarSearch } from "lucide-react";
+import { useFilter } from "./FilterContext";
 
 const CAMPAIGNS = [
   "C6: April - May 2026",
@@ -56,6 +57,41 @@ const STAGES: FunnelStage[] = [
 const STEP = 36;
 const CARD_W = 310;
 const ROW_H = 108;
+
+function InlineDateFilter() {
+  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
+  const hasDate = dateStart || dateEnd;
+
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+      <CalendarSearch size={14} className="text-orange-400 flex-shrink-0" />
+      <input
+        type="date"
+        value={dateStart}
+        onChange={(e) => setDateStart(e.target.value)}
+        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer"
+        title="Start date"
+      />
+      <span className="text-gray-300 text-xs">–</span>
+      <input
+        type="date"
+        value={dateEnd}
+        onChange={(e) => setDateEnd(e.target.value)}
+        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer"
+        title="End date"
+      />
+      {hasDate && (
+        <button
+          onClick={() => { setDateStart(""); setDateEnd(""); }}
+          className="text-gray-300 hover:text-gray-500 transition-colors ml-0.5"
+          title="Clear dates"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </div>
+  );
+}
 
 function CampaignDropdown({
   value,
@@ -173,7 +209,10 @@ export default function EcosystemFunnel({
             Program Metrics Summary
           </h2>
         </div>
-        <CampaignDropdown value={campaign} onChange={onCampaignChange} />
+        <div className="flex items-center gap-2">
+          <CampaignDropdown value={campaign} onChange={onCampaignChange} />
+          <InlineDateFilter />
+        </div>
       </div>
 
       {/* Funnel rows */}

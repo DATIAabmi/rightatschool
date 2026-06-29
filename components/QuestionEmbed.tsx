@@ -1,6 +1,6 @@
 "use client";
 
-import { InteractiveQuestion } from "@metabase/embedding-sdk-react";
+import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import { useFilter } from "./FilterContext";
 
 interface Props {
@@ -9,7 +9,6 @@ interface Props {
   districtSqlKey?: string;
   dateStartSqlKey?: string;
   dateEndSqlKey?: string;
-  /** Extra static SQL parameters passed as-is (e.g. { District_Domain: "", State: "" }). */
   staticParams?: Record<string, string>;
 }
 
@@ -44,15 +43,12 @@ export default function QuestionEmbed({
 
   return (
     <div style={{ height: "100%", width: "100%" }}>
-      <InteractiveQuestion
+      <StaticQuestion
         key={JSON.stringify(sqlParameters)}
         questionId={questionId}
         initialSqlParameters={sqlParameters}
-        withTitle={false}
-        style={{ height: "100%" }}
-      >
-        <InteractiveQuestion.QuestionVisualization height="100%" />
-      </InteractiveQuestion>
+        height="100%"
+      />
     </div>
   );
 }

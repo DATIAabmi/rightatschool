@@ -211,7 +211,6 @@ export default function Page() {
         <div style={{ flex: 1, minHeight: 0 }}>
           <QuestionEmbed
             questionId={405}
-            campaignSqlKey="ABM_Campaign"
             districtSqlKey="District"
             staticParams={staticParams}
           />

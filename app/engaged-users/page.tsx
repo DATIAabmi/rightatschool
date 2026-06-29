@@ -181,8 +181,9 @@ export default function Page() {
   const [state, setState] = useState("");
 
   const staticParams: Record<string, string> = {};
-  if (domain)   staticParams["District_Domain"] = domain;
-  if (state)    staticParams["State"] = state;
+  if (domain)    staticParams["District_Domain"] = domain;
+  if (state)     staticParams["State"] = state;
+  if (district)  staticParams["District"] = district;
 
   return (
     <MetabaseProviderWrapper>
@@ -211,7 +212,6 @@ export default function Page() {
         <div style={{ flex: 1, minHeight: 0 }}>
           <QuestionEmbed
             questionId={405}
-            districtSqlKey="District"
             staticParams={staticParams}
           />
         </div>

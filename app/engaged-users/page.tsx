@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, X } from "lucide-react";
+import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import DashboardHeader from "@/components/DashboardHeader";
-import QuestionEmbed from "@/components/QuestionEmbed";
 
 // ─── Live-search combobox (district / domain) ─────────────────────────────────
 
@@ -235,10 +235,15 @@ export default function Page() {
   const [domain, setDomain] = useState("");
   const [state, setState] = useState("");
 
-  const staticParams: Record<string, string> = {};
-  if (domain)   staticParams["District_Domain"] = domain;
-  if (state)    staticParams["State"] = state;
-  if (district) staticParams["District"] = district;
+  // Build SQL params — only include non-empty values so Metabase omits
+  // the optional [[ ]] blocks for unset filters instead of IN ('').
+  const sqlParams: Record<string, string> = {};
+  if (district) sqlParams["District"] = district;
+  if (domain)   sqlParams["District_Domain"] = domain;
+  if (state)    sqlParams["State"] = state;
+
+  // Stringify key forces StaticQuestion to remount when any filter changes.
+  const filterKey = JSON.stringify(sqlParams);
 
   return (
     <MetabaseProviderWrapper>
@@ -265,9 +270,11 @@ export default function Page() {
           />
         </div>
         <div style={{ flex: 1, minHeight: 0 }}>
-          <QuestionEmbed
+          <StaticQuestion
+            key={filterKey}
             questionId={405}
-            staticParams={staticParams}
+            initialSqlParameters={sqlParams}
+            height="100%"
           />
         </div>
       </div>

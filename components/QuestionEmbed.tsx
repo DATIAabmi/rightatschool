@@ -44,9 +44,8 @@ export default function QuestionEmbed({
   return (
     <div style={{ height: "100%", width: "100%" }}>
       <StaticQuestion
-        key={JSON.stringify(sqlParameters)}
         questionId={questionId}
-        initialSqlParameters={sqlParameters}
+        sqlParameters={sqlParameters}
         height="100%"
       />
     </div>

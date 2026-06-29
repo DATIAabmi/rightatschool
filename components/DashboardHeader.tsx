@@ -115,22 +115,6 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
           </div>
         </div>
 
-        {/* Program Status */}
-        <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
-          <div className="w-11 h-11 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <Activity size={20} className="text-purple-500" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-0.5">
-              Program Status
-            </p>
-            <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full mt-0.5">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              Active
-            </span>
-          </div>
-        </div>
-
         {/* Date Filter */}
         <div className="flex items-start gap-3 bg-gray-50 border border-gray-100 rounded-xl p-4">
           <div className="w-11 h-11 bg-orange-50 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -167,6 +151,22 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
                 placeholder="End date"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Program Status */}
+        <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
+          <div className="w-11 h-11 bg-purple-50 rounded-full flex items-center justify-center flex-shrink-0">
+            <Activity size={20} className="text-purple-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-0.5">
+              Program Status
+            </p>
+            <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full mt-0.5">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+              Active
+            </span>
           </div>
         </div>
 

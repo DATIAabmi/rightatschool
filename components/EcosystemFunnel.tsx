@@ -157,13 +157,12 @@ function CampaignDropdown({
   );
 }
 
-export default function EcosystemFunnel({
-  campaign,
-  onCampaignChange,
-}: {
-  campaign: string | null;
-  onCampaignChange: (v: string | null) => void;
-}) {
+const DEFAULT_CAMPAIGN = "C5: Nov 2025 - May 2026";
+
+export default function EcosystemFunnel() {
+  // Own internal campaign state — isolated from FilterContext so selecting
+  // "All campaigns" here doesn't clear the global campaign used by other tabs.
+  const [campaign, setCampaign] = useState<string | null>(DEFAULT_CAMPAIGN);
   const sqlParams = campaign ? { Abmi_Campaign: campaign } : undefined;
 
   return (
@@ -210,7 +209,7 @@ export default function EcosystemFunnel({
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <CampaignDropdown value={campaign} onChange={onCampaignChange} />
+          <CampaignDropdown value={campaign} onChange={setCampaign} />
           <InlineDateFilter />
         </div>
       </div>

@@ -7,12 +7,12 @@ import ChannelPerformanceChart from "@/components/ChannelPerformanceChart";
 import { useFilter } from "@/components/FilterContext";
 
 function HomeContent() {
-  const { campaign, setCampaign } = useFilter();
+  const { campaign } = useFilter();
 
   return (
     <div className="flex gap-6 items-stretch">
       <div className="w-1/2 min-w-0">
-        <EcosystemFunnel campaign={campaign} onCampaignChange={setCampaign} />
+        <EcosystemFunnel />
       </div>
       <div className="w-1/2 min-w-0">
         <ChannelPerformanceChart campaign={campaign} />

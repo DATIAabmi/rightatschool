@@ -33,11 +33,14 @@ export default function QuestionEmbed({
     );
   }
 
-  const sqlParameters: Record<string, string> = { ...staticParams };
-  if (campaignSqlKey)  sqlParameters[campaignSqlKey]  = campaign;
-  if (districtSqlKey)  sqlParameters[districtSqlKey]  = district;
-  if (dateStartSqlKey) sqlParameters[dateStartSqlKey] = dateStart;
-  if (dateEndSqlKey)   sqlParameters[dateEndSqlKey]   = dateEnd;
+  // Only include params with non-empty values so Metabase's [[ ]] optional blocks
+  // omit the condition instead of running IN ('') which matches zero rows.
+  const sqlParameters: Record<string, string> = {};
+  Object.entries(staticParams ?? {}).forEach(([k, v]) => { if (v) sqlParameters[k] = v; });
+  if (campaignSqlKey)              sqlParameters[campaignSqlKey]  = campaign;
+  if (districtSqlKey && district)  sqlParameters[districtSqlKey]  = district;
+  if (dateStartSqlKey && dateStart) sqlParameters[dateStartSqlKey] = dateStart;
+  if (dateEndSqlKey && dateEnd)     sqlParameters[dateEndSqlKey]   = dateEnd;
 
   return (
     <div style={{ height: "100%", width: "100%" }}>

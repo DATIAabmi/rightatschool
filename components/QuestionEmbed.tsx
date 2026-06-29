@@ -4,16 +4,13 @@ import { InteractiveQuestion } from "@metabase/embedding-sdk-react";
 import { useFilter } from "./FilterContext";
 
 interface Props {
-  /** Metabase question ID to embed. */
   questionId: number;
-  /** SQL template tag name for the ABMi Campaign filter (e.g. "ABM_Campaign"). */
   campaignSqlKey?: string;
-  /** SQL template tag name for the District filter (e.g. "topic_district"). */
   districtSqlKey?: string;
-  /** SQL template tag name for the date-range start (e.g. "Last_Updated.start"). */
   dateStartSqlKey?: string;
-  /** SQL template tag name for the date-range end (e.g. "Last_Updated.end"). */
   dateEndSqlKey?: string;
+  /** Extra static SQL parameters passed as-is (e.g. { District_Domain: "", State: "" }). */
+  staticParams?: Record<string, string>;
 }
 
 export default function QuestionEmbed({
@@ -22,6 +19,7 @@ export default function QuestionEmbed({
   districtSqlKey,
   dateStartSqlKey,
   dateEndSqlKey,
+  staticParams,
 }: Props) {
   const { campaign, district, dateStart, dateEnd } = useFilter();
 
@@ -35,7 +33,7 @@ export default function QuestionEmbed({
     );
   }
 
-  const sqlParameters: Record<string, string> = {};
+  const sqlParameters: Record<string, string> = { ...staticParams };
   if (campaignSqlKey)  sqlParameters[campaignSqlKey]  = campaign;
   if (districtSqlKey)  sqlParameters[districtSqlKey]  = district;
   if (dateStartSqlKey) sqlParameters[dateStartSqlKey] = dateStart;

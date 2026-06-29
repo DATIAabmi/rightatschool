@@ -25,7 +25,8 @@ export default function Page() {
           <QuestionEmbed
             questionId={405}
             campaignSqlKey="ABM_Campaign"
-            districtSqlKey="topic_district"
+            districtSqlKey="District"
+            staticParams={{ District_Domain: "", State: "" }}
           />
         </div>
       </div>

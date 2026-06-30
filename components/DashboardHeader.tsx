@@ -1,22 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { Clock, Calendar } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useFilter } from "./FilterContext";
-
-const CAMPAIGN_PERIODS: Record<string, string> = {
-  "C6: April - May 2026": "Apr 2026 – May 2026",
-  "C5: Nov 2025 - May 2026": "Nov 2025 – May 2026",
-  "C4: Aug - Sept 2025": "Aug 2025 – Sep 2025",
-  "C3: June 2025": "Jun 2025",
-  "C2: May - June 2025": "May 2025 – Jun 2025",
-  "C1: April - May 2025": "Apr 2025 – May 2025",
-};
 
 export default function DashboardHeader({ legend }: { legend?: string }) {
   const [lastUpdated, setLastUpdated] = useState("");
-  const { campaign, setCampaign } = useFilter();
 
   useEffect(() => {
     const now = new Date();
@@ -72,9 +61,9 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
       </div>
 
       {/* Info cards row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="flex">
         {/* Last Updated */}
-        <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
+        <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4 w-full">
           <div className="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
             <Clock size={20} className="text-blue-500" />
           </div>
@@ -87,28 +76,6 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             </p>
           </div>
         </div>
-
-        {/* ABMi Campaign selector */}
-        <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4">
-          <div className="w-11 h-11 bg-green-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <Calendar size={20} className="text-green-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-0.5">
-              ABMi Campaign
-            </p>
-            <select
-              value={campaign}
-              onChange={(e) => setCampaign(e.target.value)}
-              className="text-sm font-bold text-gray-800 bg-transparent border-none outline-none w-full cursor-pointer truncate"
-            >
-              {Object.keys(CAMPAIGN_PERIODS).map((key) => (
-                <option key={key} value={key}>{key}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
       </div>
 
       {legend && (

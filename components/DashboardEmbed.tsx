@@ -71,6 +71,10 @@ interface Props {
    * instead of using their natural column widths.
    */
   stretchColumns?: boolean;
+  /**
+   * Dashboard parameter slugs to hide from the Metabase filter bar.
+   */
+  hiddenParameters?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -270,6 +274,7 @@ export default function DashboardEmbed({
   campaignParamSlug,
   districtParamSlug,
   stretchColumns,
+  hiddenParameters,
 }: Props) {
   const { metabaseDateRange, campaign, district } = useFilter();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -369,9 +374,18 @@ export default function DashboardEmbed({
 
     setHeaderReady(false);
 
+    let revealed = false;
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      // Double rAF: wait for the browser to paint the header-hiding transform
+      // before making the embed visible, eliminating the branding-header flash.
+      requestAnimationFrame(() => requestAnimationFrame(() => setHeaderReady(true)));
+    };
+
     const tryHide = () => {
       const ok = hideMetabaseHeaderCards(container);
-      if (ok) setHeaderReady(true);
+      if (ok) reveal();
       return ok;
     };
 
@@ -1002,6 +1016,7 @@ export default function DashboardEmbed({
           {...(tabId !== undefined ? { dashboardTabId: tabId } : {})}
           initialParameters={initialParameters}
           withTitle={false}
+          {...(hiddenParameters ? { hiddenParameters } : {})}
           style={{ height: "100%" }}
         />
       </div>

@@ -17,6 +17,7 @@ export default function Page() {
             autoTab="Content Insights"
             dateParamSlug="select_date_range"
             campaignParamSlug="abmi_campaign_"
+            hiddenParameters={["channel"]}
             fill
           />
         </div>

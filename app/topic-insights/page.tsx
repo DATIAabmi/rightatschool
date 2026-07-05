@@ -294,6 +294,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
+const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain"]);
 
 function DataTable({ cols, rows, sort, onSort }: {
   cols: Col[]; rows: Row[];
@@ -317,16 +318,16 @@ function DataTable({ cols, rows, sort, onSort }: {
       <table className="text-sm border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="px-3 py-2 text-right w-10 shrink-0 font-semibold" style={{ color: "#509EE3" }}>#</th>
+            <th className="px-3 py-2 text-center w-10 shrink-0 font-semibold" style={{ color: "#509EE3" }}>#</th>
             {cols.map((col, j) => {
-              const isNum = NUMBER_TYPES.has(col.base_type);
+              const isLeft = LEFT_ALIGN_COLS.has(col.display_name);
               const active = sort.col === j;
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 ${isNum ? "text-right" : "text-left"}`}
+                  className={`px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 ${isLeft ? "text-left" : "text-center"}`}
                   style={{ color: "#509EE3" }}>
-                  <span className="inline-flex items-center gap-1">
+                  <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
                     {col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
                   </span>
@@ -338,11 +339,12 @@ function DataTable({ cols, rows, sort, onSort }: {
         <tbody>
           {sorted.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td className="px-3 py-1.5 text-right text-gray-400 text-xs">{i + 1}</td>
+              <td className="px-3 py-1.5 text-center text-gray-400 text-xs">{i + 1}</td>
               {row.map((cell, j) => {
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
+                const isLeft = LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
                 return (
-                  <td key={j} className={`px-4 py-1.5 ${isNum ? "text-right tabular-nums" : "text-left"} text-gray-800`}>
+                  <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums" : ""} text-gray-800`}>
                     {cell === null || cell === undefined ? "" : String(cell)}
                   </td>
                 );

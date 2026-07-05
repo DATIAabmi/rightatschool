@@ -56,10 +56,16 @@ export async function GET(req: NextRequest) {
   }
 
   const data = await res.json();
-  const DISPLAY_NAMES: Record<string, string> = { Job_Function: "Job Function", District_domain: "District Domain" };
+  const normalizeColName = (name: string, displayName: string): string => {
+    const key = name.toLowerCase();
+    if (key === "job_function") return "Job Function";
+    if (key.includes("district") && key.includes("domain")) return "District Domain";
+    if (displayName.toLowerCase().includes("district") && displayName.toLowerCase().includes("domain")) return "District Domain";
+    return displayName;
+  };
   return NextResponse.json({
     cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
-      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
+      display_name: normalizeColName(c.name, c.display_name),
       base_type: c.base_type,
     })),
     rows: data.data?.rows ?? [],

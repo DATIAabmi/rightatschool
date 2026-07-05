@@ -149,9 +149,10 @@ interface SortState { col: number; dir: SortDir }
 
 const SORT_COLUMNS = [
   { label: "District",        index: 0 },
-  { label: "State",           index: 2 },
-  { label: "Job Function",    index: 3 },
-  { label: "Total Downloads", index: 4 },
+  { label: "Campaign",        index: 2 },
+  { label: "State",           index: 3 },
+  { label: "Job Function",    index: 4 },
+  { label: "Total Downloads", index: 5 },
 ];
 
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {
@@ -270,7 +271,7 @@ function LeadsInsightsContent() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [sort, setSort] = useState<SortState>({ col: 4, dir: "desc" });
+  const [sort, setSort] = useState<SortState>({ col: 5, dir: "desc" });
 
   const fetchData = useCallback(() => {
     setLoading(true);

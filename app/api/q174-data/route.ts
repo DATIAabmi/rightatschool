@@ -68,11 +68,20 @@ export async function GET(req: NextRequest) {
   }
 
   const data = await res.json();
-  return NextResponse.json({
-    cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+
+  const baseCols: { display_name: string; base_type: string }[] = (data.data?.cols ?? []).map(
+    (c: { name: string; display_name: string; base_type: string }) => ({
       display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
       base_type: c.base_type,
-    })),
-    rows: data.data?.rows ?? [],
-  });
+    })
+  );
+  const baseRows: unknown[][] = data.data?.rows ?? [];
+
+  // Inject Campaign column at index 2 (after District, Domain)
+  const campaignCol = { display_name: "Campaign", base_type: "type/Text" };
+  const campaignVal = campaign || "All";
+  const cols = [baseCols[0], baseCols[1], campaignCol, ...baseCols.slice(2)];
+  const rows = baseRows.map((row) => [row[0], row[1], campaignVal, ...row.slice(2)]);
+
+  return NextResponse.json({ cols, rows });
 }

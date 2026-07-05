@@ -230,7 +230,8 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const LEFT_ALIGN_COLS = new Set(["District", "Domain"]);
+// Columns 0 (District) and 1 (Domain) are left-aligned; all others center
+const isLeftCol = (j: number) => j === 0 || j === 1;
 const SCORE_TREND_COL = 11;
 
 function rowBg(row: Row): string {
@@ -269,13 +270,13 @@ function DataTable({
             <th className="px-3 py-2 w-12 text-xs font-bold" style={{ color: "#509EE3", textAlign: "center" }}>#</th>
             {cols.map((col, j) => {
               const active = sort.col === j;
-              const isLeft = LEFT_ALIGN_COLS.has(col.display_name);
+              const left = isLeftCol(j);
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                   className="px-4 py-2 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70"
-                  style={{ color: "#509EE3", textAlign: isLeft ? "left" : "center" }}>
-                  <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
+                  style={{ color: "#509EE3", textAlign: left ? "left" : "center" }}>
+                  <span className={`inline-flex items-center gap-1 ${left ? "justify-start" : "justify-center"}`}>
                     {col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
                   </span>
@@ -292,9 +293,9 @@ function DataTable({
                 <td className="px-3 py-1.5 text-gray-500 text-xs font-medium" style={{ textAlign: "center" }}>{i + 1}</td>
                 {row.map((cell, j) => {
                   const display = cell === null || cell === undefined ? "" : String(cell);
-                  const isLeft = LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
+                  const left = isLeftCol(j);
                   return (
-                    <td key={j} className="px-4 py-1.5 tabular-nums text-gray-800" style={{ textAlign: isLeft ? "left" : "center" }}>
+                    <td key={j} className={`px-4 py-1.5 text-gray-800 ${left ? "text-left" : "text-center tabular-nums"}`}>
                       {j === 0 ? (
                         <button onClick={() => onDistrictClick(display)}
                           className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
@@ -329,6 +330,8 @@ function EngagedUsersContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [allRows, setAllRows] = useState<Row[]>([]);
+
   const fetchData = useCallback(() => {
     setLoading(true);
     setError("");
@@ -342,7 +345,7 @@ function EngagedUsersContent() {
       .then((d) => {
         if (d.error) throw new Error(d.error);
         setCols(d.cols);
-        setRows(d.rows);
+        setAllRows(d.rows);
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load data"); setLoading(false); });
@@ -350,8 +353,14 @@ function EngagedUsersContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Re-fetch when campaign/date changes (Q405 doesn't use campaign param, but log for awareness)
-  useEffect(() => { fetchData(); }, [campaign, dateStart, dateEnd, fetchData]);
+  // Client-side campaign filter (card 405 has no template tags for server-side filtering)
+  useEffect(() => {
+    if (!campaign) {
+      setRows(allRows);
+    } else {
+      setRows(allRows.filter((row) => String(row[3] ?? "") === campaign));
+    }
+  }, [campaign, allRows]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,

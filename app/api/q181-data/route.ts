@@ -68,11 +68,16 @@ export async function GET(req: NextRequest) {
   }
 
   const data = await res.json();
+  const CAMPAIGN_COL = 2;
   return NextResponse.json({
     cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
       display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
       base_type: c.base_type,
     })),
-    rows: data.data?.rows ?? [],
+    rows: (data.data?.rows ?? []).map((row: unknown[]) =>
+      row.map((val, j) =>
+        j === CAMPAIGN_COL && typeof val === "string" ? val.split(":")[0].trim() : val
+      )
+    ),
   });
 }

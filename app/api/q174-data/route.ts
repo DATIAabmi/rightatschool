@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
   // Inject Campaign column at index 2 (after District, Domain)
   const campaignCol = { display_name: "Campaign", base_type: "type/Text" };
-  const campaignVal = campaign || "All";
+  const campaignVal = campaign ? campaign.split(":")[0].trim() : "All";
   const cols = [baseCols[0], baseCols[1], campaignCol, ...baseCols.slice(2)];
   const rows = baseRows.map((row) => [row[0], row[1], campaignVal, ...row.slice(2)]);
 

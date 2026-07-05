@@ -324,7 +324,7 @@ function DataTable({ cols, rows, sort, onSort }: {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function PersonaInsightsContent() {
-  const { dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState("");
   const [filterState, setFilterState] = useState("");
@@ -335,6 +335,8 @@ function PersonaInsightsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 5, dir: "desc" });
+
+  const [allRows, setAllRows] = useState<Row[]>([]);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -351,11 +353,18 @@ function PersonaInsightsContent() {
       .then((d) => {
         if (d.error) throw new Error(d.error);
         setCols(d.cols);
-        setRows(d.rows);
+        setAllRows(d.rows);
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
   }, [dateStart, dateEnd, filterDistrict, filterState, filterJobFunction]);
+
+  // Card 168 has no template tags — filter campaign client-side.
+  // Campaign column is at index 4 and stores short codes ("C6").
+  useEffect(() => {
+    const prefix = campaign ? campaign.split(":")[0].trim() : "";
+    setRows(!prefix ? allRows : allRows.filter((row) => String(row[4] ?? "") === prefix));
+  }, [campaign, allRows]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

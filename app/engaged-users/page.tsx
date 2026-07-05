@@ -353,13 +353,11 @@ function EngagedUsersContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Client-side campaign filter (card 405 has no template tags for server-side filtering)
+  // Client-side campaign filter — card 405 stores campaigns as short codes ("C6"),
+  // but FilterContext holds the full label ("C6: April - May 2026"), so compare prefixes.
   useEffect(() => {
-    if (!campaign) {
-      setRows(allRows);
-    } else {
-      setRows(allRows.filter((row) => String(row[3] ?? "") === campaign));
-    }
+    const prefix = campaign ? campaign.split(":")[0].trim() : "";
+    setRows(!prefix ? allRows : allRows.filter((row) => String(row[3] ?? "") === prefix));
   }, [campaign, allRows]);
 
   return (

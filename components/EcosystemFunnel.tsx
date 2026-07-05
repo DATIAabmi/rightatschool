@@ -4,15 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import { ChevronDown, X, CalendarSearch } from "lucide-react";
 import { useFilter } from "./FilterContext";
-
-const CAMPAIGNS = [
-  "C6: April - May 2026",
-  "C5: Nov 2025 - May 2026",
-  "C4: Aug - Sept 2025",
-  "C3: June 2025",
-  "C2: May - June 2025",
-  "C1: April - May 2025",
-];
+import { CAMPAIGNS } from "@/lib/campaigns";
 
 interface FunnelStage {
   label: string;
@@ -58,114 +50,81 @@ const STEP = 36;
 const CARD_W = 310;
 const ROW_H = 108;
 
-function InlineDateFilter() {
-  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
-  const hasDate = dateStart || dateEnd;
-
-  return (
-    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
-      <CalendarSearch size={14} className="text-orange-400 flex-shrink-0" />
-      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider flex-shrink-0">
-        Date Range:
-      </span>
-      <input
-        type="date"
-        value={dateStart}
-        onChange={(e) => setDateStart(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer"
-        title="Start date"
-      />
-      <span className="text-gray-300 text-xs">–</span>
-      <input
-        type="date"
-        value={dateEnd}
-        onChange={(e) => setDateEnd(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer"
-        title="End date"
-      />
-      {hasDate && (
-        <button
-          onClick={() => { setDateStart(""); setDateEnd(""); }}
-          className="text-gray-300 hover:text-gray-500 transition-colors ml-0.5"
-          title="Clear dates"
-        >
-          <X size={12} />
-        </button>
-      )}
-    </div>
-  );
-}
-
-function CampaignDropdown({
-  value,
-  onChange,
-}: {
-  value: string | null;
-  onChange: (v: string | null) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+export function EcosystemFilterBar() {
+  const { campaign: ctxCampaign, setCampaign: setCtxCampaign, dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
+  const campaign = ctxCampaign || null;
+  const setCampaign = (v: string | null) => setCtxCampaign(v ?? "");
+  const [campaignOpen, setCampaignOpen] = useState(false);
+  const campaignRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (campaignRef.current && !campaignRef.current.contains(e.target as Node))
+        setCampaignOpen(false);
     }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, []);
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm text-gray-700 hover:border-blue-400 transition-colors min-w-[220px]"
-      >
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
-          ABMi Campaign:
-        </span>
-        <span className={`flex-1 text-left truncate ${value ? "text-blue-600 font-medium" : "text-gray-400"}`}>
-          {value ?? "All campaigns"}
-        </span>
-        {value ? (
-          <X
-            size={14}
-            className="text-gray-400 hover:text-gray-700 shrink-0"
-            onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }}
-          />
-        ) : (
-          <ChevronDown size={14} className="text-gray-400 shrink-0" />
-        )}
-      </button>
-
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[260px] py-1">
-          <button
-            onClick={() => { onChange(null); setOpen(false); }}
-            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!value ? "text-blue-600 font-semibold" : "text-gray-600"}`}
-          >
-            All campaigns
-          </button>
-          {CAMPAIGNS.map((c) => (
-            <button
-              key={c}
-              onClick={() => { onChange(c); setOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${value === c ? "text-blue-600 font-semibold" : "text-gray-600"}`}
-            >
-              {c}
+    <div className="flex items-center gap-2 mb-2">
+      {/* Campaign pill */}
+      <div ref={campaignRef} className="relative">
+        <button
+          onClick={() => setCampaignOpen((o) => !o)}
+          className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[220px]"
+        >
+          <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">ABMi Campaign:</span>
+          <span className="flex-1 text-left truncate text-blue-600 font-medium">
+            {campaign ?? "All campaigns"}
+          </span>
+          {campaign ? (
+            <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0"
+              onClick={(e) => { e.stopPropagation(); setCampaign(null); setCampaignOpen(false); }} />
+          ) : (
+            <ChevronDown size={14} className="text-gray-400 shrink-0" />
+          )}
+        </button>
+        {campaignOpen && (
+          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[260px] py-1">
+            <button onClick={() => { setCampaign(null); setCampaignOpen(false); }}
+              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!campaign ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
+              All campaigns
             </button>
-          ))}
-        </div>
-      )}
+            {CAMPAIGNS.map((c) => (
+              <button key={c} onClick={() => { setCampaign(c); setCampaignOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${campaign === c ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Date range pill */}
+      <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+        <CalendarSearch size={14} className="text-orange-400 shrink-0" />
+        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
+        <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
+          className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+        <span className="text-gray-300 text-xs">–</span>
+        <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
+          className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+        {(dateStart || dateEnd) && (
+          <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
+            <X size={12} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-const DEFAULT_CAMPAIGN = "C5: Nov 2025 - May 2026";
-
 export default function EcosystemFunnel() {
-  // Own internal campaign state — isolated from FilterContext so selecting
-  // "All campaigns" here doesn't clear the global campaign used by other tabs.
-  const [campaign, setCampaign] = useState<string | null>(DEFAULT_CAMPAIGN);
+  // Use global FilterContext so the header subtitle always matches this dropdown.
+  const { campaign: ctxCampaign, setCampaign: setCtxCampaign } = useFilter();
+  const campaign = ctxCampaign || null;
+  const setCampaign = (v: string | null) => setCtxCampaign(v ?? "");
   const sqlParams = campaign ? { Abmi_Campaign: campaign } : undefined;
 
   return (
@@ -202,20 +161,6 @@ export default function EcosystemFunnel() {
           color: white !important;
         }
       `}</style>
-
-      {/* Section header + filter bar */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-1.5 h-9 bg-gray-900 rounded-sm" />
-          <h2 className="text-sm font-bold tracking-widest uppercase text-gray-800">
-            Program Metrics Summary
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <CampaignDropdown value={campaign} onChange={setCampaign} />
-          <InlineDateFilter />
-        </div>
-      </div>
 
       {/* Funnel rows */}
       <div className="flex flex-col gap-1.5">
@@ -277,11 +222,12 @@ export default function EcosystemFunnel() {
                   </span>
                   <div className="sdk-scalar">
                     <StaticQuestion
+                      key={`${stage.cardId}-${campaign ?? "all"}`}
                       questionId={stage.cardId}
                       showVisualization
                       title={false}
                       height={56}
-                      initialSqlParameters={sqlParams}
+                      sqlParameters={sqlParams}
                     />
                   </div>
                 </div>
@@ -300,11 +246,12 @@ export default function EcosystemFunnel() {
                     </span>
                     <div className="sdk-scalar">
                       <StaticQuestion
+                        key={`${stage.goalCardId}-${campaign ?? "all"}`}
                         questionId={stage.goalCardId}
                         showVisualization
                         title={false}
                         height={56}
-                        initialSqlParameters={sqlParams}
+                        sqlParameters={sqlParams}
                       />
                     </div>
                   </div>

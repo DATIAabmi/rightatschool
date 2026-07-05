@@ -9,6 +9,7 @@ const FIELD_MAP: Record<string, string> = {
   district: "topic_district",
   domain: "email_domain",
   state: "state",
+  job_function: "job_title",
 };
 
 export async function GET(req: NextRequest) {

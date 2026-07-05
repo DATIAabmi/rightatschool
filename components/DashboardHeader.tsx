@@ -1,30 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { Clock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useFilter } from "@/components/FilterContext";
+import { campaignDateRange } from "@/lib/campaigns";
 
 export default function DashboardHeader({ legend }: { legend?: string }) {
-  const [lastUpdated, setLastUpdated] = useState("");
+  const { campaign } = useFilter();
 
-  useEffect(() => {
-    const now = new Date();
-    const date = now.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    const time = now.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    setLastUpdated(`${date} • ${time}`);
-  }, []);
+  const subtitle = campaign
+    ? campaignDateRange(campaign)
+    : "All Campaigns";
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
       {/* Logo + Title row */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between">
         {/* Left: Right At School logo */}
         <div className="flex-shrink-0 w-44">
           <Image
@@ -42,8 +32,8 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
           <h1 className="font-bold text-gray-900 tracking-tight leading-none" style={{ fontFamily: "'Lato', sans-serif", fontSize: "20px" }}>
             ABMi Always On
           </h1>
-          <p className="text-sm text-gray-400 mt-2 tracking-wide">
-            Executive ABM Intelligence Dashboard
+          <p className="text-sm text-gray-700 mt-1 font-medium">
+            {subtitle}
           </p>
           <div className="w-14 h-0.5 bg-red-500 mx-auto mt-3 rounded-full" />
         </div>
@@ -57,24 +47,6 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             height={44}
             className="object-contain"
           />
-        </div>
-      </div>
-
-      {/* Info cards row */}
-      <div className="flex">
-        {/* Last Updated */}
-        <div className="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-xl p-4 w-full">
-          <div className="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-            <Clock size={20} className="text-blue-500" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-0.5">
-              Last Updated
-            </p>
-            <p className="text-sm font-bold text-gray-800 leading-tight">
-              {lastUpdated || "Loading…"}
-            </p>
-          </div>
         </div>
       </div>
 

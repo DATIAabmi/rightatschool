@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
@@ -31,11 +31,25 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [lastUpdated, setLastUpdated] = useState("");
+
+  useEffect(() => {
+    const now = new Date();
+    setLastUpdated(now.toLocaleString("en-US", {
+      weekday: "short", month: "short", day: "numeric",
+      year: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit",
+    }));
+  }, []);
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-100 flex flex-col z-10">
       {/* Branding */}
-      <div className="px-5 py-5 border-b border-gray-100">
+      <div className="px-5 py-4 border-b border-gray-100">
+        {lastUpdated && (
+          <p className="text-[10px] text-blue-500 font-medium mb-3">
+            Last Updated: {lastUpdated}
+          </p>
+        )}
         <Image
           src="/datia-k12-logo.png"
           alt="DATIA K12"

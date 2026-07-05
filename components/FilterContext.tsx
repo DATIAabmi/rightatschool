@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
+import { DEFAULT_CAMPAIGN } from "@/lib/campaigns";
 
 interface FilterState {
   dateStart: string;
@@ -32,8 +33,7 @@ const FilterContext = createContext<FilterState>({
 export function FilterProvider({ children }: { children: ReactNode }) {
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
-  // Question 405 requires ABM_Campaign — default to current campaign so it never sends empty.
-  const [campaign, setCampaign] = useState("C5: Nov 2025 - May 2026");
+  const [campaign, setCampaign] = useState(DEFAULT_CAMPAIGN);
   const [district, setDistrict] = useState("");
 
   const metabaseDateRange =

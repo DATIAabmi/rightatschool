@@ -51,9 +51,19 @@ export async function GET(req: NextRequest) {
   }
 
   const data = await res.json();
+
+  // Apply Metabase visualization_settings column_title overrides
+  const DISPLAY_NAMES: Record<string, string> = {
+    ST:          "State",
+    Camp:        "Campaign",
+    Down:        "Downloads",
+    EngagedUser: "Engaged Users",
+    UniqueLeads: "Leads",
+  };
+
   return NextResponse.json({
-    cols: (data.data?.cols ?? []).map((c: { display_name: string; base_type: string }) => ({
-      display_name: c.display_name,
+    cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
       base_type: c.base_type,
     })),
     rows: data.data?.rows ?? [],

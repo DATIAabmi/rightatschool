@@ -106,16 +106,23 @@ export function EcosystemFilterBar() {
 }
 
 export default function EcosystemFunnel() {
+  const { campaign, dateStart, dateEnd } = useFilter();
   const [data, setData] = useState<FunnelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/funnel-data")
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (campaign) params.set("campaign", campaign);
+    if (dateStart) params.set("dateStart", dateStart);
+    if (dateEnd) params.set("dateEnd", dateEnd);
+    const qs = params.toString();
+    fetch(`/api/funnel-data${qs ? `?${qs}` : ""}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => { setError("Failed to load"); setLoading(false); });
-  }, []);
+  }, [campaign, dateStart, dateEnd]);
 
   if (loading) {
     return (

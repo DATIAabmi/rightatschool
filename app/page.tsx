@@ -4,11 +4,8 @@ import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import DashboardHeader from "@/components/DashboardHeader";
 import EcosystemFunnel, { EcosystemFilterBar } from "@/components/EcosystemFunnel";
 import ChannelPerformanceChart from "@/components/ChannelPerformanceChart";
-import { useFilter } from "@/components/FilterContext";
 
 function HomeContent() {
-  const { campaign } = useFilter();
-
   return (
     <div className="flex flex-col gap-3">
       {/* Filter bar spans full width above both sections */}
@@ -36,7 +33,7 @@ function HomeContent() {
           <EcosystemFunnel />
         </div>
         <div className="w-1/2 min-w-0">
-          <ChannelPerformanceChart campaign={campaign} />
+          <ChannelPerformanceChart />
         </div>
       </div>
     </div>

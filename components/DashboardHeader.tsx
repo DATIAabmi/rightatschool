@@ -13,9 +13,9 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-5 mb-4">
-      <div className="flex items-center gap-0">
+      <div className="relative flex items-center">
         {/* Left: Right At School logo */}
-        <div className="flex-shrink-0 pr-8">
+        <div className="flex-shrink-0 flex items-center gap-6">
           <Image
             src="/right-at-school-logo.png"
             alt="Right At School"
@@ -24,13 +24,12 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             style={{ height: "88px", width: "auto" }}
             className="object-contain"
           />
+          {/* Vertical divider */}
+          <div className="self-stretch w-px bg-gray-200 shrink-0" />
         </div>
 
-        {/* Vertical divider */}
-        <div className="self-stretch w-px bg-gray-200 mx-0 shrink-0" />
-
-        {/* Center: Campaign title */}
-        <div className="flex-1 pl-10">
+        {/* Center: absolutely centered in the full card */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
           <h1
             className="font-bold text-gray-900 leading-tight"
             style={{ fontFamily: "'Lato', sans-serif", fontSize: "38px", letterSpacing: "-0.5px" }}
@@ -41,17 +40,6 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             {subtitle}
           </p>
           <div className="h-0.5 bg-red-500 mt-2 rounded-full" style={{ width: 56 }} />
-        </div>
-
-        {/* Right: DATIA K12 logo */}
-        <div className="flex-shrink-0 pl-8">
-          <Image
-            src="/datia-k12-logo.png"
-            alt="DATIA K12"
-            width={150}
-            height={44}
-            className="object-contain"
-          />
         </div>
       </div>
 

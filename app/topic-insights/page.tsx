@@ -2,10 +2,8 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
-import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
-import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import { exportToCsv } from "@/lib/exportCsv";
 import { CAMPAIGNS } from "@/lib/campaigns";
 
@@ -25,6 +23,63 @@ const TOPICS = [
   "Supervised Learning",
   "Third-Party Vendors",
 ];
+
+// ─── AVG Topic Score chart ────────────────────────────────────────────────────
+
+type TopicRow = [string, number];
+
+function scoreColor(score: number): string {
+  if (score >= 66) return "#88BF4D";
+  if (score >= 36) return "#F9D45C";
+  return "#EF8C8C";
+}
+
+function AvgTopicScoreChart() {
+  const [rows, setRows] = useState<TopicRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/q180-data")
+      .then((r) => r.json())
+      .then((d) => { setRows(d.rows ?? []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const sorted = [...rows].sort((a, b) => b[1] - a[1]);
+  const max = sorted.length > 0 ? Math.max(...sorted.map((r) => r[1])) : 100;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full gap-2 text-gray-400 text-sm">
+        <Loader2 size={18} className="animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 h-full overflow-y-auto">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Avg Topic Score by Topic</p>
+      <div className="flex flex-col gap-1.5">
+        {sorted.map(([topic, score], i) => (
+          <div key={i} className="flex items-center gap-3">
+            <span className="text-xs text-gray-600 shrink-0" style={{ width: 240, textAlign: "right" }} title={topic}>
+              {topic.length > 38 ? topic.slice(0, 38) + "…" : topic}
+            </span>
+            <div className="flex-1 h-5 bg-gray-100 rounded-sm overflow-hidden">
+              <div
+                className="h-full rounded-sm transition-all"
+                style={{ width: `${(score / max) * 100}%`, backgroundColor: scoreColor(score) }}
+              />
+            </div>
+            <span className="text-xs tabular-nums font-semibold text-gray-700 shrink-0" style={{ width: 36 }}>
+              {score.toFixed(1)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // ─── Campaign dropdown ────────────────────────────────────────────────────────
 
@@ -430,12 +485,7 @@ function TopicInsightsContent() {
 
         {/* AVG Topic Score chart (Card 180) */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>
-          <StaticQuestion
-            key={campaign ?? "all"}
-            questionId={180}
-            title={false}
-            height={340}
-          />
+          <AvgTopicScoreChart />
         </div>
 
         {/* Section title */}
@@ -475,9 +525,5 @@ function TopicInsightsContent() {
 }
 
 export default function Page() {
-  return (
-    <MetabaseProviderWrapper>
-      <TopicInsightsContent />
-    </MetabaseProviderWrapper>
-  );
+  return <TopicInsightsContent />;
 }

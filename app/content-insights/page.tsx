@@ -1,23 +1,148 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Loader2 } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
-import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 
-// ─── Gated Content Table ──────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type GatedRow = [string, string, string, number | string, number | string, string];
+type ChannelBreakdownRow = [string, number, number, number | string];
+type ChannelClickRow = [string, number, number];
+
+interface ContentData {
+  impressions: number | null;
+  clicks: number | null;
+  ctr: string | null;
+  channelBreakdown: ChannelBreakdownRow[];
+  channelClicks: ChannelClickRow[];
+}
 
 type SortDir = "asc" | "desc";
 interface SortState { col: number; dir: SortDir }
 
-function formatNum(v: number | string): string {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtNum(v: number | string | null | undefined): string {
+  if (v === null || v === undefined) return "—";
   const n = typeof v === "number" ? v : parseFloat(String(v));
   if (isNaN(n)) return String(v);
   return Math.round(n).toLocaleString();
 }
+
+function fmtPct(v: number | string | null | undefined): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "string") return v;
+  return (v * 100).toFixed(2) + "%";
+}
+
+// ─── Scalar Card ──────────────────────────────────────────────────────────────
+
+function ScalarCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{label}</p>
+      <p className="text-3xl font-black text-gray-900 tabular-nums tracking-tight">{value}</p>
+    </div>
+  );
+}
+
+// ─── Channel Breakdown Table ──────────────────────────────────────────────────
+
+function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
+  const headers = ["Channel", "Impressions", "Clicks", "CTR"];
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-gray-900 text-white px-5 py-3">
+        <span className="font-bold text-sm tracking-wide uppercase">Impressions &amp; Clicks by Channel</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b border-gray-200">
+              {headers.map((h, i) => (
+                <th key={h} className={`px-4 py-3 font-semibold whitespace-nowrap ${i === 0 ? "text-left" : "text-right"}`}
+                  style={{ color: "#509EE3" }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="px-4 py-3 text-left text-gray-800 font-medium">{String(row[0] ?? "")}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtNum(row[1])}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtNum(row[2])}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtPct(row[3])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── Donut Chart ──────────────────────────────────────────────────────────────
+
+const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
+
+function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
+  const total = rows.reduce((s, r) => s + (r[1] ?? 0), 0);
+  const R = 70, SW = 36, CX = 100, CY = 100;
+  const circumference = 2 * Math.PI * R;
+
+  let cumulative = 0;
+  const segments = rows.map((row, i) => {
+    const pct = total > 0 ? (row[1] ?? 0) / total : 0;
+    const offset = -(cumulative * circumference) + circumference * 0.25;
+    cumulative += pct;
+    return { label: row[0], clicks: row[1] ?? 0, pct, offset, color: COLORS[i % COLORS.length] };
+  });
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Channel Performance By Clicks</p>
+      <div className="flex items-center gap-8 w-full">
+        <div className="shrink-0">
+          <svg viewBox="0 0 200 200" width={180} height={180}>
+            <circle cx={CX} cy={CY} r={R} fill="none" stroke="#f3f4f6" strokeWidth={SW} />
+            {segments.map((seg, i) => (
+              <circle key={i} cx={CX} cy={CY} r={R} fill="none"
+                stroke={seg.color} strokeWidth={SW}
+                strokeDasharray={`${seg.pct * circumference} ${circumference}`}
+                strokeDashoffset={seg.offset} />
+            ))}
+            <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">Total Clicks</text>
+            <text x={CX} y={CY + 10} textAnchor="middle" fontSize={14} fontWeight="700" fill="#111827" fontFamily="inherit">
+              {Math.round(total).toLocaleString()}
+            </text>
+          </svg>
+        </div>
+        <div className="flex flex-col gap-3 flex-1 min-w-0">
+          {segments.map((seg, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-gray-800 truncate">{seg.label}</span>
+                  <span className="text-sm tabular-nums text-gray-500 shrink-0">{Math.round(seg.clicks).toLocaleString()}</span>
+                </div>
+                <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">{(seg.pct * 100).toFixed(1)}%</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Gated Content Table ──────────────────────────────────────────────────────
 
 function GatedContentTable() {
   const [rows, setRows] = useState<GatedRow[]>([]);
@@ -33,11 +158,11 @@ function GatedContentTable() {
   }, []);
 
   const HEADERS = [
-    { label: "Image",            col: -1 },
-    { label: "Asset Name & Link",col: 1 },
-    { label: "Impressions",      col: 3 },
-    { label: "Clicks",           col: 4 },
-    { label: "CTR",              col: 5 },
+    { label: "Image",             col: -1 },
+    { label: "Asset Name & Link", col: 1 },
+    { label: "Impressions",       col: 3 },
+    { label: "Clicks",            col: 4 },
+    { label: "CTR",               col: 5 },
   ];
 
   const sorted = [...rows].sort((a, b) => {
@@ -56,7 +181,6 @@ function GatedContentTable() {
 
   return (
     <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-      {/* Header bar */}
       <div className="bg-gray-900 text-white px-5 py-3">
         <span className="font-bold text-sm tracking-wide uppercase">Gated Content Engagements</span>
       </div>
@@ -75,12 +199,9 @@ function GatedContentTable() {
             <thead>
               <tr className="border-b border-gray-200">
                 {HEADERS.map((h) => (
-                  <th
-                    key={h.label}
-                    onClick={() => handleSort(h.col)}
-                    className={`px-4 py-3 font-semibold text-left whitespace-nowrap select-none ${h.col >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${h.col >= 3 ? "text-right" : "text-left"}`}
-                    style={{ color: "#509EE3" }}
-                  >
+                  <th key={h.label} onClick={() => handleSort(h.col)}
+                    className={`px-4 py-3 font-semibold whitespace-nowrap select-none ${h.col >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${h.col >= 3 ? "text-right" : "text-left"}`}
+                    style={{ color: "#509EE3" }}>
                     <span className={`inline-flex items-center gap-1 ${h.col >= 3 ? "justify-end" : "justify-start"}`}>
                       {h.label}
                       {h.col >= 0 && (
@@ -94,44 +215,31 @@ function GatedContentTable() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((row, i) => {
-                const imgUrl  = String(row[0] ?? "");
-                const name    = String(row[1] ?? "");
-                const link    = String(row[2] ?? "");
-                const impr    = row[3];
-                const clicks  = row[4];
-                const ctr     = String(row[5] ?? "");
-                return (
-                  <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors align-top">
-                    {/* Image */}
-                    <td className="px-4 py-3 w-48">
-                      {imgUrl ? (
-                        <img src={imgUrl} alt={name} className="w-40 h-auto rounded object-cover" />
-                      ) : (
-                        <div className="w-40 h-24 bg-gray-100 rounded" />
-                      )}
-                    </td>
-                    {/* Asset Name & Link */}
-                    <td className="px-4 py-3">
-                      {link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-start gap-1 text-blue-600 hover:text-blue-800 hover:underline font-medium leading-snug">
-                          {name}
-                          <ExternalLink size={12} className="mt-0.5 shrink-0" />
-                        </a>
-                      ) : (
-                        <span className="text-gray-800 font-medium">{name}</span>
-                      )}
-                    </td>
-                    {/* Impressions */}
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-800 whitespace-nowrap">{formatNum(impr)}</td>
-                    {/* Clicks */}
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-800 whitespace-nowrap">{formatNum(clicks)}</td>
-                    {/* CTR */}
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-800 whitespace-nowrap">{ctr}</td>
-                  </tr>
-                );
-              })}
+              {sorted.map((row, i) => (
+                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors align-top">
+                  <td className="px-4 py-3 w-48">
+                    {row[0] ? (
+                      <img src={String(row[0])} alt={String(row[1] ?? "")} className="w-40 h-auto rounded object-cover" />
+                    ) : (
+                      <div className="w-40 h-24 bg-gray-100 rounded" />
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {row[2] ? (
+                      <a href={String(row[2])} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-start gap-1 text-blue-600 hover:text-blue-800 hover:underline font-medium leading-snug">
+                        {String(row[1] ?? "")}
+                        <ExternalLink size={12} className="mt-0.5 shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-gray-800 font-medium">{String(row[1] ?? "")}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-800 whitespace-nowrap">{fmtNum(row[3])}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-800 whitespace-nowrap">{fmtNum(row[4])}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-800 whitespace-nowrap">{String(row[5] ?? "")}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -142,7 +250,17 @@ function GatedContentTable() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-function ContentInsightsContent() {
+export default function Page() {
+  const [data, setData] = useState<ContentData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/content-data")
+      .then((r) => r.json())
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
@@ -151,40 +269,30 @@ function ContentInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "8px 24px 24px" }}>
-        {/* Summary scalars */}
-        <div className="grid grid-cols-3 gap-4 mb-4">
-          {[
-            { id: 200, label: "Total Impressions" },
-            { id: 201, label: "Clicks" },
-            { id: 202, label: "CTR" },
-          ].map(({ id, label }) => (
-            <div key={id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">{label}</p>
-              <StaticQuestion questionId={id} title={false} height={60} />
+        {loading ? (
+          <div className="flex items-center justify-center h-40 gap-2 text-gray-400 text-sm">
+            <Loader2 size={18} className="animate-spin" /> Loading…
+          </div>
+        ) : (
+          <>
+            {/* Summary scalars */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <ScalarCard label="Total Impressions" value={fmtNum(data?.impressions)} />
+              <ScalarCard label="Clicks" value={fmtNum(data?.clicks)} />
+              <ScalarCard label="CTR" value={data?.ctr ?? "—"} />
             </div>
-          ))}
-        </div>
 
-        {/* Channel performance charts */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          {[203, 204].map((id) => (
-            <div key={id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-              <StaticQuestion questionId={id} title={false} height={280} />
+            {/* Channel charts */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <ChannelBreakdownTable rows={data?.channelBreakdown ?? []} />
+              <ClicksDonutChart rows={data?.channelClicks ?? []} />
             </div>
-          ))}
-        </div>
 
-        {/* Gated Content custom table */}
-        <GatedContentTable />
+            {/* Gated Content table */}
+            <GatedContentTable />
+          </>
+        )}
       </div>
     </div>
-  );
-}
-
-export default function Page() {
-  return (
-    <MetabaseProviderWrapper>
-      <ContentInsightsContent />
-    </MetabaseProviderWrapper>
   );
 }

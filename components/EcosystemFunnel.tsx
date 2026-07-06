@@ -1,54 +1,39 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { StaticQuestion } from "@metabase/embedding-sdk-react";
-import { ChevronDown, X, CalendarSearch } from "lucide-react";
+import { ChevronDown, X, CalendarSearch, Loader2 } from "lucide-react";
 import { useFilter } from "./FilterContext";
 import { CAMPAIGNS } from "@/lib/campaigns";
-
-interface FunnelStage {
-  label: string;
-  description: string;
-  goal?: string;
-  cardId: number;
-  goalCardId?: number;
-}
-
-const STAGES: FunnelStage[] = [
-  {
-    label: "Impressions",
-    description: "Number of times your content or ads were displayed on social, offsite display",
-    goal: "Impression Goal: 300,000",
-    cardId: 319,
-    goalCardId: 300,
-  },
-  {
-    label: "Engagements",
-    description: "Number of clicks on your ads or opened emails",
-    cardId: 320,
-  },
-  {
-    label: "Click Thru Rate",
-    description: "The percentage of people that click on a link or ad out of all the times they saw that ad",
-    cardId: 323,
-  },
-  {
-    label: "Engaged Users",
-    description: "Unique users who viewed your content from all sources",
-    cardId: 308,
-  },
-  {
-    label: "Leads",
-    description: "Total qualified leads generated across all channels",
-    goal: "Goal: 300 Leads",
-    cardId: 314,
-    goalCardId: 305,
-  },
-];
 
 const STEP = 36;
 const CARD_W = 310;
 const ROW_H = 108;
+
+function fmt(val: string | number | null): string {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "string") return val;
+  const n = Number(val);
+  if (isNaN(n)) return String(val);
+  return Math.round(n).toLocaleString();
+}
+
+interface FunnelData {
+  impressions: string | number | null;
+  impressionsGoal: string | number | null;
+  engagements: string | number | null;
+  ctr: string | number | null;
+  engagedUsers: string | number | null;
+  leads: string | number | null;
+  leadsGoal: string | number | null;
+}
+
+interface Stage {
+  label: string;
+  description: string;
+  goal?: string;
+  value: string;
+  goalValue?: string;
+}
 
 export function EcosystemFilterBar() {
   const { campaign: ctxCampaign, setCampaign: setCtxCampaign, dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
@@ -121,52 +106,67 @@ export function EcosystemFilterBar() {
 }
 
 export default function EcosystemFunnel() {
-  // Use global FilterContext so the header subtitle always matches this dropdown.
-  const { campaign: ctxCampaign, setCampaign: setCtxCampaign } = useFilter();
-  const campaign = ctxCampaign || null;
-  const setCampaign = (v: string | null) => setCtxCampaign(v ?? "");
-  const sqlParams = campaign ? { Abmi_Campaign: campaign } : undefined;
+  const [data, setData] = useState<FunnelData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/funnel-data")
+      .then((r) => r.json())
+      .then((d) => { setData(d); setLoading(false); })
+      .catch(() => { setError("Failed to load"); setLoading(false); });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 gap-2 text-gray-400 text-sm">
+        <Loader2 size={18} className="animate-spin" /> Loading…
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return <div className="flex items-center justify-center h-64 text-red-500 text-sm">{error || "Failed to load"}</div>;
+  }
+
+  const stages: Stage[] = [
+    {
+      label: "Impressions",
+      description: "Number of times your content or ads were displayed on social, offsite display",
+      goal: "Impression Goal: 300,000",
+      value: fmt(data.impressions),
+      goalValue: fmt(data.impressionsGoal),
+    },
+    {
+      label: "Engagements",
+      description: "Number of clicks on your ads or opened emails",
+      value: fmt(data.engagements),
+    },
+    {
+      label: "Click Thru Rate",
+      description: "The percentage of people that click on a link or ad out of all the times they saw that ad",
+      value: fmt(data.ctr),
+    },
+    {
+      label: "Engaged Users",
+      description: "Unique users who viewed your content from all sources",
+      value: fmt(data.engagedUsers),
+    },
+    {
+      label: "Leads",
+      description: "Total qualified leads generated across all channels",
+      goal: "Goal: 300 Leads",
+      value: fmt(data.leads),
+      goalValue: fmt(data.leadsGoal),
+    },
+  ];
 
   return (
     <div className="w-full py-4 px-2">
-      <style>{`
-        .sdk-scalar {
-          overflow: visible !important;
-          width: 100%;
-        }
-        .sdk-scalar > div,
-        .sdk-scalar > div > div,
-        .sdk-scalar > div > div > div {
-          background: transparent !important;
-          box-shadow: none !important;
-          border: none !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          overflow: visible !important;
-        }
-        .sdk-scalar header,
-        .sdk-scalar [data-testid="legend-caption"] {
-          display: none !important;
-        }
-        .sdk-scalar [class*="Visualization"],
-        .sdk-scalar [class*="visualization"],
-        .sdk-scalar [class*="CardVisualization"] {
-          overflow: visible !important;
-        }
-        .dark-card .sdk-scalar span,
-        .dark-card .sdk-scalar h1,
-        .dark-card .sdk-scalar h2,
-        .dark-card .sdk-scalar p,
-        .dark-card .sdk-scalar div {
-          color: white !important;
-        }
-      `}</style>
-
-      {/* Funnel rows */}
       <div className="flex flex-col gap-1.5">
-        {STAGES.map((stage, i) => {
+        {stages.map((stage, i) => {
           const indent = i * STEP;
-          const isLast = i === STAGES.length - 1;
+          const isLast = i === stages.length - 1;
 
           return (
             <div key={stage.label} className="flex items-stretch" style={{ height: ROW_H }}>
@@ -204,36 +204,32 @@ export default function EcosystemFunnel() {
 
               {/* Dark metric card */}
               <div
-                className="dark-card bg-gray-950 text-white shrink-0 flex items-center"
+                className="bg-gray-950 text-white shrink-0 flex items-center"
                 style={{
                   width: CARD_W,
                   borderRadius: isLast ? "0 6px 6px 0" : undefined,
                   padding: "0 16px",
-                  gap: stage.goalCardId ? 10 : 0,
+                  gap: stage.goalValue ? 10 : 0,
                 }}
               >
                 {/* Primary metric */}
-                <div style={{ flex: 1, minWidth: 0, overflow: "visible" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <span
                     className="block uppercase tracking-widest text-gray-400 font-semibold"
                     style={{ fontSize: 11, marginBottom: 2 }}
                   >
                     {stage.label}
                   </span>
-                  <div className="sdk-scalar">
-                    <StaticQuestion
-                      key={`${stage.cardId}-${campaign ?? "all"}`}
-                      questionId={stage.cardId}
-                      showVisualization
-                      title={false}
-                      height={56}
-                      sqlParameters={sqlParams}
-                    />
-                  </div>
+                  <span
+                    className="block font-black text-white tabular-nums"
+                    style={{ fontSize: 28, lineHeight: 1.1, letterSpacing: "-0.02em" }}
+                  >
+                    {stage.value}
+                  </span>
                 </div>
 
                 {/* % to Goal column */}
-                {stage.goalCardId && (
+                {stage.goalValue && (
                   <div
                     className="shrink-0 border-l border-gray-700 flex flex-col"
                     style={{ paddingLeft: 10, minWidth: 96 }}
@@ -244,16 +240,12 @@ export default function EcosystemFunnel() {
                     >
                       % to Goal
                     </span>
-                    <div className="sdk-scalar">
-                      <StaticQuestion
-                        key={`${stage.goalCardId}-${campaign ?? "all"}`}
-                        questionId={stage.goalCardId}
-                        showVisualization
-                        title={false}
-                        height={56}
-                        sqlParameters={sqlParams}
-                      />
-                    </div>
+                    <span
+                      className="block font-black text-white tabular-nums"
+                      style={{ fontSize: 22, lineHeight: 1.1 }}
+                    >
+                      {stage.goalValue}
+                    </span>
                   </div>
                 )}
               </div>

@@ -83,6 +83,7 @@ export default function ChannelPerformanceChart() {
 
   useEffect(() => {
     setLoading(true);
+    setError("");
     const params = new URLSearchParams();
     if (campaign) params.set("campaign", campaign);
     if (dateStart) params.set("dateStart", dateStart);

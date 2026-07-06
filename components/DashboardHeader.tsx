@@ -12,34 +12,39 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
     : "All Campaigns";
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
-      {/* Logo + Title row */}
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-5 mb-4">
+      <div className="flex items-center gap-0">
         {/* Left: Right At School logo */}
-        <div className="flex-shrink-0 w-44">
+        <div className="flex-shrink-0 pr-8">
           <Image
             src="/right-at-school-logo.png"
             alt="Right At School"
             width={924}
             height={617}
-            style={{ height: "132px", width: "auto" }}
+            style={{ height: "88px", width: "auto" }}
             className="object-contain"
           />
         </div>
 
+        {/* Vertical divider */}
+        <div className="self-stretch w-px bg-gray-200 mx-0 shrink-0" />
+
         {/* Center: Campaign title */}
-        <div className="text-center flex-1 px-8">
-          <h1 className="font-bold text-gray-900 tracking-tight leading-none" style={{ fontFamily: "'Lato', sans-serif", fontSize: "20px" }}>
+        <div className="flex-1 pl-10">
+          <h1
+            className="font-bold text-gray-900 leading-tight"
+            style={{ fontFamily: "'Lato', sans-serif", fontSize: "38px", letterSpacing: "-0.5px" }}
+          >
             ABMi Always On
           </h1>
-          <p className="text-sm text-gray-700 mt-1 font-medium">
+          <p className="mt-1 font-medium" style={{ fontSize: "15px", color: "#6b8cba" }}>
             {subtitle}
           </p>
-          <div className="w-14 h-0.5 bg-red-500 mx-auto mt-3 rounded-full" />
+          <div className="h-0.5 bg-red-500 mt-2 rounded-full" style={{ width: 56 }} />
         </div>
 
         {/* Right: DATIA K12 logo */}
-        <div className="flex-shrink-0 w-44 flex justify-end">
+        <div className="flex-shrink-0 pl-8">
           <Image
             src="/datia-k12-logo.png"
             alt="DATIA K12"

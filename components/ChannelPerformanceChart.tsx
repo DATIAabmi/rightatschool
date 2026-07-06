@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useFilter } from "./FilterContext";
 
 const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
 
@@ -75,16 +76,23 @@ function DonutChart({ rows }: { rows: Row[] }) {
 }
 
 export default function ChannelPerformanceChart() {
+  const { campaign, dateStart, dateEnd } = useFilter();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("/api/q363-data")
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (campaign) params.set("campaign", campaign);
+    if (dateStart) params.set("dateStart", dateStart);
+    if (dateEnd) params.set("dateEnd", dateEnd);
+    const qs = params.toString();
+    fetch(`/api/q363-data${qs ? `?${qs}` : ""}`)
       .then((r) => r.json())
       .then((d) => { setRows(d.rows ?? []); setLoading(false); })
       .catch(() => { setError("Failed to load"); setLoading(false); });
-  }, []);
+  }, [campaign, dateStart, dateEnd]);
 
   if (loading) {
     return (

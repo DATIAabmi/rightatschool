@@ -380,8 +380,8 @@ function DataTable({ cols, rows, sort, onSort }: {
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 ${isLeft ? "text-left" : "text-center"}`}
-                  style={{ color: "#509EE3" }}>
+                  style={{ color: "#509EE3", textAlign: isLeft ? "left" : "center" }}
+                  className="px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70">
                   <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
                     {col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
@@ -399,7 +399,9 @@ function DataTable({ cols, rows, sort, onSort }: {
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
                 const isLeft = LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
                 return (
-                  <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums" : ""} text-gray-800`}>
+                  <td key={j}
+                    style={{ textAlign: isLeft ? "left" : "center" }}
+                    className={`px-4 py-1.5 whitespace-nowrap ${isNum ? "tabular-nums" : ""} text-gray-800`}>
                     {cell === null || cell === undefined ? "" : String(cell)}
                   </td>
                 );

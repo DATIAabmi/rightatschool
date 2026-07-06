@@ -9,10 +9,10 @@ type Row = [string, number, number];
 
 function DonutChart({ rows }: { rows: Row[] }) {
   const total = rows.reduce((s, r) => s + r[1], 0);
-  const R = 70;
-  const SW = 36;
-  const CX = 100;
-  const CY = 100;
+  const R = 105;
+  const SW = 52;
+  const CX = 140;
+  const CY = 140;
   const circumference = 2 * Math.PI * R;
 
   let cumulative = 0;
@@ -29,7 +29,7 @@ function DonutChart({ rows }: { rows: Row[] }) {
     <div className="flex items-center gap-8 w-full">
       {/* Donut */}
       <div className="shrink-0">
-        <svg viewBox="0 0 200 200" width={200} height={200}>
+        <svg viewBox="0 0 280 280" width={280} height={280}>
           {/* Track */}
           <circle cx={CX} cy={CY} r={R} fill="none" stroke="#f3f4f6" strokeWidth={SW} />
           {segments.map((seg, i) => (
@@ -45,8 +45,8 @@ function DonutChart({ rows }: { rows: Row[] }) {
             />
           ))}
           {/* Center label */}
-          <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">Total Clicks</text>
-          <text x={CX} y={CY + 10} textAnchor="middle" fontSize={15} fontWeight="700" fill="#111827" fontFamily="inherit">
+          <text x={CX} y={CY - 10} textAnchor="middle" fontSize={13} fill="#6b7280" fontFamily="inherit">Total Clicks</text>
+          <text x={CX} y={CY + 14} textAnchor="middle" fontSize={20} fontWeight="700" fill="#111827" fontFamily="inherit">
             {fmtNum(total)}
           </text>
         </svg>

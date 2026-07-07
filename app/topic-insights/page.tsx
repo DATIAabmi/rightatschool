@@ -350,6 +350,7 @@ type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
 const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain"]);
+const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
 
 function DataTable({ cols, rows, sort, onSort }: {
   cols: Col[]; rows: Row[];
@@ -375,7 +376,7 @@ function DataTable({ cols, rows, sort, onSort }: {
           <tr className="border-b border-gray-200">
             <th className="px-3 py-2 text-center w-10 shrink-0 font-semibold" style={{ color: "#509EE3" }}>#</th>
             {cols.map((col, j) => {
-              const isLeft = LEFT_ALIGN_COLS.has(col.display_name);
+              const isLeft = LEFT_ALIGN_COLS.has(col.display_name) && !FORCE_CENTER_COLS.has(col.display_name);
               const active = sort.col === j;
               return (
                 <th key={j}
@@ -397,7 +398,8 @@ function DataTable({ cols, rows, sort, onSort }: {
               <td className="px-3 py-1.5 text-center text-gray-400 text-xs">{i + 1}</td>
               {row.map((cell, j) => {
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
-                const isLeft = LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
+                const colName = cols[j]?.display_name ?? "";
+                const isLeft = LEFT_ALIGN_COLS.has(colName) && !FORCE_CENTER_COLS.has(colName);
                 return (
                   <td key={j}
                     style={{ textAlign: isLeft ? "left" : "center" }}

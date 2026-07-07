@@ -17,6 +17,13 @@ function fmt(val: string | number | null): string {
   return Math.round(n).toLocaleString();
 }
 
+function pctToGoal(actual: string | number | null, goal: string | number | null): string | undefined {
+  const a = Number(actual);
+  const g = Number(goal);
+  if (!g || isNaN(a) || isNaN(g)) return undefined;
+  return Math.round((a / g) * 100) + "%";
+}
+
 interface FunnelData {
   impressions: string | number | null;
   impressionsGoal: string | number | null;
@@ -142,7 +149,7 @@ export default function EcosystemFunnel() {
       description: "Number of times your content or ads were displayed on social, offsite display",
       goal: "Impression Goal: 300,000",
       value: fmt(data.impressions),
-      goalValue: fmt(data.impressionsGoal),
+      goalValue: pctToGoal(data.impressions, data.impressionsGoal),
     },
     {
       label: "Engagements",
@@ -164,7 +171,7 @@ export default function EcosystemFunnel() {
       description: "Total qualified leads generated across all channels",
       goal: "Goal: 300 Leads",
       value: fmt(data.leads),
-      goalValue: fmt(data.leadsGoal),
+      goalValue: pctToGoal(data.leads, data.leadsGoal),
     },
   ];
 

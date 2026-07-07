@@ -330,35 +330,27 @@ function EngagedUsersContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [allRows, setAllRows] = useState<Row[]>([]);
-
   const fetchData = useCallback(() => {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (district)  params.set("district", district);
-    if (domain)    params.set("domain",   domain);
-    if (state)     params.set("state",    state);
+    // Pass short code only ("C6") — Metabase card uses STARTS_WITH filter
+    const campaignCode = campaign ? campaign.split(":")[0].trim() : "";
+    if (campaignCode) params.set("campaign", campaignCode);
+    if (district)     params.set("district", district);
+    if (domain)       params.set("domain",   domain);
+    if (state)        params.set("state",    state);
 
     fetch(`/api/q405-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) throw new Error(d.error);
         setCols(d.cols);
-        setAllRows(d.rows);
+        setRows(d.rows);
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load data"); setLoading(false); });
-  }, [district, domain, state]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Client-side campaign filter — card 405 stores campaigns as short codes ("C6"),
-  // but FilterContext holds the full label ("C6: April - May 2026"), so compare prefixes.
-  useEffect(() => {
-    const prefix = campaign ? campaign.split(":")[0].trim() : "";
-    setRows(!prefix ? allRows : allRows.filter((row) => String(row[3] ?? "") === prefix));
-  }, [campaign, allRows]);
+  }, [campaign, district, domain, state]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,

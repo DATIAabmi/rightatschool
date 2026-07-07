@@ -5,12 +5,21 @@ const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
+  const campaign = searchParams.get("campaign") ?? "";
   const district = searchParams.get("district") ?? "";
   const domain = searchParams.get("domain") ?? "";
   const state = searchParams.get("state") ?? "";
 
   const parameters: object[] = [];
 
+  if (campaign) {
+    parameters.push({
+      id: "6ccf4539-6eb6-4a7c-b579-d315c59a66a0",
+      type: "string/=",
+      value: campaign,
+      target: ["variable", ["template-tag", "ABM_Campaign"]],
+    });
+  }
   if (district) {
     parameters.push({
       id: "6ed963e9-6e0f-4b96-a77d-678f5a84c1ea",

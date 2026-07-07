@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
     body: JSON.stringify({ parameters }),
-    next: { revalidate: 300 },
+    cache: "no-store",
   });
 
   if (!res.ok) {

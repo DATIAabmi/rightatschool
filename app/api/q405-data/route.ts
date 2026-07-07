@@ -56,19 +56,27 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const res = await fetch(`${METABASE_URL}/api/card/405/query`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": API_KEY,
-      },
-      body: JSON.stringify({ parameters }),
-      // Cache per unique filter combination for 5 minutes
-      next: { revalidate: 300 },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 55000);
+
+    let res: Response;
+    try {
+      res = await fetch(`${METABASE_URL}/api/card/405/query`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": API_KEY,
+        },
+        body: JSON.stringify({ parameters }),
+        cache: "no-store",
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!res.ok) {
-      return NextResponse.json({ cols: [], rows: [] }, { status: 200 });
+      return NextResponse.json({ cols: [], rows: [] });
     }
 
     const data = await res.json();
@@ -81,6 +89,6 @@ export async function GET(req: NextRequest) {
       rows: data.data?.rows ?? [],
     });
   } catch {
-    return NextResponse.json({ cols: [], rows: [] }, { status: 200 });
+    return NextResponse.json({ cols: [], rows: [] });
   }
 }

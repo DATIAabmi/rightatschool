@@ -352,6 +352,8 @@ function EngagedUsersContent() {
       .catch((err) => { setError(err.message ?? "Failed to load data"); setLoading(false); });
   }, [campaign, district, domain, state]);
 
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>

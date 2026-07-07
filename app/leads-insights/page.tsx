@@ -200,6 +200,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
+const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
 
 function DataTable({ cols, rows, sort, onSort }: {
   cols: Col[]; rows: Row[];
@@ -226,13 +227,14 @@ function DataTable({ cols, rows, sort, onSort }: {
             <th className="px-3 py-2 w-12 text-xs font-bold" style={{ color: "#509EE3", textAlign: "center" }}>#</th>
             {cols.map((col, j) => {
               const isNum = NUMBER_TYPES.has(col.base_type);
+              const isCenter = isNum || FORCE_CENTER_COLS.has(col.display_name);
               const active = sort.col === j;
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                   className="px-4 py-2 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70"
-                  style={{ color: "#509EE3", textAlign: isNum ? "center" : "left" }}>
-                  <span className={`inline-flex items-center gap-1 ${isNum ? "justify-center" : ""}`}>
+                  style={{ color: "#509EE3", textAlign: isCenter ? "center" : "left" }}>
+                  <span className={`inline-flex items-center gap-1 ${isCenter ? "justify-center" : ""}`}>
                     {col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
                   </span>
@@ -247,9 +249,11 @@ function DataTable({ cols, rows, sort, onSort }: {
               <td className="px-3 py-1.5 text-gray-500 text-xs font-medium" style={{ textAlign: "center" }}>{i + 1}</td>
               {row.map((cell, j) => {
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
+                const colName = cols[j]?.display_name ?? "";
+                const isCenter = isNum || FORCE_CENTER_COLS.has(colName);
                 return (
-                  <td key={j} className="px-4 py-1.5 tabular-nums text-gray-800"
-                    style={{ textAlign: isNum ? "center" : "left" }}>
+                  <td key={j} className={`px-4 py-1.5 text-gray-800 ${isNum ? "tabular-nums" : ""}`}
+                    style={{ textAlign: isCenter ? "center" : "left" }}>
                     {cell === null || cell === undefined ? "" : String(cell)}
                   </td>
                 );

@@ -21,7 +21,7 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             alt="Right At School"
             width={924}
             height={617}
-            style={{ height: "110px", width: "auto" }}
+            style={{ height: "132px", width: "auto" }}
             className="object-contain"
           />
           {/* Vertical divider */}

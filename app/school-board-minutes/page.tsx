@@ -7,6 +7,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import { exportToCsv } from "@/lib/exportCsv";
+import { CAMPAIGNS } from "@/lib/campaigns";
 
 const KEYWORDS = ["after school", "child care", "head start", "enrichment"];
 
@@ -140,6 +141,50 @@ function KeywordDropdown({ value, onChange }: { value: string; onChange: (v: str
   );
 }
 
+// ─── Campaign dropdown ────────────────────────────────────────────────────────
+
+function CampaignDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[180px]">
+        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Campaign:</span>
+        <span className="flex-1 text-left truncate text-xs">
+          {value ? <span className="text-blue-600 font-medium">{value}</span> : <span className="text-gray-400">All</span>}
+        </span>
+        {value
+          ? <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0" onClick={(e) => { e.stopPropagation(); onChange(""); }} />
+          : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[240px] py-1 max-h-72 overflow-y-auto">
+          <button onClick={() => { onChange(""); setOpen(false); }}
+            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!value ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
+            All campaigns
+          </button>
+          {CAMPAIGNS.map((c) => (
+            <button key={c} onClick={() => { onChange(c); setOpen(false); }}
+              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${value === c ? "text-blue-600 font-semibold bg-blue-50" : "text-gray-600"}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Sort dropdown ────────────────────────────────────────────────────────────
 
 type SortDir = "asc" | "desc";
@@ -148,8 +193,9 @@ interface SortState { col: number; dir: SortDir }
 const SORT_COLUMNS = [
   { label: "District",  index: 0 },
   { label: "State",     index: 2 },
-  { label: "SBM Date",  index: 3 },
-  { label: "Keyword",   index: 4 },
+  { label: "Campaign",  index: 3 },
+  { label: "SBM Date",  index: 4 },
+  { label: "Keyword",   index: 5 },
 ];
 
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {
@@ -247,8 +293,8 @@ function DataTable({ cols, rows, sort, onSort }: {
               <td className="px-3 py-1.5 text-right text-gray-400 text-xs">{i + 1}</td>
               {row.map((cell, j) => {
                 const val = cell === null || cell === undefined ? "" : String(cell);
-                // SBM Link column (index 6) — render as clickable link
-                if (j === 6 && val) {
+                // SBM Link column (index 7) — render as clickable link
+                if (j === 7 && val) {
                   return (
                     <td key={j} className="px-4 py-1.5 text-left">
                       <a href={val} target="_blank" rel="noopener noreferrer"
@@ -258,8 +304,8 @@ function DataTable({ cols, rows, sort, onSort }: {
                     </td>
                   );
                 }
-                // SBM Context (index 5) — truncate long text
-                if (j === 5) {
+                // SBM Context (index 6) — truncate long text
+                if (j === 6) {
                   return (
                     <td key={j} className="px-4 py-1.5 text-left text-gray-800 max-w-xs">
                       <span className="line-clamp-2 block text-xs leading-relaxed">{val}</span>
@@ -283,13 +329,14 @@ function DataTable({ cols, rows, sort, onSort }: {
 function SchoolBoardContent() {
   const searchParams = useSearchParams();
   const urlDistrict = searchParams.get("district");
-  const { campaign } = useFilter();
+  const { campaign: ctxCampaign } = useFilter();
 
+  const [filterCampaign, setFilterCampaign] = useState(ctxCampaign ?? "");
   const [filterDistrict, setFilterDistrict] = useState(urlDistrict ?? "");
   const [filterDomain, setFilterDomain] = useState("");
   const [filterState, setFilterState] = useState("");
   const [filterKeyword, setFilterKeyword] = useState("");
-  const [sort, setSort] = useState<SortState>({ col: 3, dir: "desc" }); // default: SBM Date desc
+  const [sort, setSort] = useState<SortState>({ col: 4, dir: "desc" }); // default: SBM Date desc
 
   const [allCols, setAllCols] = useState<Col[]>([]);
   const [allRows, setAllRows] = useState<Row[]>([]);
@@ -305,7 +352,7 @@ function SchoolBoardContent() {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (campaign)      params.set("campaign", campaign);
+    if (filterCampaign) params.set("campaign", filterCampaign);
     if (filterDistrict) params.set("district", filterDistrict);
 
     fetch(`/api/q425-data?${params.toString()}`)
@@ -317,15 +364,15 @@ function SchoolBoardContent() {
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [campaign, filterDistrict]);
+  }, [filterCampaign, filterDistrict]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Client-side filter for domain, state and keyword (col indices: 1=Domain, 2=ST, 4=Keyword)
+  // Client-side filter for domain, state, keyword (indices: 1=Domain, 2=ST, 5=Keyword)
   const filteredRows = allRows.filter((row) => {
     if (filterDomain  && String(row[1] ?? "").toLowerCase() !== filterDomain.toLowerCase())  return false;
     if (filterState   && String(row[2] ?? "").toLowerCase() !== filterState.toLowerCase())   return false;
-    if (filterKeyword && String(row[4] ?? "").toLowerCase() !== filterKeyword.toLowerCase()) return false;
+    if (filterKeyword && String(row[5] ?? "").toLowerCase() !== filterKeyword.toLowerCase()) return false;
     return true;
   });
 
@@ -338,7 +385,8 @@ function SchoolBoardContent() {
 
           {/* Filter + sort bar */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <CampaignDropdown value={filterCampaign} onChange={setFilterCampaign} />
               <SearchDropdown label="District" field="district" value={filterDistrict} onChange={setFilterDistrict} />
               <SearchDropdown label="Domain"   field="domain"   value={filterDomain}   onChange={setFilterDomain} />
               <SearchDropdown label="State"    field="state"    value={filterState}    onChange={setFilterState} />

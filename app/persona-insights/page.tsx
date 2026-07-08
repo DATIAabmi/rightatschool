@@ -254,7 +254,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const LEFT_ALIGN_COLS = new Set(["District", "District Domain"]);
+const LEFT_ALIGN_COLS = new Set(["District", "District Domain", "Job Function"]);
 
 function DataTable({ cols, rows, sort, onSort }: {
   cols: Col[]; rows: Row[];

@@ -47,24 +47,14 @@ export async function GET(req: NextRequest) {
 
   const params = buildParams(campaign, dateStart, dateEnd);
 
-  const [impressions, impressionsGoal, engagements, ctr, engagedUsers, leads, leadsGoal] =
+  const [impressions, engagements, ctr, engagedUsers, leads] =
     await Promise.all([
       fetchScalar(319, params),
-      fetchScalar(300, params),
       fetchScalar(320, params),
       fetchScalar(323, params),
       fetchScalar(308, params),
       fetchScalar(314, params),
-      fetchScalar(305, params),
     ]);
 
-  return NextResponse.json({
-    impressions,
-    impressionsGoal,
-    engagements,
-    ctr,
-    engagedUsers,
-    leads,
-    leadsGoal,
-  });
+  return NextResponse.json({ impressions, engagements, ctr, engagedUsers, leads });
 }

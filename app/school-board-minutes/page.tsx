@@ -313,9 +313,9 @@ function DataTable({ cols, rows, sort, onSort }: {
                     </td>
                   );
                 }
-                // Campaign (index 3) — show short code only e.g. "C6"
+                // Campaign (index 1) — show short code only e.g. "C6"
                 // SBM Date (index 4) — strip ISO timestamp, show date only
-                const display = j === 3 ? val.split(":")[0].trim()
+                const display = j === 1 ? val.split(":")[0].trim()
                   : j === 4 ? val.replace(/T.*$/, "")
                   : val;
                 return (

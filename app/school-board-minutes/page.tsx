@@ -313,8 +313,11 @@ function DataTable({ cols, rows, sort, onSort }: {
                     </td>
                   );
                 }
+                // Campaign (index 3) — show short code only e.g. "C6"
                 // SBM Date (index 4) — strip ISO timestamp, show date only
-                const display = j === 4 ? val.replace(/T.*$/, "") : val;
+                const display = j === 3 ? val.split(":")[0].trim()
+                  : j === 4 ? val.replace(/T.*$/, "")
+                  : val;
                 return (
                   <td key={j} className="px-4 py-1.5 text-left text-gray-800 whitespace-nowrap">{display}</td>
                 );

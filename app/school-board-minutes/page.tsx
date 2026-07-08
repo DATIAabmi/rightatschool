@@ -274,8 +274,8 @@ function DataTable({ cols, rows, sort, onSort }: {
               return (
                 <th key={j}
                   onClick={() => sortable && onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`px-4 py-3 font-semibold whitespace-nowrap text-left ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
-                  style={{ color: "#509EE3" }}
+                  className={`px-4 py-3 font-semibold whitespace-nowrap ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
+                  style={{ color: "#509EE3", textAlign: j === 1 ? "center" : "left" }}
                 >
                   <span className="inline-flex items-center gap-1">
                     {col.display_name}
@@ -319,7 +319,8 @@ function DataTable({ cols, rows, sort, onSort }: {
                   : j === 4 ? val.replace(/T.*$/, "")
                   : val;
                 return (
-                  <td key={j} className="px-4 py-1.5 text-left text-gray-800 whitespace-nowrap">{display}</td>
+                  <td key={j} className="px-4 py-1.5 text-gray-800 whitespace-nowrap"
+                    style={{ textAlign: j === 1 ? "center" : "left" }}>{display}</td>
                 );
               })}
             </tr>

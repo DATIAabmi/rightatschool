@@ -190,10 +190,11 @@ function CampaignDropdown({ value, onChange }: { value: string; onChange: (v: st
 type SortDir = "asc" | "desc";
 interface SortState { col: number; dir: SortDir }
 
+// Column order from card 425: 0=District 1=Campaign 2=District Domain 3=ST 4=SBM Date 5=Keyword 6=SBM Context 7=SBM Link
 const SORT_COLUMNS = [
   { label: "District",  index: 0 },
-  { label: "State",     index: 2 },
-  { label: "Campaign",  index: 3 },
+  { label: "Campaign",  index: 1 },
+  { label: "State",     index: 3 },
   { label: "SBM Date",  index: 4 },
   { label: "Keyword",   index: 5 },
 ];
@@ -266,7 +267,7 @@ function DataTable({ cols, rows, sort, onSort }: {
       <table className="text-sm border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="px-3 py-2 text-right w-10 shrink-0 font-semibold" style={{ color: "#509EE3" }}>#</th>
+            <th className="px-3 py-2 text-right font-semibold whitespace-nowrap" style={{ color: "#509EE3" }}>#</th>
             {cols.map((col, j) => {
               const active = sort.col === j;
               const sortable = SORT_COLUMNS.some((s) => s.index === j);
@@ -290,13 +291,13 @@ function DataTable({ cols, rows, sort, onSort }: {
         <tbody>
           {sorted.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td className="px-3 py-1.5 text-right text-gray-400 text-xs">{i + 1}</td>
+              <td className="px-3 py-1.5 text-right text-gray-400 text-xs whitespace-nowrap">{i + 1}</td>
               {row.map((cell, j) => {
                 const val = cell === null || cell === undefined ? "" : String(cell);
-                // SBM Link column (index 7) — render as clickable link
+                // SBM Link (index 7) — clickable link
                 if (j === 7 && val) {
                   return (
-                    <td key={j} className="px-4 py-1.5 text-left">
+                    <td key={j} className="px-4 py-1.5 text-left whitespace-nowrap">
                       <a href={val} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium">
                         View <ExternalLink size={11} />
@@ -304,16 +305,18 @@ function DataTable({ cols, rows, sort, onSort }: {
                     </td>
                   );
                 }
-                // SBM Context (index 6) — truncate long text
+                // SBM Context (index 6) — allow wrapping for long text
                 if (j === 6) {
                   return (
-                    <td key={j} className="px-4 py-1.5 text-left text-gray-800 max-w-xs">
+                    <td key={j} className="px-4 py-1.5 text-left text-gray-800" style={{ maxWidth: 320, minWidth: 160 }}>
                       <span className="line-clamp-2 block text-xs leading-relaxed">{val}</span>
                     </td>
                   );
                 }
+                // SBM Date (index 4) — strip ISO timestamp, show date only
+                const display = j === 4 ? val.replace(/T.*$/, "") : val;
                 return (
-                  <td key={j} className="px-4 py-1.5 text-left text-gray-800 whitespace-nowrap">{val}</td>
+                  <td key={j} className="px-4 py-1.5 text-left text-gray-800 whitespace-nowrap">{display}</td>
                 );
               })}
             </tr>
@@ -368,10 +371,10 @@ function SchoolBoardContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Client-side filter for domain, state, keyword (indices: 1=Domain, 2=ST, 5=Keyword)
+  // Client-side filter: 0=District 1=Campaign 2=District Domain 3=ST 4=SBM Date 5=Keyword 6=SBM Context 7=SBM Link
   const filteredRows = allRows.filter((row) => {
-    if (filterDomain  && String(row[1] ?? "").toLowerCase() !== filterDomain.toLowerCase())  return false;
-    if (filterState   && String(row[2] ?? "").toLowerCase() !== filterState.toLowerCase())   return false;
+    if (filterDomain  && String(row[2] ?? "").toLowerCase() !== filterDomain.toLowerCase())  return false;
+    if (filterState   && String(row[3] ?? "").toLowerCase() !== filterState.toLowerCase())   return false;
     if (filterKeyword && String(row[5] ?? "").toLowerCase() !== filterKeyword.toLowerCase()) return false;
     return true;
   });

@@ -38,10 +38,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ cols: [], rows: [] });
     }
 
+    const DISPLAY_NAMES: Record<string, string> = { ST: "State" };
     const data = await res.json();
     return NextResponse.json({
-      cols: (data.data?.cols ?? []).map((c: { display_name: string; base_type: string }) => ({
-        display_name: c.display_name,
+      cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+        display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
         base_type: c.base_type,
       })),
       rows: data.data?.rows ?? [],

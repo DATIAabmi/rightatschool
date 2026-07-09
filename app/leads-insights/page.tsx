@@ -290,14 +290,18 @@ function LeadsInsightsContent() {
     if (filterJobFunction) params.set("jobFunction", filterJobFunction);
 
     fetch(`/api/q174-data?${params.toString()}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        const text = await r.text();
+        if (!text.trim()) return { cols: [], rows: [] };
+        return JSON.parse(text);
+      })
+      .then((d: { cols?: unknown[]; rows?: unknown[]; error?: string }) => {
         if (d.error) throw new Error(d.error);
-        setCols(d.cols);
-        setRows(d.rows);
+        setCols((d.cols ?? []) as Col[]);
+        setRows((d.rows ?? []) as Row[]);
         setLoading(false);
       })
-      .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
+      .catch((err: Error) => { setError(err.message ?? "Failed to load"); setLoading(false); });
   }, [campaign, dateStart, dateEnd, filterDistrict, filterState, filterJobFunction]);
 
   useEffect(() => { fetchData(); }, [fetchData]);

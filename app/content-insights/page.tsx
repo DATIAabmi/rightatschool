@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Loader2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarSearch, ChevronDown, ExternalLink, Loader2, X } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
+import { useFilter } from "@/components/FilterContext";
+import { CAMPAIGNS } from "@/lib/campaigns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,18 +146,25 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
 
 // ─── Gated Content Table ──────────────────────────────────────────────────────
 
-function GatedContentTable() {
+function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string; dateStart: string; dateEnd: string }) {
   const [rows, setRows] = useState<GatedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 3, dir: "desc" });
 
-  useEffect(() => {
-    fetch("/api/q205-data")
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (campaign)  params.set("campaign",  campaign);
+    if (dateStart) params.set("dateStart", dateStart);
+    if (dateEnd)   params.set("dateEnd",   dateEnd);
+    fetch(`/api/q205-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => { setRows(d.rows ?? []); setLoading(false); })
       .catch(() => { setError("Failed to load"); setLoading(false); });
-  }, []);
+  }, [campaign, dateStart, dateEnd]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const HEADERS = [
     { label: "Image",             col: -1 },
@@ -248,27 +257,96 @@ function GatedContentTable() {
   );
 }
 
+// ─── Filter bar components ────────────────────────────────────────────────────
+
+function CampaignDropdown() {
+  const { campaign, setCampaign } = useFilter();
+  const [open, setOpen] = useState(false);
+  const ref = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const handler = (e: MouseEvent) => { if (!node.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[220px]">
+        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">ABMi Campaign:</span>
+        <span className="flex-1 text-left truncate text-blue-600 font-medium">{campaign || "All"}</span>
+        <ChevronDown size={14} className="text-gray-400 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[260px] py-1">
+          <button onClick={() => { setCampaign(""); setOpen(false); }}
+            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!campaign ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
+            All campaigns
+          </button>
+          {CAMPAIGNS.map((c) => (
+            <button key={c} onClick={() => { setCampaign(c); setOpen(false); }}
+              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${campaign === c ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DateRangeFilter() {
+  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+      <CalendarSearch size={14} className="text-orange-400 shrink-0" />
+      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
+      <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
+        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+      <span className="text-gray-300 text-xs">–</span>
+      <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
+        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+      {(dateStart || dateEnd) && (
+        <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
+          <X size={12} />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
+  const { campaign, dateStart, dateEnd } = useFilter();
   const [data, setData] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/content-data")
+  const fetchData = useCallback(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (campaign)  params.set("campaign",  campaign);
+    if (dateStart) params.set("dateStart", dateStart);
+    if (dateEnd)   params.set("dateEnd",   dateEnd);
+    fetch(`/api/content-data?${params.toString()}`)
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
+      .then((d: ContentData) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  }, [campaign, dateStart, dateEnd]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
+        <div className="flex items-center gap-2 mb-3">
+          <CampaignDropdown />
+          <DateRangeFilter />
+        </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "8px 24px 24px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
         {loading ? (
           <div className="flex items-center justify-center h-40 gap-2 text-gray-400 text-sm">
             <Loader2 size={18} className="animate-spin" /> Loading…
@@ -289,7 +367,7 @@ export default function Page() {
             </div>
 
             {/* Gated Content table */}
-            <GatedContentTable />
+            <GatedContentTable campaign={campaign} dateStart={dateStart} dateEnd={dateEnd} />
           </>
         )}
       </div>

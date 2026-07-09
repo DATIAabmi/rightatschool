@@ -62,7 +62,7 @@ function AvgTopicScoreChart() {
       <div className="flex flex-col gap-1.5">
         {sorted.map(([topic, score], i) => (
           <div key={i} className="flex items-center gap-3">
-            <span className="text-xs text-gray-600 shrink-0" style={{ width: 240, textAlign: "right" }} title={topic}>
+            <span className="text-xs text-gray-600 shrink-0" style={{ width: 240, textAlign: "left" }} title={topic}>
               {topic.length > 38 ? topic.slice(0, 38) + "…" : topic}
             </span>
             <div className="flex-1 h-5 bg-gray-100 rounded-sm overflow-hidden">
@@ -349,7 +349,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain"]);
+const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain", "Topic"]);
 const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
 
 function DataTable({ cols, rows, sort, onSort }: {

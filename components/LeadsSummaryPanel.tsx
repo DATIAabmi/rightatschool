@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import { useFilter } from "./FilterContext";
 
 interface SummaryData {
   totalDownloads: number | null;
   totalUniqueLeads: number | null;
   uniqueLeadDistrict: number | null;
-  byContentType: [string, number][];
-  byContentName: [string, number][];
 }
 
 function fmt(n: number | null): string {
@@ -26,33 +25,25 @@ function KPICard({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function HBarChart({ title, rows }: { title: string; rows: [string, number][] }) {
-  const max = Math.max(...rows.map(([, v]) => v), 1);
+function ChartCard({
+  title,
+  questionId,
+  sqlParams,
+}: {
+  title: string;
+  questionId: number;
+  sqlParams: Record<string, string>;
+}) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 min-w-0 flex flex-col overflow-hidden">
-      {/* Dark header */}
-      <div className="bg-gray-950 px-4 py-2.5">
+    <div
+      className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 min-w-0 flex flex-col overflow-hidden"
+      style={{ height: 280 }}
+    >
+      <div className="bg-gray-950 px-4 py-2.5 shrink-0">
         <span className="text-sm font-bold text-white">{title}</span>
       </div>
-      {/* Bars */}
-      <div className="flex-1 px-4 py-4 flex flex-col justify-center gap-3">
-        {rows.length === 0 ? (
-          <div className="text-center text-gray-400 text-sm">No data</div>
-        ) : rows.map(([label, value]) => (
-          <div key={label} className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 shrink-0 text-right" style={{ width: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={label}>
-              {label}
-            </span>
-            <div className="flex-1 bg-gray-100 rounded-full overflow-hidden" style={{ height: 24 }}>
-              <div
-                className="h-full rounded-full flex items-center justify-end pr-2"
-                style={{ width: `${Math.max((value / max) * 100, 4)}%`, background: "#2D6DB5" }}
-              >
-                <span className="text-white text-xs font-bold tabular-nums">{value.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="flex-1 min-h-0">
+        <StaticQuestion questionId={questionId} sqlParameters={sqlParams} height="100%" />
       </div>
     </div>
   );
@@ -71,32 +62,37 @@ export default function LeadsSummaryPanel() {
     if (dateEnd) params.set("dateEnd", dateEnd);
     fetch(`/api/leads-summary${params.size ? `?${params}` : ""}`)
       .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
+      .then((d: SummaryData) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   }, [campaign, dateStart, dateEnd]);
 
-  if (loading) {
-    return (
-      <div className="mb-4 flex items-center justify-center h-32 text-gray-400 gap-2 text-sm">
-        <Loader2 size={16} className="animate-spin" /> Loading summary…
-      </div>
-    );
-  }
-
-  if (!data) return null;
+  const sqlParams: Record<string, string> = {};
+  if (campaign)  sqlParams["Abmi_Campaign"]      = campaign;
+  if (dateStart) sqlParams["Last_Updated.start"] = dateStart;
+  if (dateEnd)   sqlParams["Last_Updated.end"]   = dateEnd;
 
   return (
-    <div className="mb-4 flex gap-3 items-stretch">
-      {/* Left: 3 KPI scalars */}
-      <div className="flex flex-col gap-3" style={{ width: 190, flexShrink: 0 }}>
-        <KPICard label="Total Downloads" value={data.totalDownloads} />
-        <KPICard label="Total Unique Leads" value={data.totalUniqueLeads} />
-        <KPICard label="Unique Lead Districts" value={data.uniqueLeadDistrict} />
+    <div className="mb-4 flex flex-col gap-3">
+      {/* Row 1: 3 KPI scalars side by side */}
+      <div className="flex gap-3">
+        {loading ? (
+          <div className="flex items-center justify-center h-16 gap-2 text-gray-400 text-sm flex-1">
+            <Loader2 size={16} className="animate-spin" />
+          </div>
+        ) : (
+          <>
+            <KPICard label="Total Downloads"       value={data?.totalDownloads      ?? null} />
+            <KPICard label="Total Unique Leads"    value={data?.totalUniqueLeads    ?? null} />
+            <KPICard label="Unique Lead Districts" value={data?.uniqueLeadDistrict  ?? null} />
+          </>
+        )}
       </div>
 
-      {/* Right: 2 horizontal bar charts */}
-      <HBarChart title="Leads by Content Type" rows={data.byContentType} />
-      <HBarChart title="Leads by Content Name" rows={data.byContentName} />
+      {/* Row 2: 2 Metabase embedded horizontal bar charts at full width */}
+      <div className="flex gap-3">
+        <ChartCard title="Leads by Content Type" questionId={178} sqlParams={sqlParams} />
+        <ChartCard title="Leads by Content Name" questionId={179} sqlParams={sqlParams} />
+      </div>
     </div>
   );
 }

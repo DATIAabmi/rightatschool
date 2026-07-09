@@ -4,25 +4,30 @@ import { StaticQuestion } from "@metabase/embedding-sdk-react";
 import { useFilter } from "./FilterContext";
 
 const STYLES = `
-  .leads-kpi .metabase-embed-frame,
+  /* Strip chrome from KPI scalars only */
+  .leads-kpi > div,
+  .leads-kpi [class*="DashCard"],
+  .leads-kpi [class*="dashcard"],
+  .leads-kpi .metabase-embed-frame {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .leads-kpi header,
+  .leads-kpi [data-testid="legend-caption"] {
+    display: none !important;
+  }
+
+  /* Charts: strip outer card border/shadow but keep Metabase's internal header */
+  .leads-chart > div,
   .leads-chart .metabase-embed-frame {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-  }
-  .leads-kpi header,
-  .leads-chart header,
-  .leads-kpi [data-testid="legend-caption"],
-  .leads-chart [data-testid="legend-caption"] {
-    display: none !important;
-  }
-  .leads-kpi > div > div,
-  .leads-kpi [class*="DashCard"],
-  .leads-kpi [class*="dashcard"] {
-    background: transparent !important;
     padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
+    margin: 0 !important;
   }
 `;
 
@@ -32,26 +37,22 @@ function KPICard({ cardId, label, sqlParams }: {
   sqlParams: Record<string, string>;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 pt-3 pb-2 flex flex-col" style={{ minHeight: 80 }}>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 pt-3 pb-2 flex flex-col" style={{ minHeight: 84 }}>
       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</span>
-      <div className="leads-kpi flex-1 flex items-center" style={{ minHeight: 44 }}>
-        <StaticQuestion questionId={cardId} sqlParameters={sqlParams} height={52} title={false} />
+      <div className="leads-kpi flex-1 flex items-center" style={{ minHeight: 46 }}>
+        <StaticQuestion questionId={cardId} sqlParameters={sqlParams} height={50} title={false} />
       </div>
     </div>
   );
 }
 
-function ChartCard({ cardId, label, sqlParams }: {
+function ChartCard({ cardId, sqlParams }: {
   cardId: number;
-  label: string;
   sqlParams: Record<string, string>;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 pt-3 pb-1 flex flex-col flex-1 min-w-0">
-      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</span>
-      <div className="leads-chart flex-1" style={{ minHeight: 180 }}>
-        <StaticQuestion questionId={cardId} sqlParameters={sqlParams} height={188} title={false} />
-      </div>
+    <div className="leads-chart rounded-xl overflow-hidden border border-gray-200 shadow-sm flex-1 min-w-0" style={{ height: 300 }}>
+      <StaticQuestion questionId={cardId} sqlParameters={sqlParams} height={300} />
     </div>
   );
 }
@@ -75,9 +76,9 @@ export default function LeadsSummaryPanel() {
           <KPICard cardId={177} label="Unique Lead District" sqlParams={sqlParams} />
         </div>
 
-        {/* Right: 2 bar charts */}
-        <ChartCard cardId={178} label="Leads by Content Type" sqlParams={sqlParams} />
-        <ChartCard cardId={179} label="Leads by Content Name" sqlParams={sqlParams} />
+        {/* Right: 2 bar charts with native Metabase header */}
+        <ChartCard cardId={178} sqlParams={sqlParams} />
+        <ChartCard cardId={179} sqlParams={sqlParams} />
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDow
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
+import LeadsSummaryPanel from "@/components/LeadsSummaryPanel";
 import { exportToCsv } from "@/lib/exportCsv";
 import { CAMPAIGNS } from "@/lib/campaigns";
 
@@ -325,6 +326,7 @@ function LeadsInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
+        <LeadsSummaryPanel />
         <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Leads Insights</span>

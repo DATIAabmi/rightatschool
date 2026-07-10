@@ -385,7 +385,8 @@ function EngagedUsersContent() {
         </div>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "0 24px 24px" }} className="eu-scroll">
+        <style>{`.eu-scroll::-webkit-scrollbar{width:6px}.eu-scroll::-webkit-scrollbar-track{background:transparent}.eu-scroll::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}.eu-scroll::-webkit-scrollbar-thumb:hover{background:#9ca3af}`}</style>
         <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Engaged Users By District</span>

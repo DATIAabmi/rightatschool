@@ -5,9 +5,9 @@ import { ChevronDown, X, CalendarSearch, Loader2 } from "lucide-react";
 import { useFilter } from "./FilterContext";
 import { CAMPAIGNS } from "@/lib/campaigns";
 
-const STEP = 36;
-const CARD_W = 310;
-const ROW_H = 108;
+const STEP = 26;
+const CARD_W = 240;
+const ROW_H = 80;
 
 function fmt(val: string | number | null): string {
   if (val === null || val === undefined) return "—";
@@ -199,15 +199,15 @@ export default function EcosystemFunnel() {
               >
                 <h3
                   className="font-black text-gray-900 leading-none"
-                  style={{ fontSize: 22, letterSpacing: "-0.01em" }}
+                  style={{ fontSize: 16, letterSpacing: "-0.01em" }}
                 >
                   {stage.label}
                 </h3>
-                <p className="text-gray-500 mt-0.5 leading-snug" style={{ fontSize: 11, maxWidth: 220 }}>
+                <p className="text-gray-500 mt-0.5 leading-snug" style={{ fontSize: 10, maxWidth: 200 }}>
                   {stage.description}
                 </p>
                 {stage.goal && (
-                  <p className="font-semibold text-green-600 mt-0.5" style={{ fontSize: 11 }}>
+                  <p className="font-semibold text-green-600 mt-0.5" style={{ fontSize: 10 }}>
                     {stage.goal}
                   </p>
                 )}
@@ -233,7 +233,7 @@ export default function EcosystemFunnel() {
                   </span>
                   <span
                     className="block font-black text-white tabular-nums"
-                    style={{ fontSize: 28, lineHeight: 1.1, letterSpacing: "-0.02em" }}
+                    style={{ fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}
                   >
                     {stage.value}
                   </span>
@@ -243,17 +243,17 @@ export default function EcosystemFunnel() {
                 {stage.goalValue && (
                   <div
                     className="shrink-0 border-l border-gray-700 flex flex-col"
-                    style={{ paddingLeft: 10, minWidth: 96 }}
+                    style={{ paddingLeft: 8, minWidth: 72 }}
                   >
                     <span
                       className="block uppercase tracking-widest text-gray-400 font-semibold"
-                      style={{ fontSize: 11, marginBottom: 2 }}
+                      style={{ fontSize: 9, marginBottom: 2 }}
                     >
                       % to Goal
                     </span>
                     <span
                       className="block font-black text-white tabular-nums"
-                      style={{ fontSize: 22, lineHeight: 1.1 }}
+                      style={{ fontSize: 16, lineHeight: 1.1 }}
                     >
                       {stage.goalValue}
                     </span>

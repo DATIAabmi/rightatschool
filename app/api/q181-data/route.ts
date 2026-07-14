@@ -10,41 +10,23 @@ const DISPLAY_NAMES: Record<string, string> = {
   Topic_Score: "Topic Score",
 };
 
+function parseList(v: string | null): string[] {
+  return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const campaign  = searchParams.get("campaign")  ?? "";
-  const district  = searchParams.get("district")  ?? "";
-  const state     = searchParams.get("state")     ?? "";
-  const topic     = searchParams.get("topic")     ?? "";
+  const campaigns = parseList(searchParams.get("campaign"));
+  const districts = parseList(searchParams.get("district"));
+  const states    = parseList(searchParams.get("state"));
+  const topics    = parseList(searchParams.get("topic"));
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
   const parameters: object[] = [];
 
-  if (campaign) parameters.push({
-    id: "ccf5f7d1-8f1a-474d-b273-edeed2dd54dc",
-    type: "string/=",
-    value: campaign,
-    target: ["variable", ["template-tag", "Abmi_Campaign"]],
-  });
-  if (district) parameters.push({
-    id: "34b78ce0-e544-416e-8a09-ddc57ec0504a",
-    type: "string/=",
-    value: district,
-    target: ["variable", ["template-tag", "user_district"]],
-  });
-  if (state) parameters.push({
-    id: "f8e34e5a-ff7c-4b73-976e-d347f625a8c8",
-    type: "string/=",
-    value: state,
-    target: ["variable", ["template-tag", "state"]],
-  });
-  if (topic) parameters.push({
-    id: "c1a88312-042c-40f4-b942-9ea74706d81c",
-    type: "string/=",
-    value: topic,
-    target: ["variable", ["template-tag", "Topic"]],
-  });
+  // Campaign/district/state/topic are real per-row columns on this card, so
+  // multiple selections are applied locally below instead of via Metabase.
   if (dateStart) parameters.push({
     id: "0b180445-b91a-4756-bdbe-6e7359010e64",
     type: "date/range",
@@ -71,15 +53,29 @@ export async function GET(req: NextRequest) {
 
   const data = await res.json();
   const CAMPAIGN_COL = 2;
-  return NextResponse.json({
-    cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
-      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
-      base_type: c.base_type,
-    })),
-    rows: (data.data?.rows ?? []).map((row: unknown[]) =>
-      row.map((val, j) =>
-        j === CAMPAIGN_COL && typeof val === "string" ? val.split(":")[0].trim() : val
-      )
-    ),
-  });
+  const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+    display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
+    base_type: c.base_type,
+  }));
+  let rows: unknown[][] = (data.data?.rows ?? []).map((row: unknown[]) =>
+    row.map((val, j) =>
+      j === CAMPAIGN_COL && typeof val === "string" ? val.split(":")[0].trim() : val
+    )
+  );
+
+  const districtCol = cols.findIndex((c: { display_name: string }) => c.display_name === "District");
+  const stateCol = cols.findIndex((c: { display_name: string }) => c.display_name === "State");
+  const topicCol = cols.findIndex((c: { display_name: string }) => c.display_name === "Topic");
+  const campaignShortCodes = campaigns.map((c) => c.split(":")[0].trim());
+
+  const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
+    values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
+
+  rows = rows
+    .filter(matches(campaignShortCodes, CAMPAIGN_COL))
+    .filter(matches(districts, districtCol))
+    .filter(matches(states, stateCol))
+    .filter(matches(topics, topicCol));
+
+  return NextResponse.json({ cols, rows });
 }

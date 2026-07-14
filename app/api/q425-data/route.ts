@@ -5,27 +5,19 @@ export const maxDuration = 60;
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
+function parseList(v: string | null): string[] {
+  return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
-    const campaign = searchParams.get("campaign") ?? "";
-    const district = searchParams.get("district") ?? "";
+    const campaigns = parseList(searchParams.get("campaign"));
+    const districts = parseList(searchParams.get("district"));
 
+    // Campaign/District are real per-row columns on this card, so multiple
+    // selections are applied locally below instead of via Metabase.
     const parameters: object[] = [];
-
-    if (campaign) parameters.push({
-      id: "abmi_campaign_tag",
-      type: "string/=",
-      value: campaign,
-      target: ["variable", ["template-tag", "abmi_campaign"]],
-    });
-
-    if (district) parameters.push({
-      id: "281aefcd-96a2-48db-b5bb-a9d3fa67e51c",
-      type: "string/=",
-      value: district,
-      target: ["variable", ["template-tag", "District"]],
-    });
 
     const res = await fetch(`${METABASE_URL}/api/card/425/query`, {
       method: "POST",
@@ -40,13 +32,23 @@ export async function GET(req: NextRequest) {
 
     const DISPLAY_NAMES: Record<string, string> = { ST: "State" };
     const data = await res.json();
-    return NextResponse.json({
-      cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
-        display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
-        base_type: c.base_type,
-      })),
-      rows: data.data?.rows ?? [],
-    });
+    const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
+      base_type: c.base_type,
+    }));
+    let rows: unknown[][] = data.data?.rows ?? [];
+
+    const districtCol = cols.findIndex((c: { display_name: string }) => c.display_name === "District");
+    const campaignCol = cols.findIndex((c: { display_name: string }) => c.display_name === "Campaign");
+
+    const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
+      values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
+
+    rows = rows
+      .filter(matches(campaigns, campaignCol))
+      .filter(matches(districts, districtCol));
+
+    return NextResponse.json({ cols, rows });
   } catch {
     return NextResponse.json({ cols: [], rows: [] });
   }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarSearch, ChevronDown, ExternalLink, Loader2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CalendarSearch, ExternalLink, Loader2, X } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
+import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { CAMPAIGNS } from "@/lib/campaigns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -146,7 +147,7 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
 
 // ─── Gated Content Table ──────────────────────────────────────────────────────
 
-function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string; dateStart: string; dateEnd: string }) {
+function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[]; dateStart: string; dateEnd: string }) {
   const [rows, setRows] = useState<GatedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -155,9 +156,9 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string;
   const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (campaign)  params.set("campaign",  campaign);
-    if (dateStart) params.set("dateStart", dateStart);
-    if (dateEnd)   params.set("dateEnd",   dateEnd);
+    if (campaign.length) params.set("campaign",  campaign.join(","));
+    if (dateStart)       params.set("dateStart", dateStart);
+    if (dateEnd)         params.set("dateEnd",   dateEnd);
     fetch(`/api/q205-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => { setRows(d.rows ?? []); setLoading(false); })
@@ -259,41 +260,6 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string;
 
 // ─── Filter bar components ────────────────────────────────────────────────────
 
-function CampaignDropdown() {
-  const { campaign, setCampaign } = useFilter();
-  const [open, setOpen] = useState(false);
-  const ref = useCallback((node: HTMLDivElement | null) => {
-    if (!node) return;
-    const handler = (e: MouseEvent) => { if (!node.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[220px]">
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">ABMi Campaign:</span>
-        <span className="flex-1 text-left truncate text-blue-600 font-medium">{campaign || "All"}</span>
-        <ChevronDown size={14} className="text-gray-400 shrink-0" />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[260px] py-1">
-          <button onClick={() => { setCampaign(""); setOpen(false); }}
-            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!campaign ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-            All campaigns
-          </button>
-          {CAMPAIGNS.map((c) => (
-            <button key={c} onClick={() => { setCampaign(c); setOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${campaign === c ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-              {c}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DateRangeFilter() {
   const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
   return (
@@ -317,16 +283,16 @@ function DateRangeFilter() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
   const [data, setData] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (campaign)  params.set("campaign",  campaign);
-    if (dateStart) params.set("dateStart", dateStart);
-    if (dateEnd)   params.set("dateEnd",   dateEnd);
+    if (campaign.length) params.set("campaign",  campaign.join(","));
+    if (dateStart)       params.set("dateStart", dateStart);
+    if (dateEnd)         params.set("dateEnd",   dateEnd);
     fetch(`/api/content-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d: ContentData) => { setData(d); setLoading(false); })
@@ -341,7 +307,7 @@ export default function Page() {
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
         <div className="flex items-center gap-2 mb-3">
-          <CampaignDropdown />
+          <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
           <DateRangeFilter />
         </div>
       </div>

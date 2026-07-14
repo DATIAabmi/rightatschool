@@ -5,47 +5,16 @@ import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDow
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
+import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import LeadsSummaryPanel from "@/components/LeadsSummaryPanel";
 import { exportToCsv } from "@/lib/exportCsv";
 import { CAMPAIGNS } from "@/lib/campaigns";
 
-function CampaignDropdown() {
-  const { campaign, setCampaign } = useFilter();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[220px]">
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">ABMi Campaign:</span>
-        <span className="flex-1 text-left truncate text-blue-600 font-medium">{campaign || "All"}</span>
-        <ChevronDown size={14} className="text-gray-400 shrink-0" />
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[260px] py-1">
-          <button onClick={() => { setCampaign(""); setOpen(false); }}
-            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!campaign ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-            All campaigns
-          </button>
-          {CAMPAIGNS.map((c) => (
-            <button key={c} onClick={() => { setCampaign(c); setOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${campaign === c ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-              {c}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+function fetchFieldOptions(field: "district" | "state" | "job_function") {
+  return (q: string) =>
+    fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
+      .then((r) => r.json())
+      .then((d) => d.values ?? []);
 }
 
 function DateRangeFilter() {
@@ -63,83 +32,6 @@ function DateRangeFilter() {
         <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
           <X size={12} />
         </button>
-      )}
-    </div>
-  );
-}
-
-function SearchDropdown({
-  label, field, value, onChange,
-}: {
-  label: string;
-  field: "district" | "state" | "job_function";
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [options, setOptions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setQuery(""); }
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  const fetchOptions = useCallback((q: string) => {
-    setLoading(true);
-    fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
-      .then((r) => r.json())
-      .then((d) => { setOptions(d.values ?? []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [field]);
-
-  function handleOpen() {
-    setOpen((o) => !o);
-    setQuery("");
-    setOptions([]);
-    setTimeout(() => { inputRef.current?.focus(); fetchOptions(""); }, 50);
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={handleOpen}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[160px]">
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">{label}:</span>
-        <span className="flex-1 text-left truncate text-xs">
-          {value ? <span className="text-blue-600 font-medium">{value}</span> : <span className="text-gray-500">All</span>}
-        </span>
-        {value
-          ? <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0" onClick={(e) => { e.stopPropagation(); onChange(""); }} />
-          : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <input ref={inputRef} type="text" placeholder={`Search ${label.toLowerCase()}…`}
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); if (debounceRef.current) clearTimeout(debounceRef.current); debounceRef.current = setTimeout(() => fetchOptions(e.target.value), 300); }}
-              className="w-full text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400" />
-          </div>
-          <div className="max-h-60 overflow-y-auto">
-            {loading && <p className="px-4 py-3 text-xs text-gray-400 text-center">Searching…</p>}
-            {!loading && options.length === 0 && query && <p className="px-4 py-3 text-xs text-gray-400 text-center">No results for &quot;{query}&quot;</p>}
-            {!loading && options.length === 0 && !query && <p className="px-4 py-3 text-xs text-gray-400 text-center">Type to search</p>}
-            {value && <button onClick={() => { onChange(""); setOpen(false); setQuery(""); }} className="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-50">Clear filter</button>}
-            {options.map((opt) => (
-              <button key={opt} onClick={() => { onChange(opt); setOpen(false); setQuery(""); }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 truncate ${value === opt ? "text-blue-600 font-semibold bg-blue-50" : "text-gray-700"}`}>
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
       )}
     </div>
   );
@@ -268,10 +160,10 @@ function DataTable({ cols, rows, sort, onSort }: {
 }
 
 function LeadsInsightsContent() {
-  const { campaign, dateStart, dateEnd } = useFilter();
-  const [filterDistrict, setFilterDistrict] = useState("");
-  const [filterState, setFilterState] = useState("");
-  const [filterJobFunction, setFilterJobFunction] = useState("");
+  const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
+  const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
+  const [filterState, setFilterState] = useState<string[]>([]);
+  const [filterJobFunction, setFilterJobFunction] = useState<string[]>([]);
   const [cols, setCols] = useState<Col[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -282,12 +174,12 @@ function LeadsInsightsContent() {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (campaign)          params.set("campaign",    campaign);
-    if (dateStart)         params.set("dateStart",   dateStart);
-    if (dateEnd)           params.set("dateEnd",     dateEnd);
-    if (filterDistrict)    params.set("district",    filterDistrict);
-    if (filterState)       params.set("state",       filterState);
-    if (filterJobFunction) params.set("jobFunction", filterJobFunction);
+    if (campaign.length)          params.set("campaign",    campaign.join(","));
+    if (dateStart)                params.set("dateStart",   dateStart);
+    if (dateEnd)                  params.set("dateEnd",     dateEnd);
+    if (filterDistrict.length)    params.set("district",    filterDistrict.join(","));
+    if (filterState.length)       params.set("state",       filterState.join(","));
+    if (filterJobFunction.length) params.set("jobFunction", filterJobFunction.join(","));
 
     fetch(`/api/q174-data?${params.toString()}`)
       .then(async (r) => {
@@ -315,7 +207,7 @@ function LeadsInsightsContent() {
         {/* Row 1: Campaign + Date Range + Sort */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <CampaignDropdown />
+            <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
             <DateRangeFilter />
           </div>
           <SortDropdown sort={sort} onSort={setSort} />
@@ -323,9 +215,9 @@ function LeadsInsightsContent() {
 
         {/* Row 2: District + Job Function + State */}
         <div className="flex items-center gap-2 mb-3">
-          <SearchDropdown label="District"     field="district"     value={filterDistrict}    onChange={setFilterDistrict} />
-          <SearchDropdown label="Job Function" field="job_function" value={filterJobFunction} onChange={setFilterJobFunction} />
-          <SearchDropdown label="State"        field="state"        value={filterState}       onChange={setFilterState} />
+          <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    search={fetchFieldOptions("district")} />
+          <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
+          <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
         </div>
       </div>
 

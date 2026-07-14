@@ -39,14 +39,25 @@ async function fetchScalar(cardId: number, params: object[]): Promise<string | n
   }
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const campaign  = searchParams.get("campaign")  ?? "";
-  const dateStart = searchParams.get("dateStart") ?? "";
-  const dateEnd   = searchParams.get("dateEnd")   ?? "";
+function sum(values: (string | number | null)[]): number | null {
+  const nums = values.map((v) => Number(v)).filter((n) => !isNaN(n));
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0);
+}
 
+// ctr scalars come back pre-formatted (e.g. "1.72%"), so strip non-numeric
+// characters before averaging, then re-format to match that same shape.
+function avgPct(values: (string | number | null)[]): string | null {
+  const nums = values
+    .map((v) => (typeof v === "string" ? parseFloat(v.replace(/[^0-9.-]/g, "")) : Number(v)))
+    .filter((n) => !isNaN(n));
+  if (nums.length === 0) return null;
+  const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+  return `${avg.toFixed(2)}%`;
+}
+
+async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateEnd: string) {
   const params = buildParams(campaign, dateStart, dateEnd);
-
   const [impressions, engagements, ctr, engagedUsers, leads] =
     await Promise.all([
       fetchScalar(319, params),
@@ -55,6 +66,26 @@ export async function GET(req: NextRequest) {
       fetchScalar(308, params),
       fetchScalar(314, params),
     ]);
+  return { impressions, engagements, ctr, engagedUsers, leads };
+}
 
-  return NextResponse.json({ impressions, engagements, ctr, engagedUsers, leads });
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const dateStart = searchParams.get("dateStart") ?? "";
+  const dateEnd   = searchParams.get("dateEnd")   ?? "";
+
+  if (campaigns.length <= 1) {
+    const result = await fetchFunnelForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
+    return NextResponse.json(result);
+  }
+
+  const perCampaign = await Promise.all(campaigns.map((c) => fetchFunnelForCampaign(c, dateStart, dateEnd)));
+  return NextResponse.json({
+    impressions:  sum(perCampaign.map((r) => r.impressions)),
+    engagements:  sum(perCampaign.map((r) => r.engagements)),
+    ctr:          avgPct(perCampaign.map((r) => r.ctr)),
+    engagedUsers: sum(perCampaign.map((r) => r.engagedUsers)),
+    leads:        sum(perCampaign.map((r) => r.leads)),
+  });
 }

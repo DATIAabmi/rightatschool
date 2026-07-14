@@ -69,7 +69,7 @@ export default function LeadsSummaryPanel() {
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (campaign) params.set("campaign", campaign);
+    if (campaign.length) params.set("campaign", campaign.join(","));
     if (dateStart) params.set("dateStart", dateStart);
     if (dateEnd) params.set("dateEnd", dateEnd);
     fetch(`/api/leads-summary${params.size ? `?${params}` : ""}`)

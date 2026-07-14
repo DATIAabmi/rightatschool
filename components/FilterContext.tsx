@@ -10,12 +10,12 @@ interface FilterState {
   setDateEnd: (d: string) => void;
   /** "YYYY-MM-DD~YYYY-MM-DD" ready for Metabase, undefined if either date is unset */
   metabaseDateRange: string | undefined;
-  /** Selected ABMi campaign key, e.g. "C5: Nov 2025 - May 2026". Empty = Metabase default. */
-  campaign: string;
-  setCampaign: (c: string) => void;
-  /** District search string — passed as the Metabase district parameter. Empty = all districts. */
-  district: string;
-  setDistrict: (d: string) => void;
+  /** Selected ABMi campaign keys, e.g. ["C5: Nov 2025 - May 2026"]. Empty = all campaigns. */
+  campaign: string[];
+  setCampaign: (c: string[]) => void;
+  /** District search values — passed as the Metabase district parameter. Empty = all districts. */
+  district: string[];
+  setDistrict: (d: string[]) => void;
 }
 
 const FilterContext = createContext<FilterState>({
@@ -24,17 +24,17 @@ const FilterContext = createContext<FilterState>({
   setDateStart: () => {},
   setDateEnd: () => {},
   metabaseDateRange: undefined,
-  campaign: "",
+  campaign: [],
   setCampaign: () => {},
-  district: "",
+  district: [],
   setDistrict: () => {},
 });
 
 export function FilterProvider({ children }: { children: ReactNode }) {
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
-  const [campaign, setCampaign] = useState(DEFAULT_CAMPAIGN);
-  const [district, setDistrict] = useState("");
+  const [campaign, setCampaign] = useState<string[]>([DEFAULT_CAMPAIGN]);
+  const [district, setDistrict] = useState<string[]>([]);
 
   const metabaseDateRange =
     dateStart && dateEnd ? `${dateStart}~${dateEnd}` : undefined;

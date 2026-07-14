@@ -7,9 +7,12 @@ import { campaignDateRange } from "@/lib/campaigns";
 export default function DashboardHeader({ legend }: { legend?: string }) {
   const { campaign } = useFilter();
 
-  const subtitle = campaign
-    ? campaignDateRange(campaign)
-    : "All Campaigns";
+  const subtitle =
+    campaign.length === 0
+      ? "All Campaigns"
+      : campaign.length === 1
+      ? campaignDateRange(campaign[0])
+      : `${campaign.length} Campaigns Selected`;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-8 py-5 mb-4">

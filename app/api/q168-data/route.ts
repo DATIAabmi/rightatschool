@@ -3,13 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
+function parseList(v: string | null): string[] {
+  return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const dateStart   = searchParams.get("dateStart") ?? "";
-  const dateEnd     = searchParams.get("dateEnd") ?? "";
-  const district    = searchParams.get("district") ?? "";
-  const state       = searchParams.get("state") ?? "";
-  const jobFunction = searchParams.get("jobFunction") ?? "";
+  const dateStart    = searchParams.get("dateStart") ?? "";
+  const dateEnd      = searchParams.get("dateEnd") ?? "";
+  const districts    = parseList(searchParams.get("district"));
+  const states       = parseList(searchParams.get("state"));
+  const jobFunctions = parseList(searchParams.get("jobFunction"));
 
   const parameters: object[] = [];
 
@@ -25,24 +29,8 @@ export async function GET(req: NextRequest) {
     value: dateEnd,
     target: ["dimension", ["template-tag", "Last_Updated.end"]],
   });
-  if (district) parameters.push({
-    id: "12a0e3ec-5c50-4329-8695-72662429abc8",
-    type: "string/=",
-    value: district,
-    target: ["variable", ["template-tag", "user_district"]],
-  });
-  if (state) parameters.push({
-    id: "f941cdb5-155d-48d1-b5d7-16215819abff",
-    type: "string/=",
-    value: state,
-    target: ["variable", ["template-tag", "state"]],
-  });
-  if (jobFunction) parameters.push({
-    id: "bb5bfb7a-0818-42c8-bc4e-e0d37a97d558",
-    type: "string/=",
-    value: jobFunction,
-    target: ["variable", ["template-tag", "Job_Function"]],
-  });
+  // District/state/job function are filtered below (post-query) so multiple
+  // values can be selected — the underlying SQL variables only support one.
 
   const res = await fetch(`${METABASE_URL}/api/card/168/query`, {
     method: "POST",
@@ -63,11 +51,23 @@ export async function GET(req: NextRequest) {
     if (displayName.toLowerCase().includes("district") && displayName.toLowerCase().includes("domain")) return "District Domain";
     return displayName;
   };
-  return NextResponse.json({
-    cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
-      display_name: normalizeColName(c.name, c.display_name),
-      base_type: c.base_type,
-    })),
-    rows: data.data?.rows ?? [],
-  });
+  const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+    display_name: normalizeColName(c.name, c.display_name),
+    base_type: c.base_type,
+  }));
+  let rows: unknown[][] = data.data?.rows ?? [];
+
+  const districtCol = cols.findIndex((c: { display_name: string }) => c.display_name === "District");
+  const stateCol = cols.findIndex((c: { display_name: string }) => c.display_name === "State");
+  const jobFunctionCol = cols.findIndex((c: { display_name: string }) => c.display_name === "Job Function");
+
+  const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
+    values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
+
+  rows = rows
+    .filter(matches(districts, districtCol))
+    .filter(matches(states, stateCol))
+    .filter(matches(jobFunctions, jobFunctionCol));
+
+  return NextResponse.json({ cols, rows });
 }

@@ -5,12 +5,7 @@ export const maxDuration = 60;
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const campaign  = searchParams.get("campaign")  ?? "";
-  const dateStart = searchParams.get("dateStart") ?? "";
-  const dateEnd   = searchParams.get("dateEnd")   ?? "";
-
+async function fetchRowsForCampaign(campaign: string, dateStart: string, dateEnd: string) {
   const params: object[] = [];
   if (campaign)  params.push({ type: "string/=",  value: campaign,  target: ["variable", ["template-tag", "Abmi_Campaign"]] });
   if (dateStart) params.push({ type: "date/range", value: dateStart, target: ["variable", ["template-tag", "Date"]] });
@@ -23,10 +18,24 @@ export async function GET(req: NextRequest) {
     cache: "no-store",
   });
 
-  if (!res.ok) {
-    return NextResponse.json({ error: `Metabase error ${res.status}` }, { status: 500 });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.data?.rows ?? [];
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const dateStart = searchParams.get("dateStart") ?? "";
+  const dateEnd   = searchParams.get("dateEnd")   ?? "";
+
+  if (campaigns.length <= 1) {
+    const rows = await fetchRowsForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
+    if (rows === null) return NextResponse.json({ error: "Metabase error" }, { status: 500 });
+    return NextResponse.json({ rows });
   }
 
-  const data = await res.json();
-  return NextResponse.json({ rows: data.data?.rows ?? [] });
+  const perCampaign = await Promise.all(campaigns.map((c) => fetchRowsForCampaign(c, dateStart, dateEnd)));
+  const rows = perCampaign.flatMap((r) => r ?? []);
+  return NextResponse.json({ rows });
 }

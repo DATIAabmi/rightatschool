@@ -83,7 +83,7 @@ function AdSamplesEmbed() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
-  const params: Record<string, string> = {
+  const params: Record<string, string | string[]> = {
     abmi_campaign_: campaign,
     channel: "",
     district: "",
@@ -165,7 +165,7 @@ function AdSamplesEmbed() {
         style={{ height: "100%", width: "100%", visibility: ready ? "visible" : "hidden" }}
       >
         <InteractiveDashboard
-          key={campaign}
+          key={campaign.join(",")}
           dashboardId={35}
           initialParameters={params}
           withTitle={false}

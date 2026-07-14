@@ -10,81 +10,94 @@ const DISPLAY_NAMES: Record<string, string> = {
   Total_Downloads: "Total Downloads",
 };
 
+function parseList(v: string | null): string[] {
+  return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: string) {
+  const parameters: object[] = [];
+
+  if (campaign) parameters.push({
+    id: "c045eb3b-8728-447b-a1de-9172b6c283f7",
+    type: "string/=",
+    value: campaign,
+    target: ["variable", ["template-tag", "Abmi_Campaign"]],
+  });
+  if (dateStart) parameters.push({
+    id: "04618b81-d06d-4227-a08b-7da50d59e85f",
+    type: "date/range",
+    value: dateStart,
+    target: ["dimension", ["template-tag", "Last_Updated.start"]],
+  });
+  if (dateEnd) parameters.push({
+    id: "9891e1ff-9b6d-496b-8871-1cbf96c4cd20",
+    type: "date/range",
+    value: dateEnd,
+    target: ["dimension", ["template-tag", "Last_Updated.end"]],
+  });
+
+  const res = await fetch(`${METABASE_URL}/api/card/174/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+    body: JSON.stringify({ parameters }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  const baseCols: { display_name: string; base_type: string }[] = (data.data?.cols ?? []).map(
+    (c: { name: string; display_name: string; base_type: string }) => ({
+      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
+      base_type: c.base_type,
+    })
+  );
+  const baseRows: unknown[][] = data.data?.rows ?? [];
+
+  // Inject Campaign column at index 2 (after District, Domain) — this card has
+  // no real per-row campaign dimension, so the requested value is echoed back.
+  const campaignCol = { display_name: "Campaign", base_type: "type/Text" };
+  const campaignVal = campaign ? campaign.split(":")[0].trim() : "All";
+  const cols = [baseCols[0], baseCols[1], campaignCol, ...baseCols.slice(2)];
+  const rows = baseRows.map((row) => [row[0], row[1], campaignVal, ...row.slice(2)]);
+
+  return { cols, rows };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
-    const campaign    = searchParams.get("campaign")    ?? "";
-    const district    = searchParams.get("district")    ?? "";
-    const state       = searchParams.get("state")       ?? "";
-    const jobFunction = searchParams.get("jobFunction") ?? "";
+    const campaigns   = parseList(searchParams.get("campaign"));
+    const districts   = parseList(searchParams.get("district"));
+    const states      = parseList(searchParams.get("state"));
+    const jobFunctions = parseList(searchParams.get("jobFunction"));
     const dateStart   = searchParams.get("dateStart")   ?? "";
     const dateEnd     = searchParams.get("dateEnd")     ?? "";
 
-    const parameters: object[] = [];
+    const results = campaigns.length > 0
+      ? await Promise.all(campaigns.map((c) => fetchForCampaign(c, dateStart, dateEnd)))
+      : [await fetchForCampaign("", dateStart, dateEnd)];
 
-    if (campaign) parameters.push({
-      id: "c045eb3b-8728-447b-a1de-9172b6c283f7",
-      type: "string/=",
-      value: campaign,
-      target: ["variable", ["template-tag", "Abmi_Campaign"]],
-    });
-    if (district) parameters.push({
-      id: "ccf5b48e-c422-4023-ab4e-09bd3c803f63",
-      type: "string/=",
-      value: district,
-      target: ["variable", ["template-tag", "user_district"]],
-    });
-    if (state) parameters.push({
-      id: "d34bd06f-fe6a-4d93-86f0-4be3b8fdb8df",
-      type: "string/=",
-      value: state,
-      target: ["variable", ["template-tag", "state"]],
-    });
-    if (jobFunction) parameters.push({
-      id: "86cfe99c-d9e4-4807-a511-6fc5ad2d7386",
-      type: "string/=",
-      value: jobFunction,
-      target: ["variable", ["template-tag", "Job_Function"]],
-    });
-    if (dateStart) parameters.push({
-      id: "04618b81-d06d-4227-a08b-7da50d59e85f",
-      type: "date/range",
-      value: dateStart,
-      target: ["dimension", ["template-tag", "Last_Updated.start"]],
-    });
-    if (dateEnd) parameters.push({
-      id: "9891e1ff-9b6d-496b-8871-1cbf96c4cd20",
-      type: "date/range",
-      value: dateEnd,
-      target: ["dimension", ["template-tag", "Last_Updated.end"]],
-    });
-
-    const res = await fetch(`${METABASE_URL}/api/card/174/query`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-      body: JSON.stringify({ parameters }),
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      return NextResponse.json({ cols: [], rows: [], error: `Metabase error ${res.status}` });
+    const first = results.find((r) => r !== null);
+    if (!first) {
+      return NextResponse.json({ cols: [], rows: [], error: "Metabase error" });
     }
+    const cols = first.cols;
+    let rows = results.flatMap((r) => r?.rows ?? []);
 
-    const data = await res.json();
+    // District/State/Job Function are real per-row columns here, so multiple
+    // selections can be applied locally after fetching.
+    const districtCol = cols.findIndex((c) => c.display_name === "District");
+    const stateCol = cols.findIndex((c) => c.display_name === "State");
+    const jobFunctionCol = cols.findIndex((c) => c.display_name === "Job Function");
 
-    const baseCols: { display_name: string; base_type: string }[] = (data.data?.cols ?? []).map(
-      (c: { name: string; display_name: string; base_type: string }) => ({
-        display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
-        base_type: c.base_type,
-      })
-    );
-    const baseRows: unknown[][] = data.data?.rows ?? [];
+    const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
+      values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
 
-    // Inject Campaign column at index 2 (after District, Domain)
-    const campaignCol = { display_name: "Campaign", base_type: "type/Text" };
-    const campaignVal = campaign ? campaign.split(":")[0].trim() : "All";
-    const cols = [baseCols[0], baseCols[1], campaignCol, ...baseCols.slice(2)];
-    const rows = baseRows.map((row) => [row[0], row[1], campaignVal, ...row.slice(2)]);
+    rows = rows
+      .filter(matches(districts, districtCol))
+      .filter(matches(states, stateCol))
+      .filter(matches(jobFunctions, jobFunctionCol));
 
     return NextResponse.json({ cols, rows });
   } catch {

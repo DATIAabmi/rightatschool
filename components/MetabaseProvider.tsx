@@ -6,10 +6,12 @@ import {
 } from "@metabase/embedding-sdk-react";
 import { useRouter } from "next/navigation";
 
+// Local-dev-only auth: Metabase's docs recommend testing the Embedding SDK on
+// localhost via an API key instead of setting up JWT/SAML SSO. Switch this to
+// jwtProviderUri-based auth before deploying anywhere beyond local dev.
 const authConfig = defineMetabaseAuthConfig({
   metabaseInstanceUrl: process.env.NEXT_PUBLIC_METABASE_URL!,
-  preferredAuthMethod: "jwt",
-  jwtProviderUri: "/sso/metabase",
+  apiKey: process.env.NEXT_PUBLIC_METABASE_API_KEY!,
 });
 
 export default function MetabaseProviderWrapper({

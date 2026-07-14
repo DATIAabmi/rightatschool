@@ -85,7 +85,7 @@ export default function ChannelPerformanceChart() {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (campaign) params.set("campaign", campaign);
+    if (campaign.length) params.set("campaign", campaign.join(","));
     if (dateStart) params.set("dateStart", dateStart);
     if (dateEnd) params.set("dateEnd", dateEnd);
     const qs = params.toString();

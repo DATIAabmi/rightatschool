@@ -2,187 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, ExternalLink, Download } from "lucide-react";
+import { ChevronDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, ExternalLink, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
+import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
 import { CAMPAIGNS } from "@/lib/campaigns";
 
 const KEYWORDS = ["after school", "child care", "head start", "enrichment"];
 
-// ─── Live-search dropdown ─────────────────────────────────────────────────────
-
-function SearchDropdown({
-  label,
-  field,
-  value,
-  onChange,
-}: {
-  label: string;
-  field: "district" | "state";
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [options, setOptions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setQuery(""); }
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  const fetchOptions = useCallback((q: string) => {
-    setLoading(true);
+function fetchFieldOptions(field: "district" | "state" | "domain") {
+  return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
-      .then((d) => { setOptions(d.values ?? []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [field]);
-
-  function handleOpen() {
-    setOpen((o) => !o); setQuery(""); setOptions([]);
-    setTimeout(() => { inputRef.current?.focus(); fetchOptions(""); }, 50);
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
-    const target = options[0] ?? query.trim();
-    if (!target) return;
-    onChange(target); setOpen(false); setQuery("");
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={handleOpen}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[160px]">
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider flex-shrink-0">{label}:</span>
-        <span className="flex-1 text-left truncate text-xs">
-          {value ? <span className="text-blue-600 font-medium">{value}</span> : <span className="text-gray-400">All</span>}
-        </span>
-        {value
-          ? <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0" onClick={(e) => { e.stopPropagation(); onChange(""); }} />
-          : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 w-72 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-gray-100">
-            <input ref={inputRef} type="text" placeholder={`Search ${label.toLowerCase()}…`}
-              value={query} onChange={(e) => { setQuery(e.target.value); if (debounceRef.current) clearTimeout(debounceRef.current); debounceRef.current = setTimeout(() => fetchOptions(e.target.value), 300); }}
-              onKeyDown={handleKeyDown}
-              className="w-full text-sm px-3 py-1.5 border border-gray-200 rounded-lg outline-none focus:border-blue-400" />
-          </div>
-          <div className="max-h-60 overflow-y-auto">
-            {loading && <p className="px-4 py-3 text-xs text-gray-400 text-center">Searching…</p>}
-            {!loading && options.length === 0 && query && <p className="px-4 py-3 text-xs text-gray-400 text-center">No results for &quot;{query}&quot;</p>}
-            {!loading && options.length === 0 && !query && <p className="px-4 py-3 text-xs text-gray-400 text-center">Type to search</p>}
-            {value && <button onClick={() => { onChange(""); setOpen(false); setQuery(""); }} className="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-50">Clear filter</button>}
-            {options.map((opt) => (
-              <button key={opt} onClick={() => { onChange(opt); setOpen(false); setQuery(""); }}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 truncate ${value === opt ? "text-blue-600 font-semibold bg-blue-50" : "text-gray-700"}`}>
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Keyword dropdown (static) ────────────────────────────────────────────────
-
-function KeywordDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[160px]">
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider flex-shrink-0">Keyword:</span>
-        <span className="flex-1 text-left truncate text-xs">
-          {value ? <span className="text-blue-600 font-medium capitalize">{value}</span> : <span className="text-gray-400">All</span>}
-        </span>
-        {value
-          ? <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0" onClick={(e) => { e.stopPropagation(); onChange(""); }} />
-          : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 z-50 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[180px] py-1">
-          {value && (
-            <button onClick={() => { onChange(""); setOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-50">All keywords</button>
-          )}
-          {KEYWORDS.map((k) => (
-            <button key={k} onClick={() => { onChange(k); setOpen(false); }}
-              className={`w-full text-left px-4 py-2 text-sm capitalize hover:bg-gray-50 ${value === k ? "text-blue-600 font-semibold bg-blue-50" : "text-gray-700"}`}>
-              {k}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Campaign dropdown ────────────────────────────────────────────────────────
-
-function CampaignDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[180px]">
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Campaign:</span>
-        <span className="flex-1 text-left truncate text-xs">
-          {value ? <span className="text-blue-600 font-medium">{value}</span> : <span className="text-gray-400">All</span>}
-        </span>
-        {value
-          ? <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0" onClick={(e) => { e.stopPropagation(); onChange(""); }} />
-          : <ChevronDown size={13} className="text-gray-400 shrink-0" />}
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[240px] py-1 max-h-72 overflow-y-auto">
-          <button onClick={() => { onChange(""); setOpen(false); }}
-            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!value ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-            All campaigns
-          </button>
-          {CAMPAIGNS.map((c) => (
-            <button key={c} onClick={() => { onChange(c); setOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${value === c ? "text-blue-600 font-semibold bg-blue-50" : "text-gray-600"}`}>
-              {c}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+      .then((d) => d.values ?? []);
 }
 
 // ─── Sort dropdown ────────────────────────────────────────────────────────────
@@ -338,11 +172,11 @@ function SchoolBoardContent() {
   const urlDistrict = searchParams.get("district");
   const { campaign: ctxCampaign } = useFilter();
 
-  const [filterCampaign, setFilterCampaign] = useState(ctxCampaign ?? "");
-  const [filterDistrict, setFilterDistrict] = useState(urlDistrict ?? "");
-  const [filterDomain, setFilterDomain] = useState("");
-  const [filterState, setFilterState] = useState("");
-  const [filterKeyword, setFilterKeyword] = useState("");
+  const [filterCampaign, setFilterCampaign] = useState<string[]>(ctxCampaign);
+  const [filterDistrict, setFilterDistrict] = useState<string[]>(urlDistrict ? [urlDistrict] : []);
+  const [filterDomain, setFilterDomain] = useState<string[]>([]);
+  const [filterState, setFilterState] = useState<string[]>([]);
+  const [filterKeyword, setFilterKeyword] = useState<string[]>([]);
   const [sort, setSort] = useState<SortState>({ col: 4, dir: "desc" }); // default: SBM Date desc
 
   const [allCols, setAllCols] = useState<Col[]>([]);
@@ -352,15 +186,15 @@ function SchoolBoardContent() {
 
   // Sync URL district param on navigation
   useEffect(() => {
-    if (urlDistrict) setFilterDistrict(urlDistrict);
+    if (urlDistrict) setFilterDistrict([urlDistrict]);
   }, [urlDistrict]);
 
   const fetchData = useCallback(() => {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (filterCampaign) params.set("campaign", filterCampaign);
-    if (filterDistrict) params.set("district", filterDistrict);
+    if (filterCampaign.length) params.set("campaign", filterCampaign.join(","));
+    if (filterDistrict.length) params.set("district", filterDistrict.join(","));
 
     fetch(`/api/q425-data?${params.toString()}`)
       .then((r) => r.json())
@@ -377,9 +211,9 @@ function SchoolBoardContent() {
 
   // Client-side filter: 0=District 1=Campaign 2=District Domain 3=ST 4=SBM Date 5=Keyword 6=SBM Context 7=SBM Link
   const filteredRows = allRows.filter((row) => {
-    if (filterDomain  && String(row[2] ?? "").toLowerCase() !== filterDomain.toLowerCase())  return false;
-    if (filterState   && String(row[3] ?? "").toLowerCase() !== filterState.toLowerCase())   return false;
-    if (filterKeyword && String(row[5] ?? "").toLowerCase() !== filterKeyword.toLowerCase()) return false;
+    if (filterDomain.length  && !filterDomain.map((v) => v.toLowerCase()).includes(String(row[2] ?? "").toLowerCase()))  return false;
+    if (filterState.length   && !filterState.map((v) => v.toLowerCase()).includes(String(row[3] ?? "").toLowerCase()))   return false;
+    if (filterKeyword.length && !filterKeyword.map((v) => v.toLowerCase()).includes(String(row[5] ?? "").toLowerCase())) return false;
     return true;
   });
 
@@ -393,11 +227,11 @@ function SchoolBoardContent() {
           {/* Filter + sort bar */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <CampaignDropdown value={filterCampaign} onChange={setFilterCampaign} />
-              <SearchDropdown label="District" field="district" value={filterDistrict} onChange={setFilterDistrict} />
-              <SearchDropdown label="Domain"   field="domain"   value={filterDomain}   onChange={setFilterDomain} />
-              <SearchDropdown label="State"    field="state"    value={filterState}    onChange={setFilterState} />
-              <KeywordDropdown value={filterKeyword} onChange={setFilterKeyword} />
+              <MultiSelectDropdown label="Campaign" value={filterCampaign} onChange={setFilterCampaign} options={[...CAMPAIGNS]} minWidth={180} />
+              <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} search={fetchFieldOptions("district")} />
+              <MultiSelectDropdown label="Domain"   value={filterDomain}   onChange={setFilterDomain}   search={fetchFieldOptions("domain")} />
+              <MultiSelectDropdown label="State"    value={filterState}    onChange={setFilterState}    search={fetchFieldOptions("state")} />
+              <MultiSelectDropdown label="Keyword"  value={filterKeyword}  onChange={setFilterKeyword}  options={KEYWORDS} />
             </div>
             <SortDropdown sort={sort} onSort={setSort} />
           </div>

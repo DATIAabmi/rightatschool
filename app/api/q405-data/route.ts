@@ -13,48 +13,22 @@ const DISPLAY_NAMES: Record<string, string> = {
   UniqueLeads: "Leads",
 };
 
+function parseList(v: string | null): string[] {
+  return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
-    const campaign = searchParams.get("campaign") ?? "";
-    const district = searchParams.get("district") ?? "";
-    const domain   = searchParams.get("domain")   ?? "";
-    const state    = searchParams.get("state")    ?? "";
+    const campaigns = parseList(searchParams.get("campaign"));
+    const districts = parseList(searchParams.get("district"));
+    const domains   = parseList(searchParams.get("domain"));
+    const states    = parseList(searchParams.get("state"));
 
+    // Campaign/District/Domain/State are all real per-row columns on this
+    // card, so multiple selections are applied locally below instead of
+    // via Metabase (whose SQL variables only support a single value).
     const parameters: object[] = [];
-
-    if (campaign) {
-      parameters.push({
-        id: "6ccf4539-6eb6-4a7c-b579-d315c59a66a0",
-        type: "string/=",
-        value: campaign,
-        target: ["variable", ["template-tag", "ABM_Campaign"]],
-      });
-    }
-    if (district) {
-      parameters.push({
-        id: "6ed963e9-6e0f-4b96-a77d-678f5a84c1ea",
-        type: "string/=",
-        value: district,
-        target: ["variable", ["template-tag", "District"]],
-      });
-    }
-    if (domain) {
-      parameters.push({
-        id: "da615bcc-61b7-4cf0-b292-a407207ab2a1",
-        type: "string/=",
-        value: domain,
-        target: ["variable", ["template-tag", "District_Domain"]],
-      });
-    }
-    if (state) {
-      parameters.push({
-        id: "07116ece-9278-43d1-8388-cae6cd1c12af",
-        type: "string/=",
-        value: state,
-        target: ["variable", ["template-tag", "State"]],
-      });
-    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 55000);
@@ -80,14 +54,28 @@ export async function GET(req: NextRequest) {
     }
 
     const data = await res.json();
+    const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
+      base_type: c.base_type,
+    }));
+    let rows: unknown[][] = data.data?.rows ?? [];
 
-    return NextResponse.json({
-      cols: (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
-        display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
-        base_type: c.base_type,
-      })),
-      rows: data.data?.rows ?? [],
-    });
+    const districtCol = cols.findIndex((c: { display_name: string }) => c.display_name === "District");
+    const domainCol = cols.findIndex((c: { display_name: string }) => c.display_name === "Domain");
+    const stateCol = cols.findIndex((c: { display_name: string }) => c.display_name === "State");
+    const campaignCol = cols.findIndex((c: { display_name: string }) => c.display_name === "Campaign");
+    const campaignShortCodes = campaigns.map((c) => c.split(":")[0].trim());
+
+    const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
+      values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
+
+    rows = rows
+      .filter(matches(campaignShortCodes, campaignCol))
+      .filter(matches(districts, districtCol))
+      .filter(matches(domains, domainCol))
+      .filter(matches(states, stateCol));
+
+    return NextResponse.json({ cols, rows });
   } catch {
     return NextResponse.json({ cols: [], rows: [] });
   }

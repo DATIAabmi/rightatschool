@@ -86,7 +86,7 @@ export default function ProgramMetricsSummary() {
           const indent = i * STEP;
 
           return (
-            <div key={metric.label} className="flex items-stretch" style={{ height: 120 }}>
+            <div key={metric.label} className="flex items-stretch" style={{ minHeight: 120 }}>
 
               {/* Staircase indent */}
               <div style={{ width: indent, flexShrink: 0 }} />

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { ChevronDown, X, CalendarSearch, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarSearch, Loader2, X } from "lucide-react";
 import { useFilter } from "./FilterContext";
 import { CAMPAIGNS } from "@/lib/campaigns";
+import MultiSelectDropdown from "./MultiSelectDropdown";
 
 const STEP = 26;
 const CARD_W = 240;
@@ -40,55 +41,18 @@ interface Stage {
 }
 
 export function EcosystemFilterBar() {
-  const { campaign: ctxCampaign, setCampaign: setCtxCampaign, dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
-  const campaign = ctxCampaign || null;
-  const setCampaign = (v: string | null) => setCtxCampaign(v ?? "");
-  const [campaignOpen, setCampaignOpen] = useState(false);
-  const campaignRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (campaignRef.current && !campaignRef.current.contains(e.target as Node))
-        setCampaignOpen(false);
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, []);
+  const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
 
   return (
     <div className="flex items-center gap-2 mb-2">
       {/* Campaign pill */}
-      <div ref={campaignRef} className="relative">
-        <button
-          onClick={() => setCampaignOpen((o) => !o)}
-          className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors min-w-[220px]"
-        >
-          <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">ABMi Campaign:</span>
-          <span className="flex-1 text-left truncate text-blue-600 font-medium">
-            {campaign ?? "All campaigns"}
-          </span>
-          {campaign ? (
-            <X size={13} className="text-gray-400 hover:text-gray-700 shrink-0"
-              onClick={(e) => { e.stopPropagation(); setCampaign(null); setCampaignOpen(false); }} />
-          ) : (
-            <ChevronDown size={14} className="text-gray-400 shrink-0" />
-          )}
-        </button>
-        {campaignOpen && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[260px] py-1">
-            <button onClick={() => { setCampaign(null); setCampaignOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${!campaign ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-              All campaigns
-            </button>
-            {CAMPAIGNS.map((c) => (
-              <button key={c} onClick={() => { setCampaign(c); setCampaignOpen(false); }}
-                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 ${campaign === c ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <MultiSelectDropdown
+        label="ABMi Campaign"
+        value={campaign}
+        onChange={setCampaign}
+        options={[...CAMPAIGNS]}
+        minWidth={220}
+      />
 
       {/* Date range pill */}
       <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
@@ -118,7 +82,7 @@ export default function EcosystemFunnel() {
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (campaign) params.set("campaign", campaign);
+    if (campaign.length) params.set("campaign", campaign.join(","));
     if (dateStart) params.set("dateStart", dateStart);
     if (dateEnd) params.set("dateEnd", dateEnd);
     const qs = params.toString();
@@ -180,7 +144,7 @@ export default function EcosystemFunnel() {
           const isLast = i === stages.length - 1;
 
           return (
-            <div key={stage.label} className="flex items-stretch" style={{ height: ROW_H }}>
+            <div key={stage.label} className="flex items-stretch" style={{ minHeight: ROW_H }}>
               {/* Staircase spacer */}
               <div style={{ width: indent, flexShrink: 0 }} />
 

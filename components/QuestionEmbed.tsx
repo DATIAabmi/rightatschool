@@ -24,7 +24,7 @@ export default function QuestionEmbed({
 
   // campaignSqlKey is a required SQL template tag — block render if value is empty
   // to avoid Metabase's "missing required parameters" error.
-  if (campaignSqlKey && !campaign) {
+  if (campaignSqlKey && campaign.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 14 }}>
         Select an ABMi Campaign to load data.
@@ -36,10 +36,10 @@ export default function QuestionEmbed({
   // omit the condition instead of running IN ('') which matches zero rows.
   const sqlParameters: Record<string, string> = {};
   Object.entries(staticParams ?? {}).forEach(([k, v]) => { if (v) sqlParameters[k] = v; });
-  if (campaignSqlKey)              sqlParameters[campaignSqlKey]  = campaign;
-  if (districtSqlKey && district)  sqlParameters[districtSqlKey]  = district;
-  if (dateStartSqlKey && dateStart) sqlParameters[dateStartSqlKey] = dateStart;
-  if (dateEndSqlKey && dateEnd)     sqlParameters[dateEndSqlKey]   = dateEnd;
+  if (campaignSqlKey)                     sqlParameters[campaignSqlKey]  = campaign.join(",");
+  if (districtSqlKey && district.length)  sqlParameters[districtSqlKey]  = district.join(",");
+  if (dateStartSqlKey && dateStart)       sqlParameters[dateStartSqlKey] = dateStart;
+  if (dateEndSqlKey && dateEnd)           sqlParameters[dateEndSqlKey]   = dateEnd;
 
   return (
     <div style={{ height: "100%", width: "100%" }}>

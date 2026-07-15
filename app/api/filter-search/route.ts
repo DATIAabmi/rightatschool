@@ -20,9 +20,13 @@ export async function GET(req: NextRequest) {
   const col = FIELD_MAP[field];
   if (!col) return NextResponse.json({ values: [] });
 
+  // A real search term gets a much higher cap so "select all shown" in the
+  // UI doesn't silently miss matches past the limit — an empty query (just
+  // browsing on open) stays capped low since that list is only a preview.
+  const limit = q ? 1000 : 50;
   const sql = q
-    ? `SELECT DISTINCT ${col} FROM ${TABLE} WHERE LOWER(${col}) LIKE LOWER("%${q.replace(/"/g, "")}%") AND ${col} IS NOT NULL AND ${col} != "" ORDER BY ${col} LIMIT 50`
-    : `SELECT DISTINCT ${col} FROM ${TABLE} WHERE ${col} IS NOT NULL AND ${col} != "" ORDER BY ${col} LIMIT 50`;
+    ? `SELECT DISTINCT ${col} FROM ${TABLE} WHERE LOWER(${col}) LIKE LOWER("%${q.replace(/"/g, "")}%") AND ${col} IS NOT NULL AND ${col} != "" ORDER BY ${col} LIMIT ${limit}`
+    : `SELECT DISTINCT ${col} FROM ${TABLE} WHERE ${col} IS NOT NULL AND ${col} != "" ORDER BY ${col} LIMIT ${limit}`;
 
   const res = await fetch(`${METABASE_URL}/api/dataset`, {
     method: "POST",

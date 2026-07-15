@@ -16,7 +16,7 @@ function buildParams(campaign: string, dateStart: string, dateEnd: string): obje
     params.push({
       type: "date/range",
       value: `${dateStart}~${dateEnd}`,
-      target: ["dimension", ["template-tag", "date"]],
+      target: ["dimension", ["template-tag", "Date"]],
     });
   }
   return params;

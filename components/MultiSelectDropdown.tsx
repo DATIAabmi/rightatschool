@@ -79,6 +79,15 @@ export default function MultiSelectDropdown(props: Props) {
   }
 
   const displayOptions = props.options ?? options;
+  const allShownSelected = displayOptions.length > 0 && displayOptions.every((opt) => value.includes(opt));
+
+  function toggleSelectAllShown() {
+    if (allShownSelected) {
+      onChange(value.filter((v) => !displayOptions.includes(v)));
+    } else {
+      onChange([...new Set([...value, ...displayOptions])]);
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -142,6 +151,14 @@ export default function MultiSelectDropdown(props: Props) {
             )}
             {!loading && displayOptions.length === 0 && !query && props.search && (
               <p className="px-4 py-3 text-xs text-gray-400 text-center">Type to search</p>
+            )}
+            {!loading && displayOptions.length > 0 && (props.search ? query : true) && (
+              <button
+                onClick={toggleSelectAllShown}
+                className="w-full text-left px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 border-b border-gray-100"
+              >
+                {allShownSelected ? "Deselect all shown" : `Select all ${displayOptions.length} shown`}
+              </button>
             )}
             {!loading && displayOptions.map((opt) => {
               const checked = value.includes(opt);

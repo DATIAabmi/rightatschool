@@ -20,7 +20,7 @@ async function fetchRowsForCampaign(campaign: string, dateStart: string, dateEnd
     parameters.push({
       type: "date/range",
       value: `${dateStart}~${dateEnd}`,
-      target: ["dimension", ["template-tag", "date"]],
+      target: ["dimension", ["template-tag", "Date"]],
     });
   }
 

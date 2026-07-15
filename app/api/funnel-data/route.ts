@@ -22,6 +22,35 @@ function buildParams(campaign: string, dateStart: string, dateEnd: string): obje
   return params;
 }
 
+// Card 314 (Leads) uses a BigQuery UNNEST query — Metabase's auto-generated
+// field-filter SQL doesn't resolve correctly against that join, so this card
+// takes two plain date variables instead of the shared Date range dimension.
+function buildLeadsParams(campaign: string, dateStart: string, dateEnd: string): object[] {
+  const params: object[] = [];
+  if (campaign) {
+    params.push({
+      type: "string/=",
+      value: campaign,
+      target: ["variable", ["template-tag", "Abmi_Campaign"]],
+    });
+  }
+  if (dateStart) {
+    params.push({
+      type: "date/single",
+      value: dateStart,
+      target: ["variable", ["template-tag", "start_date"]],
+    });
+  }
+  if (dateEnd) {
+    params.push({
+      type: "date/single",
+      value: dateEnd,
+      target: ["variable", ["template-tag", "end_date"]],
+    });
+  }
+  return params;
+}
+
 async function fetchScalar(cardId: number, params: object[]): Promise<string | number | null> {
   try {
     const res = await fetch(`${METABASE_URL}/api/card/${cardId}/query`, {
@@ -58,13 +87,14 @@ function avgPct(values: (string | number | null)[]): string | null {
 
 async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateEnd: string) {
   const params = buildParams(campaign, dateStart, dateEnd);
+  const leadsParams = buildLeadsParams(campaign, dateStart, dateEnd);
   const [impressions, engagements, ctr, engagedUsers, leads] =
     await Promise.all([
       fetchScalar(319, params),
       fetchScalar(320, params),
       fetchScalar(323, params),
       fetchScalar(308, params),
-      fetchScalar(314, params),
+      fetchScalar(314, leadsParams),
     ]);
   return { impressions, engagements, ctr, engagedUsers, leads };
 }

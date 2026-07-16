@@ -22,9 +22,10 @@ function buildParams(campaign: string, dateStart: string, dateEnd: string): obje
   return params;
 }
 
-// Card 314 (Leads) uses a BigQuery UNNEST query — Metabase's auto-generated
-// field-filter SQL doesn't resolve correctly against that join, so this card
-// takes two plain date variables instead of the shared Date range dimension.
+// Cards 308 (Engaged Users) and 314 (Leads) filter on the actual per-event
+// date nested inside the `engagement` array (via UNNEST), not a row-level
+// column — Metabase's auto-generated field-filter SQL can't target that, so
+// these two cards take plain date variables instead of the Date dimension.
 function buildLeadsParams(campaign: string, dateStart: string, dateEnd: string): object[] {
   const params: object[] = [];
   if (campaign) {
@@ -87,14 +88,14 @@ function avgPct(values: (string | number | null)[]): string | null {
 
 async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateEnd: string) {
   const params = buildParams(campaign, dateStart, dateEnd);
-  const leadsParams = buildLeadsParams(campaign, dateStart, dateEnd);
+  const engagementParams = buildLeadsParams(campaign, dateStart, dateEnd);
   const [impressions, engagements, ctr, engagedUsers, leads] =
     await Promise.all([
       fetchScalar(319, params),
       fetchScalar(320, params),
       fetchScalar(323, params),
-      fetchScalar(308, params),
-      fetchScalar(314, leadsParams),
+      fetchScalar(308, engagementParams),
+      fetchScalar(314, engagementParams),
     ]);
   return { impressions, engagements, ctr, engagedUsers, leads };
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CAMPAIGNS } from "@/lib/campaigns";
 
 export const maxDuration = 60;
 
@@ -16,8 +17,17 @@ export async function GET(req: NextRequest) {
     const districts = parseList(searchParams.get("district"));
 
     // Campaign/District are real per-row columns on this card, so multiple
-    // selections are applied locally below instead of via Metabase.
-    const parameters: object[] = [];
+    // selections are applied locally below instead of via Metabase — but the
+    // card's abmi_campaign tag has a hardcoded default of just C5, so every
+    // OTHER campaign's rows would never even get fetched unless we
+    // explicitly override it with the full list of known campaigns.
+    const parameters: object[] = [
+      {
+        type: "string/=",
+        value: [...CAMPAIGNS],
+        target: ["variable", ["template-tag", "abmi_campaign"]],
+      },
+    ];
 
     const res = await fetch(`${METABASE_URL}/api/card/425/query`, {
       method: "POST",

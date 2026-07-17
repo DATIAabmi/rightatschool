@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CalendarSearch, Loader2, X } from "lucide-react";
 import { useFilter } from "./FilterContext";
-import { CAMPAIGNS } from "@/lib/campaigns";
+import { CAMPAIGNS, campaignGoals } from "@/lib/campaigns";
 import MultiSelectDropdown from "./MultiSelectDropdown";
 
 const STEP = 26;
@@ -104,13 +104,15 @@ export default function EcosystemFunnel() {
     return <div className="flex items-center justify-center h-64 text-red-500 text-sm">{error || "Failed to load"}</div>;
   }
 
+  const goals = campaignGoals(campaign);
+
   const stages: Stage[] = [
     {
       label: "Impressions",
       description: "Number of times your content or ads were displayed on social, offsite display",
-      goal: "Impression Goal: 300,000",
+      goal: `Impression Goal: ${goals.impressions.toLocaleString()}`,
       value: fmt(data.impressions),
-      goalValue: computePct(data.impressions, 300000),
+      goalValue: computePct(data.impressions, goals.impressions),
     },
     {
       label: "Engagements",
@@ -130,9 +132,9 @@ export default function EcosystemFunnel() {
     {
       label: "Leads",
       description: "Total qualified leads generated across all channels",
-      goal: "Goal: 300 Leads",
+      goal: `Goal: ${goals.leads.toLocaleString()} Leads`,
       value: fmt(data.leads),
-      goalValue: computePct(data.leads, 300),
+      goalValue: computePct(data.leads, goals.leads),
     },
   ];
 

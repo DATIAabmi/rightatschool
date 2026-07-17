@@ -107,12 +107,25 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 const isLeftCol = (j: number) => j === 0 || j === 1;
 const SCORE_TREND_COL = 11;
 
-function rowBg(row: Row): string {
+// Shorter/matches-reference labels so multi-word headers can wrap onto two
+// lines instead of forcing extra column width.
+const HEADER_LABELS: Record<string, string> = {
+  Domain: "District Domain",
+  State: "ST",
+  Downloads: "Total Downloads",
+  "Score Trend": "Intent Score Trend",
+};
+
+interface TrendColor { bg: string; text: string }
+
+function trendColor(row: Row): TrendColor | null {
   const val = row[SCORE_TREND_COL];
-  if (val === null || val === undefined || val === "") return "";
+  if (val === null || val === undefined || val === "") return null;
   const n = typeof val === "number" ? val : parseFloat(String(val));
-  if (isNaN(n)) return "";
-  return n < 0 ? "rgba(239,68,68,0.13)" : "rgba(34,197,94,0.18)";
+  if (isNaN(n) || n === 0) return null;
+  return n < 0
+    ? { bg: "rgba(239,68,68,0.10)", text: "#b91c1c" }
+    : { bg: "rgba(34,197,94,0.14)", text: "#15803d" };
 }
 
 function DataTable({
@@ -137,21 +150,22 @@ function DataTable({
 
   return (
     <div className="overflow-auto bg-white">
-      <table className="text-sm border-collapse min-w-full">
+      <table className="text-xs border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="px-3 py-2 w-12 text-xs font-bold" style={{ color: "#509EE3", textAlign: "center" }}>#</th>
+            <th className="px-2 py-2 w-8 text-[11px] font-bold text-gray-900" style={{ textAlign: "center" }}>#</th>
             {cols.map((col, j) => {
               const active = sort.col === j;
               const left = isLeftCol(j);
+              const label = HEADER_LABELS[col.display_name] ?? col.display_name;
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="px-4 py-2 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70"
-                  style={{ color: "#509EE3", textAlign: left ? "left" : "center" }}>
-                  <span className={`inline-flex items-center gap-1 ${left ? "justify-start" : "justify-center"}`}>
-                    {col.display_name}
-                    {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
+                  className="px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight"
+                  style={{ textAlign: left ? "left" : "center" }}>
+                  <span className={`inline-flex items-center gap-0.5 ${left ? "justify-start" : "justify-center"}`}>
+                    {label}
+                    {active && (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)}
                   </span>
                 </th>
               );
@@ -160,18 +174,19 @@ function DataTable({
         </thead>
         <tbody>
           {sorted.map((row, i) => {
-            const bg = rowBg(row);
+            const trend = trendColor(row);
             return (
-              <tr key={i} className="border-b border-gray-100" style={{ backgroundColor: bg || undefined }}>
-                <td className="px-3 py-1.5 text-gray-500 text-xs font-medium" style={{ textAlign: "center" }}>{i + 1}</td>
+              <tr key={i} className="border-b border-gray-100" style={{ backgroundColor: trend?.bg, color: trend?.text }}>
+                <td className="px-2 py-1 text-gray-400 text-[11px] font-medium" style={{ textAlign: "center" }}>{i + 1}</td>
                 {row.map((cell, j) => {
                   const display = cell === null || cell === undefined ? "" : String(cell);
                   const left = isLeftCol(j);
                   return (
-                    <td key={j} className={`px-4 py-1.5 text-gray-800 ${left ? "text-left" : "text-center tabular-nums"}`}>
+                    <td key={j} className={`px-2 py-1 ${trend ? "" : "text-gray-800"} ${left ? "text-left" : "text-center tabular-nums"}`}>
                       {j === 0 ? (
                         <button onClick={() => onDistrictClick(display)}
-                          className="block w-full text-left text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                          className="block w-full text-left hover:underline font-medium"
+                          style={{ color: trend?.text ?? "#2563eb" }}>
                           {display}
                         </button>
                       ) : display}

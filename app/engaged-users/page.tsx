@@ -149,11 +149,11 @@ function DataTable({
   });
 
   return (
-    <div className="overflow-auto bg-white">
+    <div className="bg-white">
       <table className="text-xs border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="px-2 py-2 w-8 text-[11px] font-bold text-gray-900" style={{ textAlign: "center" }}>#</th>
+            <th className="sticky top-0 z-10 bg-white px-2 py-2 w-8 text-[11px] font-bold text-gray-900 border-b border-gray-200" style={{ textAlign: "center" }}>#</th>
             {cols.map((col, j) => {
               const active = sort.col === j;
               const left = isLeftCol(j);
@@ -161,7 +161,7 @@ function DataTable({
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight"
+                  className="sticky top-0 z-10 bg-white px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200"
                   style={{ textAlign: left ? "left" : "center" }}>
                   <span className={`inline-flex items-center gap-0.5 ${left ? "justify-start" : "justify-center"}`}>
                     {label}
@@ -299,7 +299,7 @@ function EngagedUsersContent() {
           <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
         )}
         {!loading && !error && (
-          <div className="border border-t-0 border-gray-200 rounded-b-xl overflow-hidden shadow-sm">
+          <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ clipPath: "inset(0 round 0 0 0.75rem 0.75rem)" }}>
             <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort}
               onDistrictClick={(d) => router.push(`/school-board-minutes?district=${encodeURIComponent(d)}`)} />
           </div>

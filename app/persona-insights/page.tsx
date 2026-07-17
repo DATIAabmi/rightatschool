@@ -172,6 +172,124 @@ function DataTable({ cols, rows, sort, onSort }: {
   );
 }
 
+// ─── Engagements by Geography ──────────────────────────────────────────────────
+
+type GeoRow = (string | number | null)[];
+const GEO_LEFT_ALIGN_COLS = new Set(["State"]);
+
+function GeographyTable({
+  campaign, dateStart, dateEnd, filterDistrict, filterState,
+}: {
+  campaign: string[]; dateStart: string; dateEnd: string;
+  filterDistrict: string[]; filterState: string[];
+}) {
+  const [cols, setCols] = useState<Col[]>([]);
+  const [rows, setRows] = useState<GeoRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [sort, setSort] = useState<SortState>({ col: 1, dir: "desc" });
+
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams();
+    if (campaign.length)       params.set("campaign", campaign.join(","));
+    if (dateStart)             params.set("dateStart", dateStart);
+    if (dateEnd)               params.set("dateEnd", dateEnd);
+    if (filterDistrict.length) params.set("district", filterDistrict.join(","));
+    if (filterState.length)    params.set("state", filterState.join(","));
+
+    fetch(`/api/q169-data?${params.toString()}`)
+      .then((r) => r.json())
+      .then((d) => { setCols(d.cols ?? []); setRows(d.rows ?? []); setLoading(false); })
+      .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
+  }, [campaign, dateStart, dateEnd, filterDistrict, filterState]);
+
+  const sorted = [...rows].sort((a, b) => {
+    const av = a[sort.col]; const bv = b[sort.col];
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    const cmp = typeof av === "number" && typeof bv === "number"
+      ? av - bv : String(av).localeCompare(String(bv));
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
+  return (
+    <div className="mt-6">
+      <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
+        <span className="font-bold text-sm tracking-wide uppercase">Engagements By Geography</span>
+        {rows.length > 0 && (
+          <button
+            onClick={() => exportToCsv("engagements-by-geography", cols, rows)}
+            className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
+          >
+            <Download size={13} /> Export CSV
+          </button>
+        )}
+      </div>
+      {loading && (
+        <div className="flex items-center justify-center h-48 gap-2 text-gray-400 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">
+          <Loader2 size={18} className="animate-spin" /> Loading…
+        </div>
+      )}
+      {!loading && error && (
+        <div className="flex items-center justify-center h-48 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
+      )}
+      {!loading && !error && (
+        <div className="border border-t-0 border-gray-200 rounded-b-xl overflow-hidden shadow-sm">
+          {rows.length === 0 ? (
+            <div className="flex items-center justify-center h-48 text-gray-400 text-sm bg-white">No results</div>
+          ) : (
+            <div className="overflow-hidden bg-white">
+              <table className="text-sm border-collapse w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-3 py-2 text-center w-10 font-semibold whitespace-nowrap" style={{ color: "#509EE3" }}>#</th>
+                    {cols.map((col, j) => {
+                      const isLeft = GEO_LEFT_ALIGN_COLS.has(col.display_name);
+                      const active = sort.col === j;
+                      return (
+                        <th key={j}
+                          onClick={() => setSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
+                          className={`px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 ${isLeft ? "text-left" : "text-center"}`}
+                          style={{ color: "#509EE3" }}
+                        >
+                          <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
+                            {col.display_name}
+                            {active
+                              ? sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />
+                              : <ArrowUpDown size={11} className="opacity-30" />}
+                          </span>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((row, i) => (
+                    <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-1.5 text-center text-gray-400 text-xs w-10 shrink-0">{i + 1}</td>
+                      {row.map((cell, j) => {
+                        const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
+                        const isLeft = GEO_LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
+                        return (
+                          <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums" : ""} text-gray-800`}>
+                            {cell === null || cell === undefined ? "" : String(cell)}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function PersonaInsightsContent() {
@@ -274,6 +392,14 @@ function PersonaInsightsContent() {
             <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} />
           </div>
         )}
+
+        <GeographyTable
+          campaign={campaign}
+          dateStart={dateStart}
+          dateEnd={dateEnd}
+          filterDistrict={filterDistrict}
+          filterState={filterState}
+        />
       </div>
     </div>
   );

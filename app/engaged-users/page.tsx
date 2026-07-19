@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -129,11 +129,12 @@ function trendColor(row: Row): TrendColor | null {
 }
 
 function DataTable({
-  cols, rows, sort, onSort, onDistrictClick,
+  cols, rows, sort, onSort, onDistrictClick, headerTop = 0,
 }: {
   cols: Col[]; rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
   onDistrictClick: (district: string) => void;
+  headerTop?: number;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">No results</div>;
@@ -153,7 +154,7 @@ function DataTable({
       <table className="text-xs border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="sticky top-0 z-10 bg-white px-2 py-2 w-8 text-[11px] font-bold text-gray-900 border-b border-gray-200" style={{ textAlign: "center" }}>#</th>
+            <th className="sticky z-10 bg-white px-2 py-2 w-8 text-[11px] font-bold text-gray-900 border-b border-gray-200" style={{ textAlign: "center", top: headerTop }}>#</th>
             {cols.map((col, j) => {
               const active = sort.col === j;
               const left = isLeftCol(j);
@@ -161,8 +162,8 @@ function DataTable({
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="sticky top-0 z-10 bg-white px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200"
-                  style={{ textAlign: left ? "left" : "center" }}>
+                  className="sticky z-10 bg-white px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200"
+                  style={{ textAlign: left ? "left" : "center", top: headerTop }}>
                   <span className={`inline-flex items-center gap-0.5 ${left ? "justify-start" : "justify-center"}`}>
                     {label}
                     {active && (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)}
@@ -217,6 +218,19 @@ function EngagedUsersContent() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const titleBarRef = useRef<HTMLDivElement>(null);
+  const [titleBarHeight, setTitleBarHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = titleBarRef.current;
+    if (!el) return;
+    const measure = () => setTitleBarHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -275,7 +289,7 @@ function EngagedUsersContent() {
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "0 24px 24px" }} className="eu-scroll">
         <style>{`.eu-scroll::-webkit-scrollbar{width:10px}.eu-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb{background:#6b7280;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb:hover{background:#374151}`}</style>
-        <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
+        <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Engaged Users By District</span>
             {!loading && rows.length > 0 && (
@@ -300,7 +314,7 @@ function EngagedUsersContent() {
         )}
         {!loading && !error && (
           <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ clipPath: "inset(0 round 0 0 0.75rem 0.75rem)" }}>
-            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort}
+            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight}
               onDistrictClick={(d) => router.push(`/school-board-minutes?district=${encodeURIComponent(d)}`)} />
           </div>
         )}

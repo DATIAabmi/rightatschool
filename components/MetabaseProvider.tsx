@@ -6,12 +6,14 @@ import {
 } from "@metabase/embedding-sdk-react";
 import { useRouter } from "next/navigation";
 
-// Local-dev-only auth: Metabase's docs recommend testing the Embedding SDK on
-// localhost via an API key instead of setting up JWT/SAML SSO. Switch this to
-// jwtProviderUri-based auth before deploying anywhere beyond local dev.
+// JWT SSO: /sso/metabase (app/sso/metabase/route.ts) issues a short-lived JWT
+// for a fixed "All Users"-scoped identity, which Metabase exchanges for a
+// session. This instance has SSO JWT enabled instance-wide, so it silently
+// attempts this exchange regardless of auth method — an API key config here
+// as well caused a conflicting half-authenticated state in production.
 const authConfig = defineMetabaseAuthConfig({
   metabaseInstanceUrl: process.env.NEXT_PUBLIC_METABASE_URL!,
-  apiKey: process.env.NEXT_PUBLIC_METABASE_API_KEY!,
+  jwtProviderUri: "/sso/metabase",
 });
 
 export default function MetabaseProviderWrapper({

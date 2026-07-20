@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, CalendarSearch, ExternalLink, Loader2, X } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
@@ -153,6 +153,19 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 3, dir: "desc" });
 
+  const titleBarRef = useRef<HTMLDivElement>(null);
+  const [titleBarHeight, setTitleBarHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = titleBarRef.current;
+    if (!el) return;
+    const measure = () => { const h = el.offsetHeight; if (h > 0) setTitleBarHeight(h); };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
@@ -190,8 +203,8 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
   }
 
   return (
-    <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
-      <div className="bg-gray-900 text-white px-5 py-3">
+    <div className="rounded-xl border border-gray-200 shadow-sm" style={{ clipPath: "inset(0 round 0.75rem)" }}>
+      <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3">
         <span className="font-bold text-sm tracking-wide uppercase">Gated Content Engagements</span>
       </div>
 
@@ -204,14 +217,14 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
         <div className="flex items-center justify-center h-40 text-red-500 text-sm bg-white">{error}</div>
       )}
       {!loading && !error && (
-        <div className="overflow-x-auto bg-white">
+        <div className="bg-white">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-gray-200">
                 {HEADERS.map((h) => (
                   <th key={h.label} onClick={() => handleSort(h.col)}
-                    className={`px-4 py-3 font-semibold whitespace-nowrap select-none ${h.col >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${h.col >= 3 ? "text-right" : "text-left"}`}
-                    style={{ color: "#509EE3" }}>
+                    className={`sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap select-none border-b border-gray-200 ${h.col >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${h.col >= 3 ? "text-right" : "text-left"}`}
+                    style={{ color: "#509EE3", top: titleBarHeight }}>
                     <span className={`inline-flex items-center gap-1 ${h.col >= 3 ? "justify-end" : "justify-start"}`}>
                       {h.label}
                       {h.col >= 0 && (

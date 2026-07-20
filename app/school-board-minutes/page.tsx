@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, ExternalLink, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -86,9 +86,10 @@ type Row = (string | number | null)[];
 const COL_ORDER = [0, 2, 3, 1, 4, 5, 6, 7];
 const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
 
-function DataTable({ cols, rows, sort, onSort }: {
+function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
+  headerTop?: number;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm bg-white">No results</div>;
@@ -103,11 +104,11 @@ function DataTable({ cols, rows, sort, onSort }: {
   });
 
   return (
-    <div className="overflow-auto bg-white">
+    <div className="bg-white">
       <table className="text-sm border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="px-3 py-2 text-right font-semibold whitespace-nowrap" style={{ color: "#509EE3" }}>#</th>
+            <th className="sticky z-10 bg-white px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#509EE3", top: headerTop }}>#</th>
             {COL_ORDER.map((j) => {
               const col = cols[j];
               if (!col) return null;
@@ -117,8 +118,8 @@ function DataTable({ cols, rows, sort, onSort }: {
               return (
                 <th key={j}
                   onClick={() => sortable && onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`px-4 py-3 font-semibold whitespace-nowrap ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
-                  style={{ color: "#509EE3", textAlign: j === 1 ? "center" : "left" }}
+                  className={`sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap border-b border-gray-200 ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
+                  style={{ color: "#509EE3", textAlign: j === 1 ? "center" : "left", top: headerTop }}
                 >
                   <span className="inline-flex items-center gap-1">
                     {label}
@@ -194,6 +195,19 @@ function SchoolBoardContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const titleBarRef = useRef<HTMLDivElement>(null);
+  const [titleBarHeight, setTitleBarHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = titleBarRef.current;
+    if (!el) return;
+    const measure = () => { const h = el.offsetHeight; if (h > 0) setTitleBarHeight(h); };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Sync URL district param on navigation
   useEffect(() => {
     if (urlDistrict) setFilterDistrict([urlDistrict]);
@@ -249,7 +263,7 @@ function SchoolBoardContent() {
 
         <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
           {/* Section title */}
-          <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
+          <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
             <span className="font-bold text-sm tracking-wide uppercase">School Board Minutes</span>
             {filteredRows.length > 0 && (
               <button
@@ -270,11 +284,11 @@ function SchoolBoardContent() {
             <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
           )}
           {!loading && !error && (
-            <div className="border border-t-0 border-gray-200 rounded-b-xl overflow-hidden shadow-sm">
+            <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ clipPath: "inset(0 round 0 0 0.75rem 0.75rem)" }}>
               <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs text-gray-400">
                 {filteredRows.length} record{filteredRows.length !== 1 ? "s" : ""}
               </div>
-              <DataTable cols={allCols} rows={filteredRows} sort={sort} onSort={setSort} />
+              <DataTable cols={allCols} rows={filteredRows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
             </div>
           )}
         </div>

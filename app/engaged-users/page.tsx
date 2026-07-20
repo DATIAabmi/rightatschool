@@ -225,7 +225,7 @@ function EngagedUsersContent() {
   useLayoutEffect(() => {
     const el = titleBarRef.current;
     if (!el) return;
-    const measure = () => setTitleBarHeight(el.offsetHeight);
+    const measure = () => { const h = el.offsetHeight; if (h > 0) setTitleBarHeight(h); };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);

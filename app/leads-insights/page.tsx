@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
 import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
@@ -95,9 +95,10 @@ type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
 const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
 
-function DataTable({ cols, rows, sort, onSort }: {
+function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
+  headerTop?: number;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">No results</div>;
@@ -113,11 +114,11 @@ function DataTable({ cols, rows, sort, onSort }: {
   });
 
   return (
-    <div className="overflow-auto bg-white">
+    <div className="bg-white">
       <table className="text-sm border-collapse min-w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="px-3 py-2 w-12 text-xs font-bold" style={{ color: "#509EE3", textAlign: "center" }}>#</th>
+            <th className="sticky z-10 bg-white px-3 py-2 w-12 text-xs font-bold border-b border-gray-200" style={{ color: "#509EE3", textAlign: "center", top: headerTop }}>#</th>
             {cols.map((col, j) => {
               const isNum = NUMBER_TYPES.has(col.base_type);
               const isCenter = isNum || FORCE_CENTER_COLS.has(col.display_name);
@@ -125,8 +126,8 @@ function DataTable({ cols, rows, sort, onSort }: {
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="px-4 py-2 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70"
-                  style={{ color: "#509EE3", textAlign: isCenter ? "center" : "left" }}>
+                  className="sticky z-10 bg-white px-4 py-2 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200"
+                  style={{ color: "#509EE3", textAlign: isCenter ? "center" : "left", top: headerTop }}>
                   <span className={`inline-flex items-center gap-1 ${isCenter ? "justify-center" : ""}`}>
                     {col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
@@ -169,6 +170,19 @@ function LeadsInsightsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 5, dir: "desc" });
+
+  const titleBarRef = useRef<HTMLDivElement>(null);
+  const [titleBarHeight, setTitleBarHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = titleBarRef.current;
+    if (!el) return;
+    const measure = () => { const h = el.offsetHeight; if (h > 0) setTitleBarHeight(h); };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -223,7 +237,7 @@ function LeadsInsightsContent() {
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
         <LeadsSummaryPanel />
-        <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
+        <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Leads Insights</span>
             {!loading && rows.length > 0 && (
@@ -247,8 +261,8 @@ function LeadsInsightsContent() {
           <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
         )}
         {!loading && !error && (
-          <div className="border border-t-0 border-gray-200 rounded-b-xl overflow-hidden shadow-sm">
-            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} />
+          <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ clipPath: "inset(0 round 0 0 0.75rem 0.75rem)" }}>
+            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
           </div>
         )}
       </div>

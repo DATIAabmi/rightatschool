@@ -80,6 +80,12 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 
+// Visual column order: District, Domain, State, Campaign, then the rest as-is.
+// Raw data order (card 425): 0=District 1=Campaign 2=District Domain 3=ST
+// 4=SBM Date 5=Keyword 6=SBM Context 7=SBM Link
+const COL_ORDER = [0, 2, 3, 1, 4, 5, 6, 7];
+const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
+
 function DataTable({ cols, rows, sort, onSort }: {
   cols: Col[]; rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
@@ -102,9 +108,12 @@ function DataTable({ cols, rows, sort, onSort }: {
         <thead>
           <tr className="border-b border-gray-200">
             <th className="px-3 py-2 text-right font-semibold whitespace-nowrap" style={{ color: "#509EE3" }}>#</th>
-            {cols.map((col, j) => {
+            {COL_ORDER.map((j) => {
+              const col = cols[j];
+              if (!col) return null;
               const active = sort.col === j;
               const sortable = SORT_COLUMNS.some((s) => s.index === j);
+              const label = HEADER_LABELS[col.display_name] ?? col.display_name;
               return (
                 <th key={j}
                   onClick={() => sortable && onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
@@ -112,7 +121,7 @@ function DataTable({ cols, rows, sort, onSort }: {
                   style={{ color: "#509EE3", textAlign: j === 1 ? "center" : "left" }}
                 >
                   <span className="inline-flex items-center gap-1">
-                    {col.display_name}
+                    {label}
                     {sortable && (active
                       ? sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />
                       : <ArrowUpDown size={11} className="opacity-30" />)}
@@ -126,7 +135,8 @@ function DataTable({ cols, rows, sort, onSort }: {
           {sorted.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
               <td className="px-3 py-1.5 text-right text-gray-400 text-xs whitespace-nowrap">{i + 1}</td>
-              {row.map((cell, j) => {
+              {COL_ORDER.map((j) => {
+                const cell = row[j];
                 const val = cell === null || cell === undefined ? "" : String(cell);
                 // SBM Link (index 7) — clickable link
                 if (j === 7 && val) {

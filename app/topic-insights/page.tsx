@@ -172,6 +172,10 @@ type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
 const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain", "Topic"]);
 const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
+const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
+// Visual column order: District, Domain, State, Campaign, then the rest as-is.
+// Raw data order (card 181): 0=District 1=Domain 2=Campaign 3=State 4=Topic 5=Topic Score
+const COL_ORDER = [0, 1, 3, 2, 4, 5];
 
 function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
@@ -197,7 +201,9 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
         <thead>
           <tr className="border-b border-gray-200">
             <th className="sticky z-10 bg-white px-3 py-2 text-center w-10 shrink-0 font-semibold border-b border-gray-200" style={{ color: "#509EE3", top: headerTop }}>#</th>
-            {cols.map((col, j) => {
+            {COL_ORDER.map((j) => {
+              const col = cols[j];
+              if (!col) return null;
               const isLeft = LEFT_ALIGN_COLS.has(col.display_name) && !FORCE_CENTER_COLS.has(col.display_name);
               const active = sort.col === j;
               return (
@@ -206,7 +212,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                   style={{ color: "#509EE3", textAlign: isLeft ? "left" : "center", top: headerTop }}
                   className="sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200">
                   <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
-                    {col.display_name}
+                    {HEADER_LABELS[col.display_name] ?? col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
                   </span>
                 </th>
@@ -218,7 +224,8 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
           {sorted.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
               <td className="px-3 py-1.5 text-center text-gray-400 text-xs">{i + 1}</td>
-              {row.map((cell, j) => {
+              {COL_ORDER.map((j) => {
+                const cell = row[j];
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
                 const colName = cols[j]?.display_name ?? "";
                 const isLeft = LEFT_ALIGN_COLS.has(colName) && !FORCE_CENTER_COLS.has(colName);

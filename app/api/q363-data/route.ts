@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 export const maxDuration = 30;
 
@@ -58,11 +59,11 @@ export async function GET(req: NextRequest) {
 
     if (campaigns.length <= 1) {
       const rows = await fetchRowsForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
-      return NextResponse.json({ rows });
+      return cachedJson({ rows });
     }
 
     const perCampaign = await Promise.all(campaigns.map((c) => fetchRowsForCampaign(c, dateStart, dateEnd)));
-    return NextResponse.json({ rows: mergeRows(perCampaign) });
+    return cachedJson({ rows: mergeRows(perCampaign) });
   } catch {
     return NextResponse.json({ rows: [] }, { status: 200 });
   }

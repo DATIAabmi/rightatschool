@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 export const maxDuration = 60;
 
@@ -64,11 +65,11 @@ export async function GET(req: NextRequest) {
 
   if (campaigns.length <= 1) {
     const result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
-    return NextResponse.json(result);
+    return cachedJson(result);
   }
 
   const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd)));
-  return NextResponse.json({
+  return cachedJson({
     totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
     totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),
     uniqueLeadDistrict: sum(perCampaign.map((r) => r.uniqueLeadDistrict)),

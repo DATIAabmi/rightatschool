@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -41,5 +42,5 @@ export async function GET(req: NextRequest) {
 
   const data = await res.json();
   const values: string[] = (data?.data?.rows ?? []).map((r: string[]) => r[0]).filter(Boolean);
-  return NextResponse.json({ values });
+  return cachedJson({ values });
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 export const maxDuration = 60;
 
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
       .filter(matches(domains, domainCol))
       .filter(matches(states, stateCol));
 
-    return NextResponse.json({ cols, rows });
+    return cachedJson({ cols, rows });
   } catch {
     return NextResponse.json({ cols: [], rows: [] });
   }

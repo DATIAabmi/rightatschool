@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -69,5 +70,5 @@ export async function GET(req: NextRequest) {
     .filter(matches(states, stateCol))
     .filter(matches(jobFunctions, jobFunctionCol));
 
-  return NextResponse.json({ cols, rows });
+  return cachedJson({ cols, rows });
 }

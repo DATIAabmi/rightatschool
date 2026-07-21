@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -108,11 +109,11 @@ export async function GET(req: NextRequest) {
 
   if (campaigns.length <= 1) {
     const result = await fetchFunnelForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
-    return NextResponse.json(result);
+    return cachedJson(result);
   }
 
   const perCampaign = await Promise.all(campaigns.map((c) => fetchFunnelForCampaign(c, dateStart, dateEnd)));
-  return NextResponse.json({
+  return cachedJson({
     impressions:  sum(perCampaign.map((r) => r.impressions)),
     engagements:  sum(perCampaign.map((r) => r.engagements)),
     ctr:          avgPct(perCampaign.map((r) => r.ctr)),

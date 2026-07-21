@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cachedJson } from "@/lib/apiCache";
 
 export const maxDuration = 60;
 
@@ -32,10 +33,10 @@ export async function GET(req: NextRequest) {
   if (campaigns.length <= 1) {
     const rows = await fetchRowsForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
     if (rows === null) return NextResponse.json({ error: "Metabase error" }, { status: 500 });
-    return NextResponse.json({ rows });
+    return cachedJson({ rows });
   }
 
   const perCampaign = await Promise.all(campaigns.map((c) => fetchRowsForCampaign(c, dateStart, dateEnd)));
   const rows = perCampaign.flatMap((r) => r ?? []);
-  return NextResponse.json({ rows });
+  return cachedJson({ rows });
 }

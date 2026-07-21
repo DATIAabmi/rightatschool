@@ -15,6 +15,7 @@ import {
   SlidersHorizontal,
   ScrollText,
   Sparkles,
+  MapPin,
 } from "lucide-react";
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { label: "Engaged Users by District", icon: Users, href: "/engaged-users" },
   { label: "School Board Minutes", icon: ScrollText, href: "/school-board-minutes" },
   { label: "Persona Insights", icon: UserCircle, href: "/persona-insights" },
+  { label: "Geo Insights", icon: MapPin, href: "/geo-insights" },
   { label: "Leads Insights", icon: TrendingUp, href: "/leads-insights" },
   { label: "Topic Insights", icon: BookOpen, href: "/topic-insights" },
   { label: "Content Insights", icon: FileText, href: "/content-insights" },

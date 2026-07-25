@@ -6,8 +6,8 @@ import { NextResponse } from "next/server";
 // `staleWhileRevalidate` more seconds while refetching in the background —
 // so repeat requests for the same filters are near-instant instead of
 // round-tripping through Metabase -> BigQuery every time.
-const MAX_AGE = 60;
-const STALE_WHILE_REVALIDATE = 300;
+const MAX_AGE = 300;
+const STALE_WHILE_REVALIDATE = 1800;
 
 export function cachedJson<T>(data: T, init?: { status?: number }) {
   return NextResponse.json(data, {

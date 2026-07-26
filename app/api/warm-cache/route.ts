@@ -9,11 +9,15 @@ export async function GET() {
     ? `https://${process.env.VERCEL_URL}`
     : "http://localhost:3000";
 
-  const start = Date.now();
   try {
-    const res = await fetch(`${base}/api/q405-data`, { cache: "no-store" });
-    const elapsed = Date.now() - start;
-    return NextResponse.json({ ok: res.ok, elapsed, cached: elapsed < 800 });
+    const [r405, r425] = await Promise.all([
+      fetch(`${base}/api/q405-data`, { cache: "no-store" }),
+      fetch(`${base}/api/q425-data`, { cache: "no-store" }),
+    ]);
+    return NextResponse.json({
+      q405: { ok: r405.ok },
+      q425: { ok: r425.ok },
+    });
   } catch (err) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }

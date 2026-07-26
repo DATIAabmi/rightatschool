@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, ExternalLink, Download } from "lucide-react";
+import { ChevronDown, ArrowUp, ArrowDown, ArrowUpDown, ExternalLink, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
@@ -176,6 +176,50 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   );
 }
 
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
+
+const SBM_SKELETON_COLS = [28, 80, 100, 36, 88, 80, 200, 48];
+const SBM_LOADING_MESSAGES = [
+  "Fetching school board minutes…",
+  "Searching meeting records…",
+  "Indexing district keywords…",
+  "Almost there…",
+];
+
+function SkeletonTable() {
+  const [msgIdx, setMsgIdx] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setMsgIdx((i) => (i + 1) % SBM_LOADING_MESSAGES.length), 2800);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm overflow-hidden bg-white">
+      <style>{`
+        @keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+        .sbm-shimmer{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:1200px 100%;animation:shimmer 1.6s infinite linear}
+      `}</style>
+      <div className="flex items-center gap-2.5 px-5 py-3 bg-gray-50 border-b border-gray-100">
+        <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shrink-0" />
+        <span className="text-xs text-gray-500">{SBM_LOADING_MESSAGES[msgIdx]}</span>
+      </div>
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-200">
+        {SBM_SKELETON_COLS.map((w, i) => (
+          <div key={i} className="sbm-shimmer rounded" style={{ width: w, height: 10, flexShrink: 0 }} />
+        ))}
+      </div>
+      {Array.from({ length: 12 }).map((_, row) => (
+        <div key={row} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-100">
+          {SBM_SKELETON_COLS.map((w, i) => (
+            <div key={i} className="sbm-shimmer rounded"
+              style={{ width: Math.round(w * (0.5 + Math.random() * 0.5)), height: 9, flexShrink: 0 }} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Page content ─────────────────────────────────────────────────────────────
 
 function SchoolBoardContent() {
@@ -275,11 +319,7 @@ function SchoolBoardContent() {
             )}
           </div>
 
-          {loading && (
-            <div className="flex items-center justify-center h-64 gap-2 text-gray-400 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">
-              <Loader2 size={18} className="animate-spin" /> Loading…
-            </div>
-          )}
+          {loading && <SkeletonTable />}
           {!loading && error && (
             <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
           )}

@@ -6,9 +6,60 @@ export const maxDuration = 60;
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
+const DISPLAY_NAMES: Record<string, string> = { ST: "State" };
 
 function parseList(v: string | null): string[] {
   return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+// In-memory cache — same strategy as q405-data. Full dataset is always fetched
+// (all campaigns), so all filter combinations share one cached copy.
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+let memCache: { cols: { display_name: string; base_type: string }[]; rows: unknown[][] } | null = null;
+let memCacheAt = 0;
+let inflightPromise: Promise<{ cols: { display_name: string; base_type: string }[]; rows: unknown[][] }> | null = null;
+
+async function fetchFullDataset() {
+  const parameters = [
+    {
+      type: "string/=",
+      value: [...CAMPAIGNS],
+      target: ["variable", ["template-tag", "abmi_campaign"]],
+    },
+  ];
+
+  const res = await fetch(`${METABASE_URL}/api/card/425/query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+    body: JSON.stringify({ parameters }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) return { cols: [], rows: [] };
+
+  const data = await res.json();
+  const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
+    display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
+    base_type: c.base_type,
+  }));
+  const rows: unknown[][] = data.data?.rows ?? [];
+  return { cols, rows };
+}
+
+async function getDataset() {
+  if (memCache && Date.now() - memCacheAt < CACHE_TTL_MS) return memCache;
+  if (!inflightPromise) {
+    inflightPromise = fetchFullDataset().then((result) => {
+      memCache = result;
+      memCacheAt = Date.now();
+      inflightPromise = null;
+      return result;
+    }).catch((err) => {
+      inflightPromise = null;
+      throw err;
+    });
+  }
+  return inflightPromise;
 }
 
 export async function GET(req: NextRequest) {
@@ -17,45 +68,15 @@ export async function GET(req: NextRequest) {
     const campaigns = parseList(searchParams.get("campaign"));
     const districts = parseList(searchParams.get("district"));
 
-    // Campaign/District are real per-row columns on this card, so multiple
-    // selections are applied locally below instead of via Metabase — but the
-    // card's abmi_campaign tag has a hardcoded default of just C5, so every
-    // OTHER campaign's rows would never even get fetched unless we
-    // explicitly override it with the full list of known campaigns.
-    const parameters: object[] = [
-      {
-        type: "string/=",
-        value: [...CAMPAIGNS],
-        target: ["variable", ["template-tag", "abmi_campaign"]],
-      },
-    ];
+    const { cols, rows: allRows } = await getDataset();
 
-    const res = await fetch(`${METABASE_URL}/api/card/425/query`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-      body: JSON.stringify({ parameters }),
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      return NextResponse.json({ cols: [], rows: [] });
-    }
-
-    const DISPLAY_NAMES: Record<string, string> = { ST: "State" };
-    const data = await res.json();
-    const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
-      display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
-      base_type: c.base_type,
-    }));
-    let rows: unknown[][] = data.data?.rows ?? [];
-
-    const districtCol = cols.findIndex((c: { display_name: string }) => c.display_name === "District");
-    const campaignCol = cols.findIndex((c: { display_name: string }) => c.display_name === "Campaign");
+    const districtCol = cols.findIndex((c) => c.display_name === "District");
+    const campaignCol = cols.findIndex((c) => c.display_name === "Campaign");
 
     const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
       values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
 
-    rows = rows
+    const rows = allRows
       .filter(matches(campaigns, campaignCol))
       .filter(matches(districts, districtCol));
 

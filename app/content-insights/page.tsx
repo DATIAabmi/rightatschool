@@ -299,6 +299,7 @@ export default function Page() {
   const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
   const [data, setData] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filterChannel, setFilterChannel] = useState<string[]>([]);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -314,6 +315,29 @@ export default function Page() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Derive available channels from loaded data
+  const availableChannels = data?.channelBreakdown.map((r) => String(r[0])) ?? [];
+
+  // Apply channel filter client-side
+  const filteredBreakdown: ChannelBreakdownRow[] = (data?.channelBreakdown ?? []).filter(
+    (r) => filterChannel.length === 0 || filterChannel.includes(String(r[0]))
+  ) as ChannelBreakdownRow[];
+
+  const filteredClicks: ChannelClickRow[] = (data?.channelClicks ?? []).filter(
+    (r) => filterChannel.length === 0 || filterChannel.includes(String(r[0]))
+  ) as ChannelClickRow[];
+
+  // Recalculate KPIs from filtered channel rows
+  const filteredImpressions = filteredBreakdown.length
+    ? filteredBreakdown.reduce((s, r) => s + (Number(r[1]) || 0), 0)
+    : data?.impressions ?? null;
+  const filteredClicksTotal = filteredBreakdown.length
+    ? filteredBreakdown.reduce((s, r) => s + (Number(r[2]) || 0), 0)
+    : data?.clicks ?? null;
+  const filteredCtr = filteredImpressions && filteredClicksTotal
+    ? ((filteredClicksTotal / filteredImpressions) * 100).toFixed(2) + "%"
+    : data?.ctr ?? null;
+
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
@@ -322,6 +346,13 @@ export default function Page() {
         <div className="flex items-center gap-2 mb-3">
           <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
           <DateRangeFilter />
+          <MultiSelectDropdown
+            label="Channel"
+            value={filterChannel}
+            onChange={setFilterChannel}
+            options={availableChannels}
+            minWidth={160}
+          />
         </div>
       </div>
 
@@ -334,15 +365,15 @@ export default function Page() {
           <>
             {/* Summary scalars */}
             <div className="grid grid-cols-3 gap-4 mb-4">
-              <ScalarCard label="Total Impressions" value={fmtNum(data?.impressions)} />
-              <ScalarCard label="Clicks" value={fmtNum(data?.clicks)} />
-              <ScalarCard label="CTR" value={data?.ctr ?? "—"} />
+              <ScalarCard label="Total Impressions" value={fmtNum(filteredImpressions)} />
+              <ScalarCard label="Clicks" value={fmtNum(filteredClicksTotal)} />
+              <ScalarCard label="CTR" value={filteredCtr ?? "—"} />
             </div>
 
             {/* Channel charts */}
             <div className="grid grid-cols-2 gap-4 mb-4">
-              <ChannelBreakdownTable rows={data?.channelBreakdown ?? []} />
-              <ClicksDonutChart rows={data?.channelClicks ?? []} />
+              <ChannelBreakdownTable rows={filteredBreakdown} />
+              <ClicksDonutChart rows={filteredClicks} />
             </div>
 
             {/* Gated Content table */}

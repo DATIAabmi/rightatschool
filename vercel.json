@@ -1,5 +1,5 @@
 {
   "crons": [
-    { "path": "/api/warm-cache", "schedule": "*/4 * * * *" }
+    { "path": "/api/warm-cache", "schedule": "0 12 * * *" }
   ]
 }

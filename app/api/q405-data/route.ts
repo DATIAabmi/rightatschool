@@ -20,7 +20,7 @@ function parseList(v: string | null): string[] {
 
 // In-memory cache for the full dataset — avoids hitting Metabase/BigQuery on
 // every filter change since all filtering is done server-side anyway.
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 let memCache: { cols: { display_name: string; base_type: string }[]; rows: unknown[][] } | null = null;
 let memCacheAt = 0;
 // Track whether a fetch is in progress so concurrent requests share one call

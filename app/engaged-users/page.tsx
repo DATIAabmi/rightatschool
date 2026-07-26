@@ -179,7 +179,7 @@ function trendColor(row: Row): TrendColor | null {
   const n = typeof val === "number" ? val : parseFloat(String(val));
   if (isNaN(n) || n === 0) return null;
   return n < 0
-    ? { bg: "rgba(239,68,68,0.10)", text: "#b91c1c" }
+    ? null
     : { bg: "rgba(34,197,94,0.14)", text: "#15803d" };
 }
 

@@ -10,13 +10,17 @@ export async function GET() {
     : "http://localhost:3000";
 
   try {
-    const [r405, r425] = await Promise.all([
+    const [r405, r425, r181, r180] = await Promise.all([
       fetch(`${base}/api/q405-data`, { cache: "no-store" }),
       fetch(`${base}/api/q425-data`, { cache: "no-store" }),
+      fetch(`${base}/api/q181-data`, { cache: "no-store" }),
+      fetch(`${base}/api/q180-data`, { cache: "no-store" }),
     ]);
     return NextResponse.json({
       q405: { ok: r405.ok },
       q425: { ok: r425.ok },
+      q181: { ok: r181.ok },
+      q180: { ok: r180.ok },
     });
   } catch (err) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });

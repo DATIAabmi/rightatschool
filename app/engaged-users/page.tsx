@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
+import { CalendarSearch, ChevronDown, X, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
@@ -94,6 +94,61 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
+
+const SKELETON_COLS = [32, 120, 56, 52, 80, 64, 72, 72, 52, 72, 72, 80];
+const SKELETON_ROWS = 14;
+const LOADING_MESSAGES = [
+  "Fetching district engagement data…",
+  "Aggregating intent signals…",
+  "Calculating engagement scores…",
+  "Loading School Board Minutes…",
+  "Almost there…",
+];
+
+function SkeletonTable() {
+  const [msgIdx, setMsgIdx] = useState(0);
+
+  useEffect(() => {
+    const iv = setInterval(() => setMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length), 2800);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl shadow-sm overflow-hidden">
+      <style>{`
+        @keyframes shimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+        .shimmer{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:1200px 100%;animation:shimmer 1.6s infinite linear}
+      `}</style>
+
+      {/* Status bar */}
+      <div className="flex items-center gap-2.5 px-5 py-3 bg-gray-50 border-b border-gray-100">
+        <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse shrink-0" />
+        <span className="text-xs text-gray-500 transition-all duration-500">{LOADING_MESSAGES[msgIdx]}</span>
+      </div>
+
+      {/* Fake header row */}
+      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-200 bg-white">
+        {SKELETON_COLS.map((w, i) => (
+          <div key={i} className="shimmer rounded" style={{ width: w, height: 10, flexShrink: 0 }} />
+        ))}
+      </div>
+
+      {/* Fake data rows */}
+      {Array.from({ length: SKELETON_ROWS }).map((_, row) => (
+        <div key={row} className="flex items-center gap-3 px-4 py-2 border-b border-gray-100">
+          {SKELETON_COLS.map((w, i) => {
+            const narrower = Math.round(w * (0.55 + Math.random() * 0.45));
+            return (
+              <div key={i} className="shimmer rounded" style={{ width: narrower, height: 9, flexShrink: 0 }} />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -304,11 +359,7 @@ function EngagedUsersContent() {
           )}
         </div>
 
-        {loading && (
-          <div className="flex items-center justify-center h-64 gap-2 text-gray-400 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">
-            <Loader2 size={18} className="animate-spin" /> Loading…
-          </div>
-        )}
+        {loading && <SkeletonTable />}
         {!loading && error && (
           <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
         )}

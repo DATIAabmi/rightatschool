@@ -136,7 +136,7 @@ function AdSamplesEmbed() {
               setTimeout(tryClean, 400);
             }
           };
-          setTimeout(tryClean, 1000);
+          setTimeout(tryClean, 1500);
           break;
         }
       }
@@ -166,8 +166,9 @@ function AdSamplesEmbed() {
       `}</style>
 
       <div style={{ position: "relative", height: "100%", width: "100%" }}>
-        {/* Metabase embed — always rendered so it can load in the background */}
-        <div ref={containerRef} className="ad-samples-embed" style={{ height: "100%", width: "100%" }}>
+        {/* Embed is invisible while loading — overlay sits on top as well */}
+        <div ref={containerRef} className="ad-samples-embed"
+          style={{ height: "100%", width: "100%", visibility: ready ? "visible" : "hidden" }}>
           <InteractiveDashboard
             key={campaign.join(",")}
             dashboardId={35}
@@ -177,10 +178,10 @@ function AdSamplesEmbed() {
           />
         </div>
 
-        {/* Solid overlay covers any flash while the tab click + cleanup runs */}
+        {/* High-z overlay guarantees nothing from Metabase bleeds through */}
         {!ready && (
           <div style={{
-            position: "absolute", inset: 0, background: "#f9fafb",
+            position: "absolute", inset: 0, zIndex: 9999, background: "#f9fafb",
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
           }}>
             <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#6b7280", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />

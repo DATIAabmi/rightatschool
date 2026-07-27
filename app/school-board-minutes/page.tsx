@@ -105,7 +105,18 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-sm border-collapse min-w-full">
+      <table className="text-sm border-collapse w-full table-fixed">
+        <colgroup>
+          <col style={{ width: 36 }} />   {/* # */}
+          <col style={{ width: 140 }} />  {/* District */}
+          <col style={{ width: 110 }} />  {/* Domain */}
+          <col style={{ width: 44 }} />   {/* ST */}
+          <col style={{ width: 68 }} />   {/* Campaign */}
+          <col style={{ width: 96 }} />   {/* SBM Date */}
+          <col style={{ width: 90 }} />   {/* Keyword */}
+          <col />                         {/* SBM Context — takes remaining space */}
+          <col style={{ width: 56 }} />   {/* SBM Link */}
+        </colgroup>
         <thead>
           <tr className="border-b border-gray-200">
             <th className="sticky z-10 bg-white px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#509EE3", top: headerTop }}>#</th>
@@ -118,7 +129,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
               return (
                 <th key={j}
                   onClick={() => sortable && onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap border-b border-gray-200 ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
+                  className={`sticky z-10 bg-white px-4 py-3 font-semibold border-b border-gray-200 ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
                   style={{ color: "#509EE3", textAlign: j === 1 ? "center" : "left", top: headerTop }}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -153,8 +164,8 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 // SBM Context (index 6) — allow wrapping for long text
                 if (j === 6) {
                   return (
-                    <td key={j} className="px-4 py-1.5 text-left text-gray-800" style={{ maxWidth: 320, minWidth: 160 }}>
-                      <span className="line-clamp-2 block text-xs leading-relaxed">{val}</span>
+                    <td key={j} className="px-4 py-1.5 text-left text-gray-800">
+                      <span className="line-clamp-3 block text-xs leading-relaxed break-words">{val}</span>
                     </td>
                   );
                 }
@@ -164,7 +175,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                   : j === 4 ? val.replace(/T.*$/, "")
                   : val;
                 return (
-                  <td key={j} className="px-4 py-1.5 text-gray-800 whitespace-nowrap"
+                  <td key={j} className={`px-4 py-1.5 text-gray-800 text-xs ${j === 0 ? "break-words" : "whitespace-nowrap"}`}
                     style={{ textAlign: j === 1 ? "center" : "left" }}>{display}</td>
                 );
               })}

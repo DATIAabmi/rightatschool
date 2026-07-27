@@ -78,10 +78,23 @@ function cleanAdSamples(container: HTMLElement): boolean {
   return true;
 }
 
+const LOADING_MSGS = [
+  "Loading ad samples…",
+  "Fetching campaign creatives…",
+  "Preparing ad preview…",
+  "Almost ready…",
+];
+
 function AdSamplesEmbed() {
   const { campaign } = useFilter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+  const [msgIdx, setMsgIdx] = useState(0);
+
+  useEffect(() => {
+    const iv = setInterval(() => setMsgIdx((i) => (i + 1) % LOADING_MSGS.length), 2800);
+    return () => clearInterval(iv);
+  }, []);
 
   const params: Record<string, string | string[]> = {
     abmi_campaign_: campaign,
@@ -94,13 +107,13 @@ function AdSamplesEmbed() {
   };
 
   useEffect(() => {
+    setReady(false);
     const container = containerRef.current;
     if (!container) return;
 
     let clickDone = false;
     let cleanDone = false;
 
-    // Step 1: poll for the "Ad Samples" tab button and click it
     const clickInterval = setInterval(() => {
       if (clickDone) return;
       const candidates = container.querySelectorAll<HTMLElement>('[role="tab"], button, a');
@@ -110,7 +123,6 @@ function AdSamplesEmbed() {
           clickDone = true;
           clearInterval(clickInterval);
 
-          // Step 2: after click, retry cleanAdSamples until cards are measured
           let attempts = 0;
           const tryClean = () => {
             if (cleanDone) return;
@@ -118,23 +130,23 @@ function AdSamplesEmbed() {
             attempts++;
             if (ok || attempts >= 10) {
               cleanDone = true;
-              setReady(true);
+              // Extra frame delay so DOM paint settles before lifting the overlay
+              requestAnimationFrame(() => requestAnimationFrame(() => setReady(true)));
             } else {
               setTimeout(tryClean, 400);
             }
           };
-          setTimeout(tryClean, 1000); // initial wait for tab content to render
+          setTimeout(tryClean, 1000);
           break;
         }
       }
     }, 150);
 
-    // Safety fallback: show after 10 s no matter what
     const fallback = setTimeout(() => {
       if (!cleanDone) {
         cleanDone = true;
         if (containerRef.current) cleanAdSamples(containerRef.current);
-        setReady(true);
+        requestAnimationFrame(() => requestAnimationFrame(() => setReady(true)));
       }
     }, 10_000);
 
@@ -144,33 +156,38 @@ function AdSamplesEmbed() {
   return (
     <>
       <style>{`
-        /* Hide native Metabase filter bar */
         .ad-samples-embed [data-testid="dashboard-parameters-widget-container"],
         .ad-samples-embed [class*="ParametersWidget"],
         .ad-samples-embed [class*="parameters-widget"],
-        .ad-samples-embed [class*="ParameterWidget"] {
-          display: none !important;
-        }
-        /* Remove top gap left by hidden filter bar */
+        .ad-samples-embed [class*="ParameterWidget"] { display: none !important; }
         .ad-samples-embed [class*="DashboardBody"],
         .ad-samples-embed [class*="dashboard-body"],
-        .ad-samples-embed [data-testid="dashboard-grid"] {
-          padding-top: 0 !important;
-          margin-top: 0 !important;
-        }
+        .ad-samples-embed [data-testid="dashboard-grid"] { padding-top: 0 !important; margin-top: 0 !important; }
       `}</style>
-      <div
-        ref={containerRef}
-        className="ad-samples-embed"
-        style={{ height: "100%", width: "100%", visibility: ready ? "visible" : "hidden" }}
-      >
-        <InteractiveDashboard
-          key={campaign.join(",")}
-          dashboardId={35}
-          initialParameters={params}
-          withTitle={false}
-          style={{ height: "100%" }}
-        />
+
+      <div style={{ position: "relative", height: "100%", width: "100%" }}>
+        {/* Metabase embed — always rendered so it can load in the background */}
+        <div ref={containerRef} className="ad-samples-embed" style={{ height: "100%", width: "100%" }}>
+          <InteractiveDashboard
+            key={campaign.join(",")}
+            dashboardId={35}
+            initialParameters={params}
+            withTitle={false}
+            style={{ height: "100%" }}
+          />
+        </div>
+
+        {/* Solid overlay covers any flash while the tab click + cleanup runs */}
+        {!ready && (
+          <div style={{
+            position: "absolute", inset: 0, background: "#f9fafb",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
+          }}>
+            <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#6b7280", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <span style={{ fontSize: 13, color: "#9ca3af" }}>{LOADING_MSGS[msgIdx]}</span>
+            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          </div>
+        )}
       </div>
     </>
   );

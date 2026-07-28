@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarSearch, ChevronDown, X, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
+import { CalendarSearch, ChevronDown, X, ArrowUp, ArrowDown, ArrowUpDown, Download, Info } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
@@ -33,6 +33,42 @@ function DateRangeFilter() {
           <X size={12} />
         </button>
       )}
+    </div>
+  );
+}
+
+// ─── Definitions modal ────────────────────────────────────────────────────────
+
+const DEFINITIONS = [
+  { term: "SBM", def: "School Board Minutes. The SBM Link directs to the school board minutes document." },
+  { term: "Topic", def: "Intent signals based on content consumption. See Topic Insights dashboard." },
+  { term: "Engagements", def: "The number of clicks on your ads, email opens and lead downloads." },
+  { term: "Intent Score", def: "A numerical value that indicates a lead/district's likelihood to be in market derived from district data and total engagement on and off the DATIA K12 channels." },
+];
+
+function DefinitionsModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
+      <div
+        className="relative bg-white rounded-2xl shadow-xl border border-gray-100 p-6 max-w-md w-full mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-gray-900 text-sm tracking-wide uppercase">Definitions</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="space-y-3">
+          {DEFINITIONS.map(({ term, def }) => (
+            <div key={term} className="flex gap-3">
+              <span className="font-bold text-gray-900 text-xs shrink-0 pt-0.5 min-w-[90px]">{term}</span>
+              <span className="text-xs text-gray-600 leading-relaxed">{def}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -273,6 +309,7 @@ function EngagedUsersContent() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showDefs, setShowDefs] = useState(false);
 
   const titleBarRef = useRef<HTMLDivElement>(null);
   const [titleBarHeight, setTitleBarHeight] = useState(0);
@@ -326,20 +363,21 @@ function EngagedUsersContent() {
           <SortDropdown sort={sort} onSort={setSort} />
         </div>
 
-        {/* Row 2: District Domain + District + State */}
-        <div className="flex items-center gap-2 mb-2">
+        {/* Row 2: District Domain + District + State + Definitions link */}
+        <div className="flex items-center gap-2 mb-3">
           <MultiSelectDropdown label="District Domain" value={domain}   onChange={setDomain}   search={fetchFieldOptions("domain")} />
           <MultiSelectDropdown label="District"         value={district} onChange={setDistrict} search={fetchFieldOptions("district")} />
           <MultiSelectDropdown label="State"            value={state}    onChange={setState}    search={fetchFieldOptions("state")} />
+          <button
+            onClick={() => setShowDefs(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
+          >
+            <Info size={13} />
+            Definitions
+          </button>
         </div>
 
-        {/* Legend */}
-        <div className="text-xs text-gray-500 leading-relaxed space-y-0.5 mb-3">
-          <p><span className="font-bold text-gray-700">SBM</span> - School Board Minutes. The SBM Link directs to the school board minutes document.</p>
-          <p><span className="font-bold text-gray-700">Topic</span> is the intent signals based on content consumption. See Topic Insights dashboard.</p>
-          <p><span className="font-bold text-gray-700">Engagements</span> are the number of clicks on your ads, email opens and lead downloads.</p>
-          <p><span className="font-bold text-gray-700">Intent Score</span> is a numerical value that indicates a lead/district&apos;s likelihood to be in market derived from district data and total engagement on and off the DATIA K12 channels.</p>
-        </div>
+        {showDefs && <DefinitionsModal onClose={() => setShowDefs(false)} />}
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflowY: "scroll", overflowX: "hidden", padding: "0 24px 24px" }} className="eu-scroll">

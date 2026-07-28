@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, ArrowUp, ArrowDown, ArrowUpDown, Download, Info } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
-import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
 function fetchFieldOptions(field: "district" | "domain" | "state") {
@@ -395,9 +394,5 @@ function EngagedUsersContent() {
 }
 
 export default function Page() {
-  return (
-    <MetabaseProviderWrapper>
-      <EngagedUsersContent />
-    </MetabaseProviderWrapper>
-  );
+  return <EngagedUsersContent />;
 }

@@ -8,7 +8,6 @@ import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
-import { CAMPAIGNS } from "@/lib/campaigns";
 
 const KEYWORDS = ["after school", "child care", "head start", "enrichment"];
 
@@ -236,15 +235,12 @@ function SkeletonTable() {
 function SchoolBoardContent() {
   const searchParams = useSearchParams();
   const urlDistrict = searchParams.get("district");
-  const { campaign: ctxCampaign } = useFilter();
+  const { campaign, dateStart, dateEnd } = useFilter();
 
-  const [filterCampaign, setFilterCampaign] = useState<string[]>(ctxCampaign);
   const [filterDistrict, setFilterDistrict] = useState<string[]>(urlDistrict ? [urlDistrict] : []);
   const [filterDomain, setFilterDomain] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterKeyword, setFilterKeyword] = useState<string[]>([]);
-  const [filterDateStart, setFilterDateStart] = useState("");
-  const [filterDateEnd, setFilterDateEnd] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 4, dir: "desc" }); // default: SBM Date desc
 
   const [allCols, setAllCols] = useState<Col[]>([]);
@@ -274,10 +270,10 @@ function SchoolBoardContent() {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (filterCampaign.length) params.set("campaign", filterCampaign.join(","));
+    if (campaign.length)       params.set("campaign", campaign.join(","));
     if (filterDistrict.length) params.set("district", filterDistrict.join(","));
-    if (filterDateStart) params.set("dateStart", filterDateStart);
-    if (filterDateEnd)   params.set("dateEnd", filterDateEnd);
+    if (dateStart) params.set("dateStart", dateStart);
+    if (dateEnd)   params.set("dateEnd", dateEnd);
 
     fetch(`/api/q425-data?${params.toString()}`)
       .then((r) => r.json())
@@ -288,7 +284,7 @@ function SchoolBoardContent() {
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [filterCampaign, filterDistrict, filterDateStart, filterDateEnd]);
+  }, [campaign, filterDistrict, dateStart, dateEnd]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -310,35 +306,10 @@ function SchoolBoardContent() {
           {/* Filter + sort bar */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <MultiSelectDropdown label="Campaign" value={filterCampaign} onChange={setFilterCampaign} options={[...CAMPAIGNS]} minWidth={180} />
               <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} search={fetchFieldOptions("district")} />
               <MultiSelectDropdown label="Domain"   value={filterDomain}   onChange={setFilterDomain}   search={fetchFieldOptions("domain")} />
               <MultiSelectDropdown label="State"    value={filterState}    onChange={setFilterState}    search={fetchFieldOptions("state")} />
               <MultiSelectDropdown label="Keyword"  value={filterKeyword}  onChange={setFilterKeyword}  options={KEYWORDS} />
-              {/* Date range filter */}
-              <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm">
-                <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date:</span>
-                <input
-                  type="date"
-                  value={filterDateStart}
-                  onChange={(e) => setFilterDateStart(e.target.value)}
-                  className="text-xs text-gray-700 border-none outline-none bg-transparent cursor-pointer"
-                />
-                <span className="text-gray-300 text-xs">–</span>
-                <input
-                  type="date"
-                  value={filterDateEnd}
-                  onChange={(e) => setFilterDateEnd(e.target.value)}
-                  className="text-xs text-gray-700 border-none outline-none bg-transparent cursor-pointer"
-                />
-                {(filterDateStart || filterDateEnd) && (
-                  <button
-                    onClick={() => { setFilterDateStart(""); setFilterDateEnd(""); }}
-                    className="ml-1 text-gray-300 hover:text-gray-500 text-xs leading-none"
-                    title="Clear dates"
-                  >✕</button>
-                )}
-              </div>
             </div>
             <SortDropdown sort={sort} onSort={setSort} />
           </div>

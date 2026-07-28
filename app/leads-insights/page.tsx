@@ -1,40 +1,18 @@
 "use client";
 
 import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
-import { CalendarSearch, ChevronDown, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
+import { ChevronDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import LeadsSummaryPanel from "@/components/LeadsSummaryPanel";
 import { exportToCsv } from "@/lib/exportCsv";
-import { CAMPAIGNS } from "@/lib/campaigns";
-
 function fetchFieldOptions(field: "district" | "state" | "job_function") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
       .then((d) => d.values ?? []);
-}
-
-function DateRangeFilter() {
-  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
-  return (
-    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
-      <CalendarSearch size={14} className="text-orange-400 shrink-0" />
-      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
-      <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      <span className="text-gray-300 text-xs">–</span>
-      <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      {(dateStart || dateEnd) && (
-        <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
-          <X size={12} />
-        </button>
-      )}
-    </div>
-  );
 }
 
 type SortDir = "asc" | "desc";
@@ -168,7 +146,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 }
 
 function LeadsInsightsContent() {
-  const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd } = useFilter();
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterJobFunction, setFilterJobFunction] = useState<string[]>([]);
@@ -225,20 +203,14 @@ function LeadsInsightsContent() {
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
 
-        {/* Row 1: Campaign + Date Range + Sort */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Filter + sort row */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
-            <DateRangeFilter />
+            <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    search={fetchFieldOptions("district")} />
+            <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
+            <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
           </div>
           <SortDropdown sort={sort} onSort={setSort} />
-        </div>
-
-        {/* Row 2: District + Job Function + State */}
-        <div className="flex items-center gap-2 mb-3">
-          <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    search={fetchFieldOptions("district")} />
-          <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
-          <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
         </div>
       </div>
 

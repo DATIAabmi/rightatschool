@@ -2,39 +2,17 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarSearch, ChevronDown, X, ArrowUp, ArrowDown, ArrowUpDown, Download, Info } from "lucide-react";
+import { ChevronDown, ArrowUp, ArrowDown, ArrowUpDown, Download, Info } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
-import { CAMPAIGNS } from "@/lib/campaigns";
-
 function fetchFieldOptions(field: "district" | "domain" | "state") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
       .then((d) => d.values ?? []);
-}
-
-function DateRangeFilter() {
-  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
-  return (
-    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
-      <CalendarSearch size={14} className="text-orange-400 shrink-0" />
-      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
-      <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      <span className="text-gray-300 text-xs">–</span>
-      <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      {(dateStart || dateEnd) && (
-        <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
-          <X size={12} />
-        </button>
-      )}
-    </div>
-  );
 }
 
 // ─── Definitions modal ────────────────────────────────────────────────────────
@@ -298,7 +276,7 @@ function DataTable({
 
 function EngagedUsersContent() {
   const router = useRouter();
-  const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
+  const { campaign } = useFilter();
 
   const [district, setDistrict] = useState<string[]>([]);
   const [domain, setDomain] = useState<string[]>([]);
@@ -354,27 +332,21 @@ function EngagedUsersContent() {
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
 
-        {/* Row 1: Campaign + Date Range + Sort */}
-        <div className="flex items-center justify-between mb-2">
+        {/* Filter + sort row */}
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
-            <DateRangeFilter />
+            <MultiSelectDropdown label="District Domain" value={domain}   onChange={setDomain}   search={fetchFieldOptions("domain")} />
+            <MultiSelectDropdown label="District"         value={district} onChange={setDistrict} search={fetchFieldOptions("district")} />
+            <MultiSelectDropdown label="State"            value={state}    onChange={setState}    search={fetchFieldOptions("state")} />
+            <button
+              onClick={() => setShowDefs(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
+            >
+              <Info size={13} />
+              Definitions
+            </button>
           </div>
           <SortDropdown sort={sort} onSort={setSort} />
-        </div>
-
-        {/* Row 2: District Domain + District + State + Definitions link */}
-        <div className="flex items-center gap-2 mb-3">
-          <MultiSelectDropdown label="District Domain" value={domain}   onChange={setDomain}   search={fetchFieldOptions("domain")} />
-          <MultiSelectDropdown label="District"         value={district} onChange={setDistrict} search={fetchFieldOptions("district")} />
-          <MultiSelectDropdown label="State"            value={state}    onChange={setState}    search={fetchFieldOptions("state")} />
-          <button
-            onClick={() => setShowDefs(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
-          >
-            <Info size={13} />
-            Definitions
-          </button>
         </div>
 
         {showDefs && <DefinitionsModal onClose={() => setShowDefs(false)} />}

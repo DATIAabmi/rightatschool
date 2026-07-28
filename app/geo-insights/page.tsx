@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarSearch, X, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
+import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import UsStateChoropleth from "@/components/UsStateChoropleth";
 import { exportToCsv } from "@/lib/exportCsv";
-import { CAMPAIGNS } from "@/lib/campaigns";
-
 function fetchFieldOptions(field: "district" | "state") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
@@ -17,27 +15,7 @@ function fetchFieldOptions(field: "district" | "state") {
       .then((d) => d.values ?? []);
 }
 
-// ─── Date range filter ────────────────────────────────────────────────────────
 
-function DateRangeFilter() {
-  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
-  return (
-    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
-      <CalendarSearch size={14} className="text-orange-400 flex-shrink-0" />
-      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider flex-shrink-0">Date Range:</span>
-      <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      <span className="text-gray-300 text-xs">–</span>
-      <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      {(dateStart || dateEnd) && (
-        <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
-          <X size={12} />
-        </button>
-      )}
-    </div>
-  );
-}
 
 // ─── Engagements by Geography ──────────────────────────────────────────────────
 
@@ -201,7 +179,7 @@ function GeographyTable({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function GeoInsightsContent() {
-  const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
@@ -212,13 +190,7 @@ function GeoInsightsContent() {
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
 
-        {/* Row 1: Campaign + Date Range */}
-        <div className="flex items-center gap-2 mb-2">
-          <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
-          <DateRangeFilter />
-        </div>
-
-        {/* Row 2: District + State */}
+        {/* Filter row */}
         <div className="flex items-center gap-2 mb-3">
           <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} search={fetchFieldOptions("district")} />
           <MultiSelectDropdown label="State"    value={filterState}    onChange={setFilterState}    search={fetchFieldOptions("state")} />

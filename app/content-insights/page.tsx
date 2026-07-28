@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, CalendarSearch, ExternalLink, Loader2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Loader2 } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
-import { CAMPAIGNS } from "@/lib/campaigns";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -271,32 +270,10 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
   );
 }
 
-// ─── Filter bar components ────────────────────────────────────────────────────
-
-function DateRangeFilter() {
-  const { dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
-  return (
-    <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
-      <CalendarSearch size={14} className="text-orange-400 shrink-0" />
-      <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
-      <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      <span className="text-gray-300 text-xs">–</span>
-      <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
-        className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
-      {(dateStart || dateEnd) && (
-        <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
-          <X size={12} />
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { campaign, setCampaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd } = useFilter();
   const [data, setData] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterChannel, setFilterChannel] = useState<string[]>([]);
@@ -344,8 +321,6 @@ export default function Page() {
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
         <div className="flex items-center gap-2 mb-3">
-          <MultiSelectDropdown label="ABMi Campaign" value={campaign} onChange={setCampaign} options={[...CAMPAIGNS]} minWidth={220} />
-          <DateRangeFilter />
           <MultiSelectDropdown
             label="Channel"
             value={filterChannel}

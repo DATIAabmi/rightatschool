@@ -1,7 +1,7 @@
 "use client";
 
 import DashboardHeader from "@/components/DashboardHeader";
-import EcosystemFunnel, { EcosystemFilterBar } from "@/components/EcosystemFunnel";
+import EcosystemFunnel from "@/components/EcosystemFunnel";
 import ChannelPerformanceChart from "@/components/ChannelPerformanceChart";
 
 export default function Home() {
@@ -9,8 +9,6 @@ export default function Home() {
     <>
       <DashboardHeader />
       <div className="flex flex-col gap-3">
-        <EcosystemFilterBar />
-
         <div className="flex flex-col xl:flex-row gap-3 xl:gap-6 xl:items-start">
           <div className="w-full xl:w-1/2 min-w-0 flex items-center gap-3">
             <div className="w-1.5 h-7 bg-gray-900 rounded-sm shrink-0" />

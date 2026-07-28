@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { CalendarSearch, X } from "lucide-react";
 import { useFilter } from "@/components/FilterContext";
-import { campaignDateRange } from "@/lib/campaigns";
+import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
+import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
 export default function DashboardHeader({ legend }: { legend?: string }) {
-  const { campaign } = useFilter();
+  const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
 
   const subtitle =
     campaign.length === 0
@@ -22,9 +24,9 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
           <Image
             src="/right-at-school-logo.png"
             alt="Right At School"
-            width={924}
-            height={617}
-            style={{ height: "132px", width: "auto" }}
+            width={652}
+            height={306}
+            style={{ height: "96px", width: "auto" }}
             className="object-contain"
           />
           {/* Vertical divider */}
@@ -43,6 +45,31 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             {subtitle}
           </p>
           <div className="h-0.5 bg-red-500 mt-2 rounded-full" style={{ width: 56 }} />
+        </div>
+      </div>
+
+      {/* Global filters — Campaign + Date Range */}
+      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap">
+        <MultiSelectDropdown
+          label="ABMi Campaign"
+          value={campaign}
+          onChange={setCampaign}
+          options={[...CAMPAIGNS]}
+          minWidth={220}
+        />
+        <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+          <CalendarSearch size={14} className="text-orange-400 shrink-0" />
+          <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
+          <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
+            className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+          <span className="text-gray-300 text-xs">–</span>
+          <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
+            className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+          {(dateStart || dateEnd) && (
+            <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
+              <X size={12} />
+            </button>
+          )}
         </div>
       </div>
 

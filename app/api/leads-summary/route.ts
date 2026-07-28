@@ -6,6 +6,11 @@ export const maxDuration = 60;
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
+const CACHE_TTL_MS = 30 * 60 * 1000;
+type SummaryResult = { totalDownloads: unknown; totalUniqueLeads: unknown; uniqueLeadDistrict: unknown; byContentType: unknown; byContentName: unknown };
+const memCache = new Map<string, { data: SummaryResult; ts: number }>();
+const inflight = new Map<string, Promise<SummaryResult>>();
+
 async function fetchCard(cardId: number, params: object[]) {
   const res = await fetch(`${METABASE_URL}/api/card/${cardId}/query`, {
     method: "POST",
@@ -57,23 +62,39 @@ async function fetchSummaryForCampaign(campaign: string, dateStart: string, date
   };
 }
 
+async function getResult(campaigns: string[], dateStart: string, dateEnd: string): Promise<SummaryResult> {
+  const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}`;
+  const cached = memCache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
+  if (!inflight.has(key)) {
+    const p = (async () => {
+      let result: SummaryResult;
+      if (campaigns.length <= 1) {
+        result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
+      } else {
+        const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd)));
+        result = {
+          totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
+          totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),
+          uniqueLeadDistrict: sum(perCampaign.map((r) => r.uniqueLeadDistrict)),
+          byContentType: mergeLabeledCounts(perCampaign.map((r) => r.byContentType)),
+          byContentName: mergeLabeledCounts(perCampaign.map((r) => r.byContentName)),
+        };
+      }
+      memCache.set(key, { data: result, ts: Date.now() });
+      inflight.delete(key);
+      return result;
+    })();
+    p.catch(() => inflight.delete(key));
+    inflight.set(key, p);
+  }
+  return inflight.get(key)!;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd = searchParams.get("dateEnd") ?? "";
-
-  if (campaigns.length <= 1) {
-    const result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
-    return cachedJson(result);
-  }
-
-  const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd)));
-  return cachedJson({
-    totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
-    totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),
-    uniqueLeadDistrict: sum(perCampaign.map((r) => r.uniqueLeadDistrict)),
-    byContentType: mergeLabeledCounts(perCampaign.map((r) => r.byContentType)),
-    byContentName: mergeLabeledCounts(perCampaign.map((r) => r.byContentName)),
-  });
+  return cachedJson(await getResult(campaigns, dateStart, dateEnd));
 }

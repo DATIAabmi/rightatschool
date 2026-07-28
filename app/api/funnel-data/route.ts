@@ -4,6 +4,11 @@ import { cachedJson } from "@/lib/apiCache";
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
+const CACHE_TTL_MS = 30 * 60 * 1000;
+type FunnelResult = { impressions: unknown; engagements: unknown; ctr: unknown; engagedUsers: unknown; leads: unknown };
+const memCache = new Map<string, { data: FunnelResult; ts: number }>();
+const inflight = new Map<string, Promise<FunnelResult>>();
+
 function buildParams(campaign: string, dateStart: string, dateEnd: string): object[] {
   const params: object[] = [];
   if (campaign) {
@@ -101,23 +106,39 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
   return { impressions, engagements, ctr, engagedUsers, leads };
 }
 
+async function getResult(campaigns: string[], dateStart: string, dateEnd: string): Promise<FunnelResult> {
+  const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}`;
+  const cached = memCache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
+  if (!inflight.has(key)) {
+    const p = (async () => {
+      let result: FunnelResult;
+      if (campaigns.length <= 1) {
+        result = await fetchFunnelForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
+      } else {
+        const perCampaign = await Promise.all(campaigns.map((c) => fetchFunnelForCampaign(c, dateStart, dateEnd)));
+        result = {
+          impressions:  sum(perCampaign.map((r) => r.impressions)),
+          engagements:  sum(perCampaign.map((r) => r.engagements)),
+          ctr:          avgPct(perCampaign.map((r) => r.ctr)),
+          engagedUsers: sum(perCampaign.map((r) => r.engagedUsers)),
+          leads:        sum(perCampaign.map((r) => r.leads)),
+        };
+      }
+      memCache.set(key, { data: result, ts: Date.now() });
+      inflight.delete(key);
+      return result;
+    })();
+    p.catch(() => inflight.delete(key));
+    inflight.set(key, p);
+  }
+  return inflight.get(key)!;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
-
-  if (campaigns.length <= 1) {
-    const result = await fetchFunnelForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
-    return cachedJson(result);
-  }
-
-  const perCampaign = await Promise.all(campaigns.map((c) => fetchFunnelForCampaign(c, dateStart, dateEnd)));
-  return cachedJson({
-    impressions:  sum(perCampaign.map((r) => r.impressions)),
-    engagements:  sum(perCampaign.map((r) => r.engagements)),
-    ctr:          avgPct(perCampaign.map((r) => r.ctr)),
-    engagedUsers: sum(perCampaign.map((r) => r.engagedUsers)),
-    leads:        sum(perCampaign.map((r) => r.leads)),
-  });
+  return cachedJson(await getResult(campaigns, dateStart, dateEnd));
 }

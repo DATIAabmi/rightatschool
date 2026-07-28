@@ -6,7 +6,10 @@ export const maxDuration = 30;
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
+const CACHE_TTL_MS = 30 * 60 * 1000;
 type Row = [string, number, number];
+const memCache = new Map<string, { data: Row[]; ts: number }>();
+const inflight = new Map<string, Promise<Row[]>>();
 
 async function fetchRowsForCampaign(campaign: string, dateStart: string, dateEnd: string): Promise<Row[]> {
   const parameters: object[] = [];
@@ -50,20 +53,32 @@ function mergeRows(rowSets: Row[][]): Row[] {
     .sort((a, b) => b[1] - a[1]);
 }
 
+async function getRows(campaigns: string[], dateStart: string, dateEnd: string): Promise<Row[]> {
+  const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}`;
+  const cached = memCache.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
+  if (!inflight.has(key)) {
+    const p = (async () => {
+      const rows = campaigns.length <= 1
+        ? await fetchRowsForCampaign(campaigns[0] ?? "", dateStart, dateEnd)
+        : mergeRows(await Promise.all(campaigns.map((c) => fetchRowsForCampaign(c, dateStart, dateEnd))));
+      memCache.set(key, { data: rows, ts: Date.now() });
+      inflight.delete(key);
+      return rows;
+    })();
+    p.catch(() => inflight.delete(key));
+    inflight.set(key, p);
+  }
+  return inflight.get(key)!;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
     const dateStart = searchParams.get("dateStart") ?? "";
     const dateEnd   = searchParams.get("dateEnd")   ?? "";
-
-    if (campaigns.length <= 1) {
-      const rows = await fetchRowsForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
-      return cachedJson({ rows });
-    }
-
-    const perCampaign = await Promise.all(campaigns.map((c) => fetchRowsForCampaign(c, dateStart, dateEnd)));
-    return cachedJson({ rows: mergeRows(perCampaign) });
+    return cachedJson({ rows: await getRows(campaigns, dateStart, dateEnd) });
   } catch {
     return NextResponse.json({ rows: [] }, { status: 200 });
   }

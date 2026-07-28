@@ -65,20 +65,32 @@ async function getDataset() {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
-    const campaigns = parseList(searchParams.get("campaign"));
-    const districts = parseList(searchParams.get("district"));
+    const campaigns  = parseList(searchParams.get("campaign"));
+    const districts  = parseList(searchParams.get("district"));
+    const dateStart  = searchParams.get("dateStart") ?? "";
+    const dateEnd    = searchParams.get("dateEnd")   ?? "";
 
     const { cols, rows: allRows } = await getDataset();
 
     const districtCol = cols.findIndex((c) => c.display_name === "District");
     const campaignCol = cols.findIndex((c) => c.display_name === "Campaign");
+    // SBM Date is the 5th column in raw order (index 4)
+    const dateCol     = cols.findIndex((c) => c.display_name === "SBM Date");
 
     const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
       values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
 
     const rows = allRows
       .filter(matches(campaigns, campaignCol))
-      .filter(matches(districts, districtCol));
+      .filter(matches(districts, districtCol))
+      .filter((row) => {
+        if (!dateStart && !dateEnd) return true;
+        if (dateCol < 0) return true;
+        const raw = String(row[dateCol] ?? "").slice(0, 10); // "YYYY-MM-DD"
+        if (dateStart && raw < dateStart) return false;
+        if (dateEnd   && raw > dateEnd)   return false;
+        return true;
+      });
 
     return cachedJson({ cols, rows });
   } catch {

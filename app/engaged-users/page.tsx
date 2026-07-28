@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ArrowUp, ArrowDown, ArrowUpDown, Download, Info } from "lucide-react";
+import { ChevronDown, X, ArrowUp, ArrowDown, ArrowUpDown, Download, Info } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";

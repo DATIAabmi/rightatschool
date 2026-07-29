@@ -118,7 +118,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
         </colgroup>
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#509EE3", top: headerTop }}>#</th>
+            <th className="sticky z-10 bg-white px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
             {COL_ORDER.map((j) => {
               const col = cols[j];
               if (!col) return null;
@@ -129,7 +129,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 <th key={j}
                   onClick={() => sortable && onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                   className={`sticky z-10 bg-white px-4 py-3 font-semibold border-b border-gray-200 ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
-                  style={{ color: "#509EE3", textAlign: j === 1 ? "center" : "left", top: headerTop }}
+                  style={{ color: "#111827", textAlign: j === 1 ? "center" : "left", top: headerTop }}
                 >
                   <span className="inline-flex items-center gap-1">
                     {label}
@@ -318,7 +318,12 @@ function SchoolBoardContent() {
         <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
           {/* Section title */}
           <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
-            <span className="font-bold text-sm tracking-wide uppercase">School Board Minutes</span>
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-sm tracking-wide uppercase">School Board Minutes</span>
+              {!loading && filteredRows.length > 0 && (
+                <span className="text-gray-400 text-xs">{filteredRows.length.toLocaleString()} records</span>
+              )}
+            </div>
             {filteredRows.length > 0 && (
               <button
                 onClick={() => exportToCsv("school-board-minutes", allCols, filteredRows)}

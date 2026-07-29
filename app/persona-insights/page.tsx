@@ -157,7 +157,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
       <table className="text-sm border-collapse w-full">
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-3 py-2 text-center w-10 font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#509EE3", top: headerTop }}>#</th>
+            <th className="sticky z-10 bg-white px-3 py-2 text-center w-10 font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
             {COL_ORDER.map((j) => {
               const col = cols[j];
               if (!col) return null;
@@ -167,7 +167,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                   className={`sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200 ${isLeft ? "text-left" : "text-center"}`}
-                  style={{ color: "#509EE3", top: headerTop }}
+                  style={{ color: "#111827", top: headerTop }}
                 >
                   <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
                     {HEADER_LABELS[col.display_name] ?? col.display_name}

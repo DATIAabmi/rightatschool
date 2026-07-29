@@ -64,7 +64,7 @@ function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
             <tr className="border-b border-gray-200">
               {headers.map((h, i) => (
                 <th key={h} className={`px-4 py-3 font-semibold whitespace-nowrap ${i === 0 ? "text-left" : "text-right"}`}
-                  style={{ color: "#509EE3" }}>
+                  style={{ color: "#111827" }}>
                   {h}
                 </th>
               ))}
@@ -88,7 +88,7 @@ function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 
-const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
+const COLORS = ["#111827", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
 
 function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
   const total = rows.reduce((s, r) => s + (r[1] ?? 0), 0);
@@ -223,7 +223,7 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
                 {HEADERS.map((h) => (
                   <th key={h.label} onClick={() => handleSort(h.col)}
                     className={`sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap select-none border-b border-gray-200 ${h.col >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${h.col >= 3 ? "text-right" : "text-left"}`}
-                    style={{ color: "#509EE3", top: titleBarHeight }}>
+                    style={{ color: "#111827", top: titleBarHeight }}>
                     <span className={`inline-flex items-center gap-1 ${h.col >= 3 ? "justify-end" : "justify-start"}`}>
                       {h.label}
                       {h.col >= 0 && (

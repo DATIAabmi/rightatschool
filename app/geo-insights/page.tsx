@@ -116,7 +116,7 @@ function GeographyTable({
                 <table className="text-sm border-collapse w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="px-3 py-2 text-center w-10 font-semibold whitespace-nowrap" style={{ color: "#509EE3" }}>#</th>
+                      <th className="px-3 py-2 text-center w-10 font-semibold whitespace-nowrap" style={{ color: "#111827" }}>#</th>
                       {cols.map((col, j) => {
                         const isLeft = GEO_LEFT_ALIGN_COLS.has(col.display_name);
                         const active = sort.col === j;
@@ -124,7 +124,7 @@ function GeographyTable({
                           <th key={j}
                             onClick={() => setSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                             className={`px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 ${isLeft ? "text-left" : "text-center"}`}
-                            style={{ color: "#509EE3" }}
+                            style={{ color: "#111827" }}
                           >
                             <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
                               {displayName(col.display_name)}

@@ -340,9 +340,6 @@ function SchoolBoardContent() {
           )}
           {!loading && !error && (
             <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ clipPath: "inset(0 round 0 0 0.75rem 0.75rem)" }}>
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 text-xs text-gray-400">
-                {filteredRows.length} record{filteredRows.length !== 1 ? "s" : ""}
-              </div>
               <DataTable cols={allCols} rows={filteredRows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
             </div>
           )}

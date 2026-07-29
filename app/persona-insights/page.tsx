@@ -166,8 +166,8 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200 ${isLeft ? "text-left" : "text-center"}`}
-                  style={{ color: "#111827", top: headerTop }}
+                  className="sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200"
+                  style={{ color: "#111827", top: headerTop, textAlign: isLeft ? "left" : "center" }}
                 >
                   <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
                     {HEADER_LABELS[col.display_name] ?? col.display_name}
@@ -189,7 +189,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
                 const isLeft = LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
                 return (
-                  <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums whitespace-nowrap" : ""} text-gray-800`}>
+                  <td key={j} style={{ textAlign: isLeft ? "left" : "center" }} className={`px-4 py-1.5 ${isNum ? "tabular-nums whitespace-nowrap" : ""} text-gray-800`}>
                     {cell === null || cell === undefined ? "" : String(cell)}
                   </td>
                 );

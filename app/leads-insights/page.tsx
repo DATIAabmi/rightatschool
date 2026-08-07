@@ -146,7 +146,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 }
 
 function LeadsInsightsContent() {
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterJobFunction, setFilterJobFunction] = useState<string[]>([]);
@@ -196,6 +196,13 @@ function LeadsInsightsContent() {
   }, [campaign, dateStart, dateEnd, filterDistrict, filterState, filterJobFunction]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setFilterDistrict([]);
+    setFilterState([]);
+    setFilterJobFunction([]);
+  }, [resetSignal]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,

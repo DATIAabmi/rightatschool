@@ -284,7 +284,7 @@ function DataTable({
 
 function EngagedUsersContent() {
   const router = useRouter();
-  const { campaign } = useFilter();
+  const { campaign, resetSignal } = useFilter();
 
   const [district, setDistrict] = useState<string[]>([]);
   const [domain, setDomain] = useState<string[]>([]);
@@ -333,6 +333,13 @@ function EngagedUsersContent() {
   }, [campaign, district, domain, state]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setDistrict([]);
+    setDomain([]);
+    setState([]);
+  }, [resetSignal]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,

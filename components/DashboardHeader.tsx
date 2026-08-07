@@ -1,13 +1,21 @@
 "use client";
 
 import Image from "next/image";
-import { CalendarSearch, X } from "lucide-react";
+import { CalendarSearch, X, RotateCcw, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
 export default function DashboardHeader({ legend }: { legend?: string }) {
-  const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd } = useFilter();
+  const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd, resetAll } = useFilter();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   const subtitle =
     campaign.length === 0
@@ -71,6 +79,24 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
             </button>
           )}
         </div>
+        <button
+          type="button"
+          onClick={resetAll}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-500 hover:text-red-600 border border-gray-300 hover:border-red-300 rounded-lg bg-white transition-colors shrink-0 ml-auto"
+          title="Reset all filters to default"
+        >
+          <RotateCcw size={13} />
+          Reset Filters
+        </button>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg bg-white transition-colors shrink-0"
+          title="Sign out"
+        >
+          <LogOut size={13} />
+          Sign out
+        </button>
       </div>
 
       {legend && (

@@ -273,7 +273,7 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
   const [data, setData] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterChannel, setFilterChannel] = useState<string[]>([]);
@@ -291,6 +291,11 @@ export default function Page() {
   }, [campaign, dateStart, dateEnd]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setFilterChannel([]);
+  }, [resetSignal]);
 
   // Derive available channels from loaded data
   const availableChannels = data?.channelBreakdown.map((r) => String(r[0])) ?? [];

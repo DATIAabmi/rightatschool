@@ -8,14 +8,14 @@ interface FilterState {
   dateEnd: string;
   setDateStart: (d: string) => void;
   setDateEnd: (d: string) => void;
-  /** "YYYY-MM-DD~YYYY-MM-DD" ready for Metabase, undefined if either date is unset */
   metabaseDateRange: string | undefined;
-  /** Selected ABMi campaign keys, e.g. ["C5: Nov 2025 - May 2026"]. Empty = all campaigns. */
   campaign: string[];
   setCampaign: (c: string[]) => void;
-  /** District search values — passed as the Metabase district parameter. Empty = all districts. */
   district: string[];
   setDistrict: (d: string[]) => void;
+  /** Increments each time resetAll() is called. Pages watch this to reset local state. */
+  resetSignal: number;
+  resetAll: () => void;
 }
 
 const FilterContext = createContext<FilterState>({
@@ -28,6 +28,8 @@ const FilterContext = createContext<FilterState>({
   setCampaign: () => {},
   district: [],
   setDistrict: () => {},
+  resetSignal: 0,
+  resetAll: () => {},
 });
 
 export function FilterProvider({ children }: { children: ReactNode }) {
@@ -35,13 +37,22 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const [dateEnd, setDateEnd] = useState("");
   const [campaign, setCampaign] = useState<string[]>([DEFAULT_CAMPAIGN]);
   const [district, setDistrict] = useState<string[]>([]);
+  const [resetSignal, setResetSignal] = useState(0);
 
   const metabaseDateRange =
     dateStart && dateEnd ? `${dateStart}~${dateEnd}` : undefined;
 
+  function resetAll() {
+    setCampaign([DEFAULT_CAMPAIGN]);
+    setDateStart("");
+    setDateEnd("");
+    setDistrict([]);
+    setResetSignal((s) => s + 1);
+  }
+
   return (
     <FilterContext.Provider
-      value={{ dateStart, dateEnd, setDateStart, setDateEnd, metabaseDateRange, campaign, setCampaign, district, setDistrict }}
+      value={{ dateStart, dateEnd, setDateStart, setDateEnd, metabaseDateRange, campaign, setCampaign, district, setDistrict, resetSignal, resetAll }}
     >
       {children}
     </FilterContext.Provider>

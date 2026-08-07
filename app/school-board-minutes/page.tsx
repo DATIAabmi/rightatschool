@@ -235,7 +235,7 @@ function SkeletonTable() {
 function SchoolBoardContent() {
   const searchParams = useSearchParams();
   const urlDistrict = searchParams.get("district");
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>(urlDistrict ? [urlDistrict] : []);
   const [filterDomain, setFilterDomain] = useState<string[]>([]);
@@ -287,6 +287,14 @@ function SchoolBoardContent() {
   }, [campaign, filterDistrict, dateStart, dateEnd]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setFilterDistrict([]);
+    setFilterDomain([]);
+    setFilterState([]);
+    setFilterKeyword([]);
+  }, [resetSignal]);
 
   // Client-side filter: 0=District 1=Campaign 2=District Domain 3=ST 4=SBM Date 5=Keyword 6=SBM Context 7=SBM Link
   const filteredRows = allRows.filter((row) => {

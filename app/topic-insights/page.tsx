@@ -311,7 +311,7 @@ function SkeletonTable() {
 // ─── Page content ─────────────────────────────────────────────────────────────
 
 function TopicInsightsContent() {
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
@@ -360,6 +360,13 @@ function TopicInsightsContent() {
   }, [campaign, dateStart, dateEnd, filterDistrict, filterState, filterTopic]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setFilterDistrict([]);
+    setFilterState([]);
+    setFilterTopic([]);
+  }, [resetSignal]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,

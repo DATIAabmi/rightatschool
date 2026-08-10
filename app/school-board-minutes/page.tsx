@@ -104,7 +104,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-sm border-collapse w-full table-fixed">
+      <table className="text-xs border-collapse w-full table-fixed">
         <colgroup>
           <col style={{ width: 36 }} />   {/* # */}
           <col style={{ width: 140 }} />  {/* District */}
@@ -118,7 +118,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
         </colgroup>
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-3 py-2 text-right font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
+            <th className="sticky z-10 bg-white px-2 py-2 text-right font-bold whitespace-nowrap border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
             {COL_ORDER.map((j) => {
               const col = cols[j];
               if (!col) return null;
@@ -128,7 +128,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
               return (
                 <th key={j}
                   onClick={() => sortable && onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`sticky z-10 bg-white px-4 py-3 font-semibold border-b border-gray-200 ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
+                  className={`sticky z-10 bg-white px-2 py-2 font-bold border-b border-gray-200 ${sortable ? "cursor-pointer select-none hover:opacity-70" : ""}`}
                   style={{ color: "#111827", textAlign: j === 1 ? "center" : "left", top: headerTop }}
                 >
                   <span className="inline-flex items-center gap-1">

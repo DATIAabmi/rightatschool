@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
@@ -13,6 +13,7 @@ function buildParams(campaign: string, dateStart: string, dateEnd: string): obje
   const params: object[] = [];
   if (campaign) {
     params.push({
+      id: "campaign",
       type: "string/=",
       value: campaign,
       target: ["variable", ["template-tag", "Abmi_Campaign"]],
@@ -20,6 +21,7 @@ function buildParams(campaign: string, dateStart: string, dateEnd: string): obje
   }
   if (dateStart && dateEnd) {
     params.push({
+      id: "date",
       type: "date/range",
       value: `${dateStart}~${dateEnd}`,
       target: ["dimension", ["template-tag", "Date"]],
@@ -36,6 +38,7 @@ function buildLeadsParams(campaign: string, dateStart: string, dateEnd: string):
   const params: object[] = [];
   if (campaign) {
     params.push({
+      id: "campaign",
       type: "string/=",
       value: campaign,
       target: ["variable", ["template-tag", "Abmi_Campaign"]],
@@ -43,6 +46,7 @@ function buildLeadsParams(campaign: string, dateStart: string, dateEnd: string):
   }
   if (dateStart) {
     params.push({
+      id: "start_date",
       type: "date/single",
       value: dateStart,
       target: ["variable", ["template-tag", "start_date"]],
@@ -50,6 +54,7 @@ function buildLeadsParams(campaign: string, dateStart: string, dateEnd: string):
   }
   if (dateEnd) {
     params.push({
+      id: "end_date",
       type: "date/single",
       value: dateEnd,
       target: ["variable", ["template-tag", "end_date"]],
@@ -140,5 +145,9 @@ export async function GET(req: NextRequest) {
   const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
-  return cachedJson(await getResult(campaigns, dateStart, dateEnd));
+  const result = await getResult(campaigns, dateStart, dateEnd);
+  // Don't cache null responses — Metabase may have returned an error or timed out.
+  // Let the next request retry rather than serving stale nulls from CDN.
+  const hasData = result.impressions !== null || result.engagements !== null;
+  return hasData ? cachedJson(result) : NextResponse.json(result);
 }

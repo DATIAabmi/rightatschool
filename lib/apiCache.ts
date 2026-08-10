@@ -6,8 +6,8 @@ import { NextResponse } from "next/server";
 // `staleWhileRevalidate` more seconds while refetching in the background —
 // so repeat requests for the same filters are near-instant instead of
 // round-tripping through Metabase -> BigQuery every time.
-const MAX_AGE = 900;             // 15 min — cron runs every 10 min so cache never expires cold
-const STALE_WHILE_REVALIDATE = 3600; // 1 hour stale fallback
+const MAX_AGE = 3600;                // 1 hour fresh CDN cache
+const STALE_WHILE_REVALIDATE = 86400; // 24 hour stale fallback — always serve instantly, revalidate in background
 
 export function cachedJson<T>(data: T, init?: { status?: number }) {
   return NextResponse.json(data, {

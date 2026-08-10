@@ -94,6 +94,7 @@ const DEFINITIONS = [
   { term: "Bombora Intent Signals", def: "Based on topics that districts are researching. Bombora detects intent when a district shows a pattern of increased content consumption compared to its baseline." },
   { term: "Topic Score", def: "The average score of a district's total engagement with a topic." },
   { term: "Score Ranges", def: "Low: 1–35 · Moderate: 36–65 · High: ≥66" },
+  { term: "Intent Score", def: "A numerical value that indicates a lead/district's likelihood to be in market derived from district data and total engagement on and off the DATIA K12 channels." },
 ];
 
 function DefinitionsModal({ onClose }: { onClose: () => void }) {
@@ -112,7 +113,7 @@ function DefinitionsModal({ onClose }: { onClose: () => void }) {
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <span style={{ fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#111" }}>Definitions</span>
+          <span style={{ fontWeight: 700, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#111" }}>Metric Descriptions</span>
           <button type="button" onClick={onClose} style={{ color: "#9ca3af", cursor: "pointer", background: "none", border: "none", padding: 0 }}>
             <X size={16} />
           </button>
@@ -386,7 +387,7 @@ function TopicInsightsContent() {
               className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
             >
               <Info size={13} />
-              Definitions
+              Metric Descriptions
             </button>
           </div>
           <SortDropdown sort={sort} onSort={setSort} />

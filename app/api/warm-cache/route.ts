@@ -11,20 +11,22 @@ export async function GET() {
 
   try {
     const DEFAULT = "C6%3A%20April%20-%20May%202026"; // URL-encoded DEFAULT_CAMPAIGN
-    const [funnel, q363, q405, q425, leads, q181, q180] = await Promise.all([
-      fetch(`${base}/api/funnel-data?campaign=${DEFAULT}`, { cache: "no-store" }),
-      fetch(`${base}/api/q363-data?campaign=${DEFAULT}`, { cache: "no-store" }),
-      fetch(`${base}/api/q405-data?campaign=${DEFAULT}`, { cache: "no-store" }),
-      fetch(`${base}/api/q425-data?campaign=${DEFAULT}`, { cache: "no-store" }),
+    const results = await Promise.all([
+      fetch(`${base}/api/funnel-data?campaign=${DEFAULT}`,   { cache: "no-store" }),
+      fetch(`${base}/api/q363-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
+      fetch(`${base}/api/q405-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
+      fetch(`${base}/api/q425-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
       fetch(`${base}/api/leads-summary?campaign=${DEFAULT}`, { cache: "no-store" }),
-      fetch(`${base}/api/q181-data?campaign=${DEFAULT}`, { cache: "no-store" }),
-      fetch(`${base}/api/q180-data`, { cache: "no-store" }),
+      fetch(`${base}/api/q174-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
+      fetch(`${base}/api/q181-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
+      fetch(`${base}/api/q180-data`,                         { cache: "no-store" }),
+      fetch(`${base}/api/content-data?campaign=${DEFAULT}`,  { cache: "no-store" }),
+      fetch(`${base}/api/q168-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
+      fetch(`${base}/api/q169-data?campaign=${DEFAULT}`,     { cache: "no-store" }),
+      fetch(`${base}/api/ai-signals-data`,                   { cache: "no-store" }),
     ]);
-    return NextResponse.json({
-      funnel: { ok: funnel.ok }, q363: { ok: q363.ok },
-      q405: { ok: q405.ok }, q425: { ok: q425.ok },
-      leads: { ok: leads.ok }, q181: { ok: q181.ok }, q180: { ok: q180.ok },
-    });
+    const names = ["funnel","q363","q405","q425","leads","q174","q181","q180","content","q168","q169","ai-signals"];
+    return NextResponse.json(Object.fromEntries(names.map((n, i) => [n, { ok: results[i].ok }])));
   } catch (err) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }

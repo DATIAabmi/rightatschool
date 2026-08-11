@@ -37,6 +37,7 @@ function GeographyTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 2, dir: "desc" });
+  const [selectedState, setSelectedState] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -110,7 +111,11 @@ function GeographyTable({
           ) : (
             <div className="flex flex-col lg:flex-row gap-4 p-4">
               <div className="lg:w-1/2 shrink-0 flex items-start">
-                <UsStateChoropleth valueByState={valueByState} />
+                <UsStateChoropleth
+                  valueByState={valueByState}
+                  selectedState={selectedState ?? undefined}
+                  onStateClick={(abbr) => setSelectedState((s) => s === abbr ? null : abbr)}
+                />
               </div>
               <div className="lg:w-1/2 min-w-0 overflow-auto">
                 <table className="text-sm border-collapse w-full">
@@ -138,20 +143,28 @@ function GeographyTable({
                     </tr>
                   </thead>
                   <tbody>
-                    {sorted.map((row, i) => (
-                      <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="px-3 py-1.5 text-center text-gray-400 text-xs w-10 shrink-0">{i + 1}</td>
-                        {row.map((cell, j) => {
-                          const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
-                          const isLeft = GEO_LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
-                          return (
-                            <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums" : ""} text-gray-800`}>
-                              {cell === null || cell === undefined ? "" : String(cell)}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                    {sorted.map((row, i) => {
+                      const rowState = stateCol >= 0 ? String(row[stateCol] ?? "") : "";
+                      const isActive = rowState && rowState === selectedState;
+                      return (
+                        <tr
+                          key={i}
+                          onClick={() => setSelectedState((s) => s === rowState ? null : rowState)}
+                          className={`border-b border-gray-100 cursor-pointer transition-colors ${isActive ? "bg-orange-50" : "hover:bg-gray-50"}`}
+                        >
+                          <td className={`px-3 py-1.5 text-center text-xs w-10 shrink-0 ${isActive ? "text-orange-500 font-bold" : "text-gray-400"}`}>{i + 1}</td>
+                          {row.map((cell, j) => {
+                            const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
+                            const isLeft = GEO_LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
+                            return (
+                              <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums" : ""} ${isActive ? "text-orange-700 font-semibold" : "text-gray-800"}`}>
+                                {cell === null || cell === undefined ? "" : String(cell)}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-gray-300 font-bold">

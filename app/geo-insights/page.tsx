@@ -109,7 +109,7 @@ function GeographyTable({
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm bg-white">No results</div>
           ) : (
             <div className="flex flex-col lg:flex-row gap-4 p-4">
-              <div className="lg:w-1/2 shrink-0 flex items-center">
+              <div className="lg:w-1/2 shrink-0 flex items-start">
                 <UsStateChoropleth valueByState={valueByState} />
               </div>
               <div className="lg:w-1/2 min-w-0 overflow-auto">

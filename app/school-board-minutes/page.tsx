@@ -108,11 +108,11 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
         <colgroup>
           <col style={{ width: 36 }} />   {/* # */}
           <col style={{ width: 140 }} />  {/* District */}
-          <col style={{ width: 130 }} />  {/* Domain */}
-          <col style={{ width: 48 }} />   {/* State */}
-          <col style={{ width: 96 }} />   {/* Campaign */}
-          <col style={{ width: 96 }} />   {/* SBM Date */}
-          <col style={{ width: 90 }} />   {/* Keyword */}
+          <col style={{ width: 120 }} />  {/* Domain */}
+          <col style={{ width: 44 }} />   {/* State */}
+          <col style={{ width: 52 }} />   {/* Campaign */}
+          <col style={{ width: 88 }} />   {/* SBM Date */}
+          <col style={{ width: 110 }} />  {/* Keyword */}
           <col />                         {/* SBM Context — takes remaining space */}
           <col style={{ width: 56 }} />   {/* SBM Link */}
         </colgroup>
@@ -152,7 +152,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 // SBM Link (index 7) — clickable link
                 if (j === 7 && val) {
                   return (
-                    <td key={j} className="px-4 py-1.5 text-left whitespace-nowrap">
+                    <td key={j} className="px-2 py-1.5 text-center whitespace-nowrap">
                       <a href={val} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium">
                         View <ExternalLink size={11} />
@@ -163,7 +163,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 // SBM Context (index 6) — allow wrapping for long text
                 if (j === 6) {
                   return (
-                    <td key={j} className="px-4 py-1.5 text-left text-gray-800">
+                    <td key={j} className="px-2 py-1.5 text-left text-gray-800">
                       <span className="line-clamp-3 block text-xs leading-relaxed break-words">{val}</span>
                     </td>
                   );
@@ -173,8 +173,14 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 const display = j === 1 ? val.split(":")[0].trim()
                   : j === 4 ? val.replace(/T.*$/, "")
                   : val;
+                // District(0): wrap at word boundaries; Domain(2): break-all for URLs;
+                // Keyword(5): truncate with ellipsis; others: nowrap
+                const cellClass = j === 0 ? "break-words"
+                  : j === 2 ? "break-all"
+                  : j === 5 ? "truncate"
+                  : "whitespace-nowrap";
                 return (
-                  <td key={j} className={`px-4 py-1.5 text-gray-800 text-xs ${j === 0 || j === 2 ? "break-all" : "whitespace-nowrap"}`}
+                  <td key={j} className={`px-2 py-1.5 text-gray-800 text-xs ${cellClass}`}
                     style={{ textAlign: j === 1 ? "center" : "left" }}>{display}</td>
                 );
               })}

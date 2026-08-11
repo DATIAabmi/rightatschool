@@ -129,10 +129,10 @@ type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
 const LEFT_ALIGN_COLS = new Set(["District", "District Domain", "Job Function"]);
 const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
-// Visual column order: District, Domain, State, Campaign, then the rest as-is.
+// Visual column order: District, Domain, State, Campaign, Job Function, Leads, Engagements
 // Raw data order (card 168): 0=District 1=Domain 2=State 3=Job Function
 // 4=Campaign 5=Engagements 6=Leads
-const COL_ORDER = [0, 1, 2, 4, 3, 5, 6];
+const COL_ORDER = [0, 1, 2, 4, 3, 6, 5];
 
 function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
@@ -154,7 +154,17 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-sm border-collapse w-full">
+      <table className="text-sm border-collapse w-full table-fixed">
+        <colgroup>
+          <col style={{ width: 36 }} />   {/* # */}
+          <col style={{ width: 160 }} />  {/* District */}
+          <col style={{ width: 120 }} />  {/* Domain */}
+          <col style={{ width: 50 }} />   {/* State */}
+          <col style={{ width: 80 }} />   {/* Campaign */}
+          <col style={{ width: 170 }} />  {/* Job Function */}
+          <col style={{ width: 72 }} />   {/* Leads */}
+          <col style={{ width: 88 }} />   {/* Engagements */}
+        </colgroup>
         <thead>
           <tr className="border-b border-gray-200">
             <th className="sticky z-10 bg-white px-3 py-2 text-center w-10 font-semibold whitespace-nowrap border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
@@ -300,7 +310,12 @@ function PersonaInsightsContent() {
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
-          <span className="font-bold text-sm tracking-wide uppercase">Engagements By Persona Insights</span>
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-sm tracking-wide uppercase">Engagements By Persona Insights</span>
+            {!loading && rows.length > 0 && (
+              <span className="text-gray-400 text-xs">{rows.length.toLocaleString()} records</span>
+            )}
+          </div>
           {rows.length > 0 && (
             <button
               onClick={() => exportToCsv("persona-insights", cols, rows)}

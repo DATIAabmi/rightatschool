@@ -108,8 +108,8 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
         <colgroup>
           <col style={{ width: 36 }} />   {/* # */}
           <col style={{ width: 140 }} />  {/* District */}
-          <col style={{ width: 110 }} />  {/* Domain */}
-          <col style={{ width: 72 }} />   {/* State */}
+          <col style={{ width: 130 }} />  {/* Domain */}
+          <col style={{ width: 48 }} />   {/* State */}
           <col style={{ width: 96 }} />   {/* Campaign */}
           <col style={{ width: 96 }} />   {/* SBM Date */}
           <col style={{ width: 90 }} />   {/* Keyword */}
@@ -174,7 +174,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                   : j === 4 ? val.replace(/T.*$/, "")
                   : val;
                 return (
-                  <td key={j} className={`px-4 py-1.5 text-gray-800 text-xs ${j === 0 ? "break-words" : "whitespace-nowrap"}`}
+                  <td key={j} className={`px-4 py-1.5 text-gray-800 text-xs ${j === 0 || j === 2 ? "break-all" : "whitespace-nowrap"}`}
                     style={{ textAlign: j === 1 ? "center" : "left" }}>{display}</td>
                 );
               })}

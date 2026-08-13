@@ -199,10 +199,16 @@ function GeographyTable({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function GeoInsightsContent() {
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setFilterDistrict([]);
+    setFilterState([]);
+  }, [resetSignal]);
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,

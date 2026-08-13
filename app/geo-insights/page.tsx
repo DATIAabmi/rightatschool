@@ -47,13 +47,13 @@ function GeographyTable({
     if (dateStart)             params.set("dateStart", dateStart);
     if (dateEnd)               params.set("dateEnd", dateEnd);
     if (filterDistrict.length) params.set("district", filterDistrict.join(","));
-    if (filterState.length)    params.set("state", filterState.join(","));
+    // State is filtered client-side — dataset is ~50 rows so no round-trip needed.
 
     fetch(`/api/q169-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => { setCols(d.cols ?? []); setRows(d.rows ?? []); setLoading(false); })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [campaign, dateStart, dateEnd, filterDistrict, filterState]);
+  }, [campaign, dateStart, dateEnd, filterDistrict]);
 
   const stateCol = cols.findIndex((c) => c.display_name === "State");
 

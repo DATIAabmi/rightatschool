@@ -233,7 +233,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white overflow-x-auto">
-      <table className="text-xs border-collapse" style={{ tableLayout: "fixed", width: COL_WIDTHS.reduce((a, b) => a + b, 0) }}>
+      <table className="text-xs border-collapse w-full" style={{ tableLayout: "fixed" }}>
         <colgroup>
           {COL_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
         </colgroup>

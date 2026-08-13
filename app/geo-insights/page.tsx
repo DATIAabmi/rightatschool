@@ -55,7 +55,15 @@ function GeographyTable({
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
   }, [campaign, dateStart, dateEnd, filterDistrict, filterState]);
 
-  const sorted = [...rows].sort((a, b) => {
+  const stateCol = cols.findIndex((c) => c.display_name === "State");
+
+  // Client-side state filter — Metabase aggregates one row per state so this
+  // is instant and also keeps the map in sync with the selected filter.
+  const filteredRows = filterState.length > 0 && stateCol >= 0
+    ? rows.filter((row) => filterState.some((s) => s.toLowerCase() === String(row[stateCol] ?? "").toLowerCase()))
+    : rows;
+
+  const sorted = [...filteredRows].sort((a, b) => {
     const av = a[sort.col]; const bv = b[sort.col];
     if (av === null || av === undefined) return 1;
     if (bv === null || bv === undefined) return -1;
@@ -64,11 +72,10 @@ function GeographyTable({
     return sort.dir === "asc" ? cmp : -cmp;
   });
 
-  const stateCol = cols.findIndex((c) => c.display_name === "State");
   const engagedUsersCol = cols.findIndex((c) => c.display_name === "Engaged Users");
   const valueByState: Record<string, number> = {};
   if (stateCol >= 0 && engagedUsersCol >= 0) {
-    for (const row of rows) {
+    for (const row of filteredRows) {
       const state = String(row[stateCol] ?? "");
       const value = Number(row[engagedUsersCol]) || 0;
       if (state) valueByState[state] = value;
@@ -78,7 +85,7 @@ function GeographyTable({
   const totals = cols.map((col, j) => {
     if (j === stateCol) return "Grand total";
     if (!NUMBER_TYPES.has(col.base_type)) return "";
-    return rows.reduce((sum, row) => sum + (Number(row[j]) || 0), 0);
+    return filteredRows.reduce((sum, row) => sum + (Number(row[j]) || 0), 0);
   });
 
   const displayName = (name: string) => (name === "Leads" ? "Unique Leads" : name);
@@ -87,9 +94,9 @@ function GeographyTable({
     <div>
       <div className="bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
         <span className="font-bold text-sm tracking-wide uppercase">Engagements By Geography</span>
-        {rows.length > 0 && (
+        {filteredRows.length > 0 && (
           <button
-            onClick={() => exportToCsv("engagements-by-geography", cols, rows)}
+            onClick={() => exportToCsv("engagements-by-geography", cols, filteredRows)}
             className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
           >
             <Download size={13} /> Export CSV
@@ -106,7 +113,7 @@ function GeographyTable({
       )}
       {!loading && !error && (
         <div className="border border-t-0 border-gray-200 rounded-b-xl overflow-hidden shadow-sm bg-white">
-          {rows.length === 0 ? (
+          {filteredRows.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-gray-400 text-sm bg-white">No results</div>
           ) : (
             <div className="flex flex-col lg:flex-row gap-4 p-4">

@@ -99,8 +99,8 @@ export default function LeadsSummaryPanel() {
 
       {/* Row 2: 2 horizontal bar charts at full width */}
       <div className="flex gap-3">
-        <HBarChart title="Leads by Content Type" rows={data.byContentType} />
         <HBarChart title="Leads by Content Name" rows={data.byContentName} />
+        <HBarChart title="Leads by Content Type" rows={data.byContentType} />
       </div>
     </div>
   );

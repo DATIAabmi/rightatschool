@@ -27,17 +27,17 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 const GEO_LEFT_ALIGN_COLS = new Set<string>();
 
 function GeographyTable({
-  campaign, dateStart, dateEnd, filterDistrict, filterState,
+  campaign, dateStart, dateEnd, filterDistrict, filterState, selectedState, setSelectedState,
 }: {
   campaign: string[]; dateStart: string; dateEnd: string;
   filterDistrict: string[]; filterState: string[];
+  selectedState: string | null; setSelectedState: (s: string | null) => void;
 }) {
   const [cols, setCols] = useState<Col[]>([]);
   const [rows, setRows] = useState<GeoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 2, dir: "desc" });
-  const [selectedState, setSelectedState] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -203,11 +203,13 @@ function GeoInsightsContent() {
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState<string | null>(null);
 
   useEffect(() => {
     if (resetSignal === 0) return;
     setFilterDistrict([]);
     setFilterState([]);
+    setSelectedState(null);
   }, [resetSignal]);
 
   return (
@@ -230,6 +232,8 @@ function GeoInsightsContent() {
           dateEnd={dateEnd}
           filterDistrict={filterDistrict}
           filterState={filterState}
+          selectedState={selectedState}
+          setSelectedState={setSelectedState}
         />
       </div>
     </div>

@@ -31,9 +31,19 @@ const TOPICS = [
   "Third-Party Vendors",
 ];
 
-// ─── AVG Topic Score chart ────────────────────────────────────────────────────
+// ─── Data types (used by table and chart) ─────────────────────────────────────
 
-type TopicRow = [string, number];
+type Col = { display_name: string; base_type: string };
+type Row = (string | number | null)[];
+const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
+const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain", "Topic"]);
+const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
+const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
+// Visual column order: District, Domain, State, Campaign, Topic, Topic Score.
+// Raw data order (card 181): 0=District 1=Domain 2=Campaign 3=State 4=Topic 5=Topic Score
+const COL_ORDER = [0, 1, 3, 2, 4, 5];
+
+// ─── AVG Topic Score chart ────────────────────────────────────────────────────
 
 function scoreColor(score: number): string {
   if (score >= 66) return "#88BF4D";
@@ -41,18 +51,25 @@ function scoreColor(score: number): string {
   return "#EF8C8C";
 }
 
-function AvgTopicScoreChart() {
-  const [rows, setRows] = useState<TopicRow[]>([]);
-  const [loading, setLoading] = useState(true);
+// Computes avg topic score per topic from the filtered rows already in state —
+// so the chart automatically reflects every filter change with no extra fetch.
+function AvgTopicScoreChart({ rows, topicCol, scoreCol, loading }: {
+  rows: Row[]; topicCol: number; scoreCol: number; loading: boolean;
+}) {
+  const byTopic: Record<string, { sum: number; count: number }> = {};
+  for (const row of rows) {
+    const topic = String(row[topicCol] ?? "");
+    const score = Number(row[scoreCol]);
+    if (!topic || isNaN(score)) continue;
+    if (!byTopic[topic]) byTopic[topic] = { sum: 0, count: 0 };
+    byTopic[topic].sum += score;
+    byTopic[topic].count += 1;
+  }
 
-  useEffect(() => {
-    fetch("/api/q180-data")
-      .then((r) => r.json())
-      .then((d) => { setRows(d.rows ?? []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+  const sorted = Object.entries(byTopic)
+    .map(([topic, { sum, count }]) => [topic, sum / count] as [string, number])
+    .sort((a, b) => b[1] - a[1]);
 
-  const sorted = [...rows].sort((a, b) => b[1] - a[1]);
   const max = sorted.length > 0 ? Math.max(...sorted.map((r) => r[1])) : 100;
 
   if (loading) {
@@ -60,6 +77,12 @@ function AvgTopicScoreChart() {
       <div className="flex items-center justify-center h-full gap-2 text-gray-400 text-sm">
         <Loader2 size={18} className="animate-spin" /> Loading…
       </div>
+    );
+  }
+
+  if (sorted.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-400 text-sm">No data</div>
     );
   }
 
@@ -94,7 +117,6 @@ const DEFINITIONS = [
   { term: "Bombora Intent Signals", def: "Based on topics that districts are researching. Bombora detects intent when a district shows a pattern of increased content consumption compared to its baseline." },
   { term: "Topic Score", def: "The average score of a district's total engagement with a topic." },
   { term: "Score Ranges", def: "Low: 1–35 · Moderate: 36–65 · High: ≥66" },
-  { term: "Intent Score", def: "A numerical value that indicates a lead/district's likelihood to be in market derived from district data and total engagement on and off the DATIA K12 channels." },
 ];
 
 function DefinitionsModal({ onClose }: { onClose: () => void }) {
@@ -188,16 +210,6 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 
 // ─── Data table ───────────────────────────────────────────────────────────────
 
-type Col = { display_name: string; base_type: string };
-type Row = (string | number | null)[];
-const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain", "Topic"]);
-const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
-const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
-// Visual column order: District, Domain, State, Campaign, then the rest as-is.
-// Raw data order (card 181): 0=District 1=Domain 2=Campaign 3=State 4=Topic 5=Topic Score
-const COL_ORDER = [0, 1, 3, 2, 4, 5];
-
 function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
@@ -216,12 +228,18 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
     return sort.dir === "asc" ? cmp : -cmp;
   });
 
+  // col order: #, District, Domain, State, Campaign, Topic, Topic Score
+  const COL_WIDTHS = [36, 200, 140, 50, 56, 200, 100];
+
   return (
-    <div className="bg-white">
-      <table className="text-sm border-collapse min-w-full">
+    <div className="bg-white overflow-x-auto">
+      <table className="text-xs border-collapse" style={{ tableLayout: "fixed", width: COL_WIDTHS.reduce((a, b) => a + b, 0) }}>
+        <colgroup>
+          {COL_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
+        </colgroup>
         <thead>
           <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-3 py-2 text-center w-10 shrink-0 font-semibold border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
+            <th className="sticky z-10 bg-white px-2 py-2 text-center font-bold border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
             {COL_ORDER.map((j) => {
               const col = cols[j];
               if (!col) return null;
@@ -231,7 +249,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                   style={{ color: "#111827", textAlign: isLeft ? "left" : "center", top: headerTop }}
-                  className="sticky z-10 bg-white px-4 py-3 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200">
+                  className="sticky z-10 bg-white px-2 py-2 font-bold leading-tight cursor-pointer select-none hover:opacity-70 border-b border-gray-200">
                   <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
                     {HEADER_LABELS[col.display_name] ?? col.display_name}
                     {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
@@ -244,7 +262,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
         <tbody>
           {sorted.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td className="px-3 py-1.5 text-center text-gray-400 text-xs">{i + 1}</td>
+              <td className="px-2 py-1.5 text-center text-gray-400">{i + 1}</td>
               {COL_ORDER.map((j) => {
                 const cell = row[j];
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
@@ -253,7 +271,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 return (
                   <td key={j}
                     style={{ textAlign: isLeft ? "left" : "center" }}
-                    className={`px-4 py-1.5 whitespace-nowrap ${isNum ? "tabular-nums" : ""} text-gray-800`}>
+                    className={`px-2 py-1.5 truncate ${isNum ? "tabular-nums" : ""} text-gray-800`}>
                     {cell === null || cell === undefined ? "" : String(cell)}
                   </td>
                 );
@@ -398,9 +416,14 @@ function TopicInsightsContent() {
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
 
-        {/* AVG Topic Score chart (Card 180) */}
+        {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>
-          <AvgTopicScoreChart />
+          <AvgTopicScoreChart
+            rows={rows}
+            topicCol={cols.findIndex((c) => c.display_name === "Topic")}
+            scoreCol={cols.findIndex((c) => c.display_name === "Topic Score")}
+            loading={loading}
+          />
         </div>
 
         {/* Section title */}

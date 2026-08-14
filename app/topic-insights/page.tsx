@@ -228,8 +228,8 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
     return sort.dir === "asc" ? cmp : -cmp;
   });
 
-  // col order: #, District, Domain, State, Campaign, Topic, Topic Score
-  const COL_WIDTHS = ["3%", "22%", "14%", "5%", "5%", "38%", "13%"];
+  // col order: #, District, Domain, State, Campaign (full date), Topic, Topic Score
+  const COL_WIDTHS = ["3%", "18%", "13%", "4%", "16%", "33%", "13%"];
 
   return (
     <div className="bg-white">

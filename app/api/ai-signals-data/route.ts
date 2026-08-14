@@ -5,7 +5,10 @@ export const maxDuration = 60;
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
-const CARD_ID = 432;
+
+// ai_signals table in "My First Project" database — has District, Domain, State, Campaign
+const DB_ID    = 67;
+const TABLE_ID = 390;
 
 interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; }
 let memCache: SignalCache | null = null;
@@ -15,17 +18,27 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 async function fetchSignals(): Promise<SignalCache> {
   if (memCache && Date.now() - memCacheAt < CACHE_TTL_MS) return memCache;
 
-  const res = await fetch(`${METABASE_URL}/api/card/${CARD_ID}/query/json`, {
+  const res = await fetch(`${METABASE_URL}/api/dataset`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-    body: JSON.stringify({ parameters: [] }),
+    body: JSON.stringify({
+      database: DB_ID,
+      type: "query",
+      query: { "source-table": TABLE_ID },
+    }),
     cache: "no-store",
   });
 
   if (!res.ok) throw new Error(`Metabase error ${res.status}`);
-  const rows: Record<string, unknown>[] = await res.json();
-  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
-  memCache = { rows, columns };
+  const data = await res.json();
+
+  const cols: string[] = (data.data?.cols ?? []).map((c: { display_name: string }) => c.display_name);
+  const rawRows: unknown[][] = data.data?.rows ?? [];
+  const rows: Record<string, unknown>[] = rawRows.map((row) =>
+    Object.fromEntries(cols.map((col, i) => [col, row[i]]))
+  );
+
+  memCache = { rows, columns: cols };
   memCacheAt = Date.now();
   return memCache;
 }

@@ -19,17 +19,24 @@ function chipStyle(label: string): React.CSSProperties {
 const PRIMARY_COLS = new Set([
   "Signal Strength",
   "Action",
-  "AI Analysis",
+  "Ai Analysis",
   "City",
   "County",
-  "Amount ($)",
+  "Amount",
   "Confidence",
   "Verified Source Link",
   "Run Date",
   "Source Tags",
   "District",
+  "Domain",
   "State",
   "Campaign",
+  "Sbm Link",
+  "Sbm Date",
+  "Sbm Context",
+  "Nces ID",
+  "Enrollment",
+  "Curate Search Term",
 ]);
 
 const TOPICS = ["Security & Access Control", "Construction & Renovation", "Safety Grants & Funding"];
@@ -111,7 +118,7 @@ export default function AIOpportunityFeed() {
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
-    if (!r["AI Analysis"] || !r["Signal Strength"]) return false;
+    if (!r["Ai Analysis"] || !r["Signal Strength"]) return false;
     if (filterTopic.length    && !filterTopic.includes((r.Topic as string) ?? ""))               return false;
     if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
     if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
@@ -209,9 +216,9 @@ export default function AIOpportunityFeed() {
             ) : (
               filtered.map((row, i) => {
                 const sc     = strengthColor(row["Signal Strength"]);
-                const amount = fmtAmount(row["Amount ($)"]);
-                const link   = row["Verified Source Link"] as string | null;
-                const domain = extractDomain(link);
+                const amount = fmtAmount(row["Amount"]);
+                const link   = (row["Verified Source Link"] as string | null) || (row["Sbm Link"] as string | null);
+                const domain = (row["Domain"] as string) || extractDomain(link);
 
                 const chips = tagCols
                   .map((col) => ({ label: col, value: row[col] }))
@@ -272,7 +279,7 @@ export default function AIOpportunityFeed() {
                     {/* Signal Context (AI Analysis) + chips */}
                     <div style={{ paddingTop: 3 }}>
                       <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
-                        {(row["AI Analysis"] as string) ?? "—"}
+                        {(row["Ai Analysis"] as string) ?? "—"}
                       </div>
                       {chips.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">

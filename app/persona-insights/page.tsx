@@ -127,12 +127,12 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const LEFT_ALIGN_COLS = new Set(["District", "Domain", "Job Function"]);
-const HEADER_LABELS: Record<string, string> = {};
-// Visual column order: District, Domain, State, Campaign, Job Function, Leads, Engagements
-// Raw data order (card 168): 0=District 1=Domain 2=State 3=Job Function
-// 4=Campaign 5=Engagements 6=Leads
+// Raw column indices (card 168): 0=District 1=Domain 2=State 3=Job Function 4=Campaign 5=Engagements 6=Leads
+// Visual column order shown to user
 const COL_ORDER = [0, 1, 2, 4, 3, 6, 5];
+// Columns that are always left-aligned, identified by raw card index (avoids display_name mismatch)
+const LEFT_ALIGN_INDICES = new Set([0, 1, 3]); // District, Domain, Job Function
+const COL_LABELS: Record<number, string> = { 1: "Domain", 3: "Job Function" };
 
 function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
@@ -171,16 +171,17 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
             {COL_ORDER.map((j) => {
               const col = cols[j];
               if (!col) return null;
-              const isLeft = LEFT_ALIGN_COLS.has(col.display_name);
+              const isLeft = LEFT_ALIGN_INDICES.has(j);
               const active = sort.col === j;
+              const label = COL_LABELS[j] ?? col.display_name;
               return (
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="sticky z-10 bg-white px-2 py-2 font-bold whitespace-nowrap cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200"
-                  style={{ color: "#111827", top: headerTop, textAlign: isLeft ? "left" : "center" }}
+                  className={`sticky z-10 bg-white px-2 py-2 font-bold whitespace-nowrap cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200 ${isLeft ? "text-left" : "text-center"}`}
+                  style={{ color: "#111827", top: headerTop }}
                 >
                   <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
-                    {HEADER_LABELS[col.display_name] ?? col.display_name}
+                    {label}
                     {active
                       ? sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />
                       : <ArrowUpDown size={11} className="opacity-30" />}
@@ -197,9 +198,9 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
               {COL_ORDER.map((j) => {
                 const cell = row[j];
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
-                const isLeft = LEFT_ALIGN_COLS.has(cols[j]?.display_name ?? "");
+                const isLeft = LEFT_ALIGN_INDICES.has(j);
                 return (
-                  <td key={j} style={{ textAlign: isLeft ? "left" : "center" }} className={`px-4 py-1.5 ${isNum ? "tabular-nums whitespace-nowrap" : ""} text-gray-800`}>
+                  <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums whitespace-nowrap" : ""} text-gray-800`}>
                     {cell === null || cell === undefined ? "" : String(cell)}
                   </td>
                 );

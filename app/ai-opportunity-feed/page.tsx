@@ -264,7 +264,7 @@ export default function AIOpportunityFeed() {
 
                     {/* AI Analysis + dynamic tag chips */}
                     <div style={{ paddingTop: 3 }}>
-                      <div className="text-xs text-gray-800 leading-relaxed">
+                      <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
                         {(row["AI Analysis"] as string) ?? "—"}
                       </div>
                       {chips.length > 0 && (

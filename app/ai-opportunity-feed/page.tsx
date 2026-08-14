@@ -52,6 +52,11 @@ function confDot(c: unknown) {
   return "#9CA3AF";
 }
 
+function extractDomain(url: string | null | undefined): string {
+  if (!url) return "";
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
 function fmtAmount(v: unknown): string {
   if (!v || typeof v !== "string") return "";
   const n = parseFloat(v.replace(/[^0-9.]/g, ""));
@@ -112,7 +117,7 @@ export default function AIOpportunityFeed() {
     if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
     if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
     if (q) {
-      const haystack = [r["AI Analysis"], r.City, r.County, r["Category Tags"], r["Source Tags"]]
+      const haystack = [r["AI Analysis"], r.City, r.County, r["Category Tags"], r["Source Tags"], extractDomain(r["Verified Source Link"] as string)]
         .map((v) => String(v ?? "").toLowerCase()).join(" ");
       if (!haystack.includes(q)) return false;
     }
@@ -183,7 +188,7 @@ export default function AIOpportunityFeed() {
               style={{
                 top: titleBarHeight,
                 color: "#111827",
-                gridTemplateColumns: "52px 96px 100px minmax(0,1fr) 120px 80px 90px 40px",
+                gridTemplateColumns: "52px 96px 100px minmax(0,1fr) 120px 130px 80px 90px 40px",
                 gap: "0 12px",
                 padding: "10px 20px",
               }}
@@ -193,6 +198,7 @@ export default function AIOpportunityFeed() {
               <span>Topic</span>
               <span>AI Analysis</span>
               <span>Location</span>
+              <span>Domain</span>
               <span>Amount</span>
               <span>Confidence</span>
               <span></span>
@@ -207,6 +213,7 @@ export default function AIOpportunityFeed() {
                 const location = [row.City, row.County].filter(Boolean).join(", ");
                 const amount   = fmtAmount(row["Amount ($)"]);
                 const link     = row["Verified Source Link"] as string | null;
+                const domain   = extractDomain(link);
 
                 // All tag cols that have a value — Category/Source Tags pinned first
                 const PRIORITY = ["Category Tags", "Source Tags"];
@@ -222,7 +229,7 @@ export default function AIOpportunityFeed() {
                     key={i}
                     className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors items-start"
                     style={{
-                      gridTemplateColumns: "52px 96px 100px minmax(0,1fr) 120px 80px 90px 40px",
+                      gridTemplateColumns: "52px 96px 100px minmax(0,1fr) 120px 130px 80px 90px 40px",
                       gap: "0 12px",
                       padding: "12px 20px",
                     }}
@@ -282,6 +289,11 @@ export default function AIOpportunityFeed() {
                     {/* Location */}
                     <div className="text-xs text-gray-500" style={{ paddingTop: 4 }}>
                       {location || "—"}
+                    </div>
+
+                    {/* Domain */}
+                    <div className="text-xs text-gray-500 truncate" style={{ paddingTop: 4 }} title={domain}>
+                      {domain || "—"}
                     </div>
 
                     {/* Amount */}

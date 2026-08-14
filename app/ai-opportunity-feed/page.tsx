@@ -67,7 +67,8 @@ function fmtDate(v: unknown): string {
   }
 }
 
-const GRID = "40px 110px 140px 60px 100px 90px 120px minmax(0,1fr) 80px 52px";
+const GRID = "30px 95px 130px 45px 80px 82px 110px minmax(0,1fr) 68px 44px";
+const GAP  = "0 8px";
 
 export default function AIOpportunityFeed() {
   const [rows, setRows]       = useState<Signal[]>([]);
@@ -187,7 +188,7 @@ export default function AIOpportunityFeed() {
                 top: titleBarHeight,
                 color: "#111827",
                 gridTemplateColumns: GRID,
-                gap: "0 12px",
+                gap: GAP,
                 padding: "10px 20px",
               }}
             >
@@ -222,7 +223,7 @@ export default function AIOpportunityFeed() {
                     className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors items-start"
                     style={{
                       gridTemplateColumns: GRID,
-                      gap: "0 12px",
+                      gap: GAP,
                       padding: "12px 20px",
                     }}
                   >

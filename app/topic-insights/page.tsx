@@ -229,10 +229,10 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   });
 
   // col order: #, District, Domain, State, Campaign, Topic, Topic Score
-  const COL_WIDTHS = ["4%", "28%", "18%", "5%", "6%", "29%", "10%"];
+  const COL_WIDTHS = ["3%", "22%", "14%", "5%", "5%", "38%", "13%"];
 
   return (
-    <div className="bg-white overflow-x-auto">
+    <div className="bg-white">
       <table className="text-xs border-collapse w-full" style={{ tableLayout: "fixed" }}>
         <colgroup>
           {COL_WIDTHS.map((w, i) => <col key={i} style={{ width: w }} />)}
@@ -268,11 +268,12 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
                 const colName = cols[j]?.display_name ?? "";
                 const isLeft = LEFT_ALIGN_COLS.has(colName) && !FORCE_CENTER_COLS.has(colName);
+                const text = cell === null || cell === undefined ? "" : String(cell);
                 return (
                   <td key={j}
                     style={{ textAlign: isLeft ? "left" : "center" }}
-                    className={`px-2 py-1.5 truncate ${isNum ? "tabular-nums" : ""} text-gray-800`}>
-                    {cell === null || cell === undefined ? "" : String(cell)}
+                    className={`px-2 py-1.5 ${isNum ? "tabular-nums" : ""} text-gray-800`}>
+                    <div className="truncate" title={text}>{text}</div>
                   </td>
                 );
               })}

@@ -46,7 +46,11 @@ async function fetchSignals(): Promise<SignalCache> {
 export async function GET() {
   try {
     const { rows, columns } = await fetchSignals();
-    return cachedJson({ rows, columns });
+    // Serve from in-memory cache only — no CDN caching so stale data from the
+    // old Card 432 source is never served after a source change.
+    return NextResponse.json({ rows, columns }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (err) {
     return NextResponse.json({ error: String(err), rows: [], columns: [] }, { status: 500 });
   }

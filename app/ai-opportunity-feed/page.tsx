@@ -102,7 +102,7 @@ export default function AIOpportunityFeed() {
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/ai-signals-data")
+    fetch("/api/ai-signals-data?v=2")
       .then((r) => r.json())
       .then((d: { rows?: Signal[]; columns?: string[]; error?: string }) => {
         if (d.error) throw new Error(d.error);

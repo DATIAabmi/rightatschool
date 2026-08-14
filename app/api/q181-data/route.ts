@@ -41,8 +41,9 @@ async function fetchDataset(dateStart: string, dateEnd: string): Promise<Dataset
     display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
     base_type: c.base_type,
   }));
-  // Keep full campaign string (e.g. "C6: April - May 2026") so the date is visible in the table.
-  const rows: unknown[][] = data.data?.rows ?? [];
+  const rows: unknown[][] = (data.data?.rows ?? []).map((row: unknown[]) =>
+    row.map((val, j) => j === CAMPAIGN_COL && typeof val === "string" ? val.split(":")[0].trim() : val)
+  );
   return { cols, rows };
 }
 
@@ -75,18 +76,13 @@ export async function GET(req: NextRequest) {
     const districtCol = cols.findIndex((c) => c.display_name === "District");
     const stateCol    = cols.findIndex((c) => c.display_name === "State");
     const topicCol    = cols.findIndex((c) => c.display_name === "Topic");
-    // Campaign values in rows are now full strings ("C6: April - May 2026").
-    // Match by comparing the short-code prefix before the first colon.
-    const campaignShortCodes = campaigns.map((c) => c.split(":")[0].trim().toLowerCase());
-    const matchesCampaign = (row: unknown[]) =>
-      campaignShortCodes.length === 0 ||
-      campaignShortCodes.includes(String(row[CAMPAIGN_COL] ?? "").split(":")[0].trim().toLowerCase());
+    const campaignShortCodes = campaigns.map((c) => c.split(":")[0].trim());
 
     const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
       values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
 
     const rows = allRows
-      .filter(matchesCampaign)
+      .filter(matches(campaignShortCodes, CAMPAIGN_COL))
       .filter(matches(districts, districtCol))
       .filter(matches(states, stateCol))
       .filter(matches(topics, topicCol));

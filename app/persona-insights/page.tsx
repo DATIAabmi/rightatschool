@@ -127,8 +127,8 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const LEFT_ALIGN_COLS = new Set(["District", "District_Domain", "Job_Function"]);
-const HEADER_LABELS: Record<string, string> = { "District_Domain": "Domain", "Job_Function": "Job Function" };
+const LEFT_ALIGN_COLS = new Set(["District", "Domain", "Job Function"]);
+const HEADER_LABELS: Record<string, string> = {};
 // Visual column order: District, Domain, State, Campaign, Job Function, Leads, Engagements
 // Raw data order (card 168): 0=District 1=Domain 2=State 3=Job Function
 // 4=Campaign 5=Engagements 6=Leads

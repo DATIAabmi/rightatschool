@@ -35,7 +35,7 @@ function fmtNum(v: number | string | null | undefined): string {
 function fmtPct(v: number | string | null | undefined): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "string") return v;
-  return (v * 100).toFixed(2) + "%";
+  return v.toFixed(2) + "%";
 }
 
 // ─── Scalar Card ──────────────────────────────────────────────────────────────

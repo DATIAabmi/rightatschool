@@ -39,17 +39,45 @@ function avgPct(values: (string | number | null | undefined)[]): string | null {
   return `${avg.toFixed(2)}%`;
 }
 
-// Merge [label, count, ...rest][] across campaigns by summing the count column (index 1).
-function mergeByLabel(rowSets: unknown[][][]): unknown[][] {
+// Merge Card 203 rows [Channel, Impressions, Clicks, CTR] across campaigns.
+// Sums Impressions and Clicks per channel, recomputes CTR from totals.
+function mergeChannelBreakdown(rowSets: unknown[][][]): unknown[][] {
+  const byChannel = new Map<string, { impressions: number; clicks: number; hasImp: boolean }>();
+  for (const rows of rowSets) {
+    for (const row of rows) {
+      const channel = String(row[0]);
+      const imp = row[1] != null ? Number(row[1]) : null;
+      const clk = row[2] != null ? Number(row[2]) : 0;
+      if (!byChannel.has(channel)) byChannel.set(channel, { impressions: 0, clicks: 0, hasImp: false });
+      const t = byChannel.get(channel)!;
+      if (imp != null && !isNaN(imp)) { t.impressions += imp; t.hasImp = true; }
+      if (!isNaN(clk as number)) t.clicks += (clk as number);
+    }
+  }
+  return [...byChannel.entries()]
+    .map(([ch, { impressions, clicks, hasImp }]) => {
+      const imp = hasImp ? impressions : null;
+      const ctr = hasImp && impressions > 0 ? (clicks / impressions) * 100 : null;
+      return [ch, imp, clicks, ctr];
+    })
+    .sort((a, b) => (Number(b[1]) || 0) - (Number(a[1]) || 0));
+}
+
+// Merge Card 204 rows [channel, Clicks, Click_Percentage] across campaigns.
+// Sums clicks per channel, recomputes percentages from the new total.
+function mergeChannelClicks(rowSets: unknown[][][]): unknown[][] {
   const totals = new Map<string, number>();
   for (const rows of rowSets) {
     for (const row of rows) {
-      const label = String(row[0]);
-      const count = Number(row[1]) || 0;
-      totals.set(label, (totals.get(label) ?? 0) + count);
+      const channel = String(row[0]);
+      const clicks = Number(row[1]) || 0;
+      totals.set(channel, (totals.get(channel) ?? 0) + clicks);
     }
   }
-  return [...totals.entries()].sort((a, b) => b[1] - a[1]);
+  const total = [...totals.values()].reduce((a, b) => a + b, 0);
+  return [...totals.entries()]
+    .map(([ch, clicks]) => [ch, clicks, total > 0 ? clicks / total : 0])
+    .sort((a, b) => (b[1] as number) - (a[1] as number));
 }
 
 async function fetchContentForCampaign(campaign: string, dateStart: string, dateEnd: string) {
@@ -91,7 +119,7 @@ export async function GET(req: NextRequest) {
     impressions:      sum(perCampaign.map((r) => r.impressions)),
     clicks:           sum(perCampaign.map((r) => r.clicks)),
     ctr:              avgPct(perCampaign.map((r) => r.ctr)),
-    channelBreakdown: mergeByLabel(perCampaign.map((r) => r.channelBreakdown)),
-    channelClicks:    mergeByLabel(perCampaign.map((r) => r.channelClicks)),
+    channelBreakdown: mergeChannelBreakdown(perCampaign.map((r) => r.channelBreakdown)),
+    channelClicks:    mergeChannelClicks(perCampaign.map((r) => r.channelClicks)),
   });
 }

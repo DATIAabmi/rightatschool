@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ExternalLink, Loader2, Download } from "lucide-react";
+import { ExternalLink, Loader2, Download, Search } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
@@ -66,9 +66,12 @@ export default function AIOpportunityFeed() {
   const [tagCols, setTagCols] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
-  const [filterAction, setFilterAction] = useState<string[]>([]);
-  const [filterTopic,  setFilterTopic]  = useState<string[]>([]);
-  const [filterConf,   setFilterConf]   = useState<string[]>([]);
+  const [filterAction,   setFilterAction]   = useState<string[]>([]);
+  const [filterTopic,    setFilterTopic]    = useState<string[]>([]);
+  const [filterConf,     setFilterConf]     = useState<string[]>([]);
+  const [filterCategory, setFilterCategory] = useState<string[]>([]);
+  const [filterSource,   setFilterSource]   = useState<string[]>([]);
+  const [searchText,     setSearchText]     = useState("");
 
   const titleBarRef = useRef<HTMLDivElement>(null);
   const [titleBarHeight, setTitleBarHeight] = useState(0);
@@ -97,11 +100,22 @@ export default function AIOpportunityFeed() {
       .catch((e: Error) => { setError(e.message ?? "Failed to load"); setLoading(false); });
   }, []);
 
+  const categoryOptions = [...new Set(rows.map((r) => String(r["Category Tags"] ?? "")).filter(Boolean))].sort();
+  const sourceOptions   = [...new Set(rows.map((r) => String(r["Source Tags"]   ?? "")).filter(Boolean))].sort();
+
+  const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
     if (!r["AI Analysis"] || !r["Signal Strength"]) return false;
-    if (filterAction.length && !filterAction.includes((r.Action as string) ?? "")) return false;
-    if (filterTopic.length  && !filterTopic.includes((r.Topic as string) ?? ""))   return false;
-    if (filterConf.length   && !filterConf.includes((r.Confidence as string) ?? "")) return false;
+    if (filterAction.length   && !filterAction.includes((r.Action as string) ?? ""))       return false;
+    if (filterTopic.length    && !filterTopic.includes((r.Topic as string) ?? ""))         return false;
+    if (filterConf.length     && !filterConf.includes((r.Confidence as string) ?? ""))     return false;
+    if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
+    if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
+    if (q) {
+      const haystack = [r["AI Analysis"], r.City, r.County, r["Category Tags"], r["Source Tags"]]
+        .map((v) => String(v ?? "").toLowerCase()).join(" ");
+      if (!haystack.includes(q)) return false;
+    }
     return true;
   });
 
@@ -114,9 +128,25 @@ export default function AIOpportunityFeed() {
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <MultiSelectDropdown label="Action"     value={filterAction} onChange={setFilterAction} options={ACTIONS} />
-          <MultiSelectDropdown label="Topic"      value={filterTopic}  onChange={setFilterTopic}  options={TOPICS} />
-          <MultiSelectDropdown label="Confidence" value={filterConf}   onChange={setFilterConf}   options={["high", "medium", "low"]} />
+          {/* Text search — searches district names, city, county, and analysis text */}
+          <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+            <Search size={13} className="text-gray-400 shrink-0" />
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="Search district, state…"
+              className="text-xs text-gray-700 bg-transparent border-none outline-none w-44 placeholder-gray-400"
+            />
+            {searchText && (
+              <button onClick={() => setSearchText("")} className="text-gray-300 hover:text-gray-500 ml-0.5 text-xs leading-none">✕</button>
+            )}
+          </div>
+          <MultiSelectDropdown label="Category"   value={filterCategory} onChange={setFilterCategory} options={categoryOptions} />
+          <MultiSelectDropdown label="Source"     value={filterSource}   onChange={setFilterSource}   options={sourceOptions} />
+          <MultiSelectDropdown label="Action"     value={filterAction}   onChange={setFilterAction}   options={ACTIONS} />
+          <MultiSelectDropdown label="Topic"      value={filterTopic}    onChange={setFilterTopic}    options={TOPICS} />
+          <MultiSelectDropdown label="Confidence" value={filterConf}     onChange={setFilterConf}     options={["high", "medium", "low"]} />
         </div>
       </div>
 

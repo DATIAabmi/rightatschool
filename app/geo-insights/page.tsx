@@ -43,16 +43,58 @@ function GeographyTable({
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (campaign.length)       params.set("campaign", campaign.join(","));
-    if (dateStart)             params.set("dateStart", dateStart);
-    if (dateEnd)               params.set("dateEnd", dateEnd);
-    if (filterDistrict.length) params.set("district", filterDistrict.join(","));
-    // State is filtered client-side — dataset is ~50 rows so no round-trip needed.
+    if (dateStart) params.set("dateStart", dateStart);
+    if (dateEnd)   params.set("dateEnd", dateEnd);
 
+    if (filterDistrict.length > 0) {
+      // District filter active — fetch district-level Card 168 data, then
+      // aggregate by state so the map and table still show a state-level view.
+      params.set("district", filterDistrict.join(","));
+      fetch(`/api/q168-data?${params.toString()}`)
+        .then((r) => r.json())
+        .then((d: { cols?: Col[]; rows?: GeoRow[] }) => {
+          const rawCols  = d.cols  ?? [];
+          const rawRows  = d.rows  ?? [];
+          const stateIdx = rawCols.findIndex((c) => c.display_name === "State");
+          const engIdx   = rawCols.findIndex((c) => c.display_name === "Engagements");
+          const leadsIdx = rawCols.findIndex((c) => c.display_name === "Leads");
+          const campIdx  = rawCols.findIndex((c) => c.display_name === "Campaign");
+
+          // Filter by campaign client-side (Card 168 has no campaign template tag)
+          const campFiltered = campaign.length > 0 && campIdx >= 0
+            ? rawRows.filter((row) => campaign.some((c) => String(row[campIdx] ?? "") === c))
+            : rawRows;
+
+          // Aggregate by state
+          const byState = new Map<string, { engaged: number; leads: number }>();
+          for (const row of campFiltered) {
+            const state = String(row[stateIdx] ?? "");
+            if (!state) continue;
+            if (!byState.has(state)) byState.set(state, { engaged: 0, leads: 0 });
+            const t = byState.get(state)!;
+            t.engaged += Number(row[engIdx])   || 0;
+            t.leads   += Number(row[leadsIdx]) || 0;
+          }
+
+          setCols([
+            { display_name: "State",         base_type: "type/Text"    },
+            { display_name: "Engaged Users",  base_type: "type/Integer" },
+            { display_name: "Leads",          base_type: "type/Integer" },
+          ]);
+          setRows([...byState.entries()].map(([state, { engaged, leads }]) => [state, engaged, leads]));
+          setSort({ col: 1, dir: "desc" });
+          setLoading(false);
+        })
+        .catch((err: Error) => { setError(err.message ?? "Failed to load"); setLoading(false); });
+      return;
+    }
+
+    // No district filter — use Card 169 state-level aggregated data.
+    if (campaign.length) params.set("campaign", campaign.join(","));
     fetch(`/api/q169-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => { setCols(d.cols ?? []); setRows(d.rows ?? []); setLoading(false); })
-      .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
+      .catch((err: Error) => { setError(err.message ?? "Failed to load"); setLoading(false); });
   }, [campaign, dateStart, dateEnd, filterDistrict]);
 
   const stateCol = cols.findIndex((c) => c.display_name === "State");

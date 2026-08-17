@@ -238,9 +238,9 @@ function DataTable({
                 <th key={j}
                   onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
                   className="sticky z-10 bg-white px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200"
-                  style={{ textAlign: left ? "left" : "center", top: headerTop }}>
-                  <span className={`inline-flex items-center gap-0.5 ${left ? "justify-start" : "justify-center"}`}>
-                    {label}
+                  style={{ textAlign: left ? "left" : "center", top: headerTop, ...(col.display_name === "Engagements" ? { maxWidth: 52 } : {}) }}>
+                  <span className={`inline-flex flex-wrap items-center gap-0.5 ${left ? "justify-start" : "justify-center"}`}>
+                    <span style={col.display_name === "Engagements" ? { wordBreak: "break-word" } : undefined}>{label}</span>
                     {active && (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)}
                   </span>
                 </th>

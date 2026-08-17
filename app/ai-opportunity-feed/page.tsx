@@ -65,13 +65,10 @@ function fmtAmount(v: unknown): string {
 function fmtDate(v: unknown): string {
   if (!v) return "—";
   const s = String(v);
-  try {
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return s;
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  } catch {
-    return s;
-  }
+  // Dates arrive as "YYYY-MM-DD" — parse parts directly to avoid timezone shifts
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[2]}-${m[3]}-${m[1].slice(2)}`;
+  return s;
 }
 
 const GRID = "30px 95px 130px 45px 80px 82px 110px minmax(0,1fr) 68px 44px";

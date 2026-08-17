@@ -125,7 +125,7 @@ export default function EcosystemFunnel() {
       value: fmt(data.ctr),
     },
     {
-      label: "Unique Engaged Users",
+      label: "UEU",
       description: "Unique engaged users who engaged with your content",
       value: fmt(data.engagedUsers),
     },

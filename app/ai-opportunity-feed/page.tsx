@@ -5,6 +5,7 @@ import { ExternalLink, Loader2, Download, Search } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
+import { fmtDate } from "@/lib/fmtDate";
 
 type Signal = Record<string, unknown>;
 
@@ -62,14 +63,6 @@ function fmtAmount(v: unknown): string {
   return v.startsWith("$") ? v : `$${v}`;
 }
 
-function fmtDate(v: unknown): string {
-  if (!v) return "—";
-  const s = String(v);
-  // Dates arrive as "YYYY-MM-DD" — parse parts directly to avoid timezone shifts
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return `${m[2]}-${m[3]}-${m[1].slice(2)}`;
-  return s;
-}
 
 const GRID = "30px 95px 130px 45px 80px 82px 110px minmax(0,1fr) 68px 44px";
 const GAP  = "0 8px";

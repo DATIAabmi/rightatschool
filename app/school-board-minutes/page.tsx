@@ -8,6 +8,7 @@ import { useFilter } from "@/components/FilterContext";
 import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
+import { fmtDate } from "@/lib/fmtDate";
 
 const KEYWORDS = ["after school", "child care", "head start", "enrichment"];
 
@@ -171,7 +172,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
                 // Campaign (index 1) — show short code only e.g. "C6"
                 // SBM Date (index 4) — strip ISO timestamp, show date only
                 const display = j === 1 ? val.split(":")[0].trim()
-                  : j === 4 ? val.replace(/T.*$/, "")
+                  : j === 4 ? fmtDate(val)
                   : val;
                 // District(0): wrap at word boundaries; Domain(2): break-all for URLs;
                 // Keyword(5): truncate with ellipsis; others: nowrap

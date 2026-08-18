@@ -9,6 +9,7 @@ const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 const DISPLAY_NAMES: Record<string, string> = {
   Job_Function:    "Job Function",
   Total_Downloads: "Total Downloads",
+  ST:              "State",
 };
 
 function parseList(v: string | null): string[] {

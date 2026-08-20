@@ -111,7 +111,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
           <col style={{ width: 140 }} />  {/* District */}
           <col style={{ width: 120 }} />  {/* Domain */}
           <col style={{ width: 44 }} />   {/* State */}
-          <col style={{ width: 52 }} />   {/* Campaign */}
+          <col style={{ width: 72 }} />   {/* Campaign */}
           <col style={{ width: 88 }} />   {/* SBM Date */}
           <col style={{ width: 110 }} />  {/* Keyword */}
           <col />                         {/* SBM Context — takes remaining space */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
+import { normalizeJobTitle } from "@/lib/jobFunctionCategories";
 
 export const maxDuration = 60;
 
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
     const campaigns   = parseList(searchParams.get("campaign"));
     const districts   = parseList(searchParams.get("district"));
     const states      = parseList(searchParams.get("state"));
-    const jobFunctions = parseList(searchParams.get("jobFunction"));
+    const jobFunctions = searchParams.getAll("jobFunction").map((s) => s.trim()).filter(Boolean);
     const dateStart   = searchParams.get("dateStart")   ?? "";
     const dateEnd     = searchParams.get("dateEnd")     ?? "";
 
@@ -90,10 +91,15 @@ export async function GET(req: NextRequest) {
     const matches = (values: string[], colIdx: number) => (row: unknown[]) =>
       values.length === 0 || (colIdx >= 0 && values.some((v) => v.toLowerCase() === String(row[colIdx] ?? "").toLowerCase()));
 
+    // Job function filter uses normalized categories — match by normalizing the raw job_title.
+    const matchesJobFunction = (row: unknown[]) =>
+      jobFunctions.length === 0 ||
+      (jobFunctionCol >= 0 && jobFunctions.includes(normalizeJobTitle(String(row[jobFunctionCol] ?? ""))));
+
     rows = rows
       .filter(matches(districts, districtCol))
       .filter(matches(states, stateCol))
-      .filter(matches(jobFunctions, jobFunctionCol));
+      .filter(matchesJobFunction);
 
     return cachedJson({ cols, rows });
   } catch {

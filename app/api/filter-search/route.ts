@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
+import { JOB_FUNCTION_CATEGORIES, normalizeJobTitle } from "@/lib/jobFunctionCategories";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -17,6 +18,15 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const field = searchParams.get("field") ?? "";
   const q = (searchParams.get("q") ?? "").trim();
+
+  // Job function uses normalized categories derived from raw job_title values.
+  if (field === "job_function") {
+    const allLabels = JOB_FUNCTION_CATEGORIES.map((c) => c.label);
+    const values = q
+      ? allLabels.filter((l) => l.toLowerCase().includes(q.toLowerCase()))
+      : allLabels;
+    return cachedJson({ values });
+  }
 
   const col = FIELD_MAP[field];
   if (!col) return NextResponse.json({ values: [] });

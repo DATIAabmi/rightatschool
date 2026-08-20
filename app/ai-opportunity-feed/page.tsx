@@ -234,16 +234,9 @@ export default function AIOpportunityFeed() {
                       {(row.District as string) || "—"}
                     </div>
 
-                    {/* Domain — links to source */}
-                    <div className="text-xs text-gray-600 leading-snug" style={{ paddingTop: 4 }}>
-                      {domain && link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors"
-                          title={link}>
-                          <span className="truncate">{domain}</span>
-                          <ExternalLink size={10} className="shrink-0" />
-                        </a>
-                      ) : domain || "—"}
+                    {/* Domain — plain text only; link moved to Signal Context */}
+                    <div className="min-w-0 overflow-hidden text-xs text-gray-600 leading-snug truncate" style={{ paddingTop: 4 }}>
+                      {domain || "—"}
                     </div>
 
                     {/* State */}
@@ -266,10 +259,18 @@ export default function AIOpportunityFeed() {
                       {(row["Source Tags"] as string) || "—"}
                     </div>
 
-                    {/* Signal Context (AI Analysis) + chips */}
+                    {/* Signal Context (AI Analysis) + source link + chips */}
                     <div style={{ paddingTop: 3 }}>
                       <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
                         {(row["Ai Analysis"] as string) ?? "—"}
+                        {domain && link && (
+                          <a href={link} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
+                            title={link}>
+                            <span>{domain}</span>
+                            <ExternalLink size={10} className="shrink-0" />
+                          </a>
+                        )}
                       </div>
                       {chips.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">

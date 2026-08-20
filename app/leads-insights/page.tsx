@@ -178,13 +178,14 @@ function LeadsInsightsContent() {
     if (dateEnd)                  params.set("dateEnd",     dateEnd);
     if (filterDistrict.length)    params.set("district",    filterDistrict.join(","));
     if (filterState.length)       params.set("state",       filterState.join(","));
-    if (filterJobFunction.length) params.set("jobFunction", filterJobFunction.join(","));
+    filterJobFunction.forEach((v) => params.append("jobFunction", v));
 
     fetch(`/api/q174-data?${params.toString()}`)
       .then(async (r) => {
         const text = await r.text();
         if (!text.trim()) return { cols: [], rows: [] };
-        return JSON.parse(text);
+        try { return JSON.parse(text); }
+        catch { throw new Error("Server error — please try again or reduce the number of filters selected"); }
       })
       .then((d: { cols?: unknown[]; rows?: unknown[]; error?: string }) => {
         if (d.error) throw new Error(d.error);

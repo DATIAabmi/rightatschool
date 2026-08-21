@@ -39,22 +39,21 @@ function mergeLabeledCounts(rowSets: [string, number][][]): [string, number][] {
   return [...totals.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-function sqlList(values: string[]): string {
-  return values.map((v) => `'${v.replace(/'/g, "\\'")}'`).join(", ");
-}
-
-async function fetchSummaryForCampaign(
+// Fetch summary for a single (campaign, district, state) combination.
+// Values are passed WITHOUT manual quoting — Metabase adds its own quotes
+// on substitution into template tags, matching how the campaign param works.
+async function fetchSummaryForFilters(
   campaign: string,
   dateStart: string,
   dateEnd: string,
-  districts: string[],
-  states: string[],
+  district: string,
+  state: string,
 ) {
   const params: object[] = [];
-  if (campaign) params.push({ id: "campaign", type: "string/=", value: campaign, target: ["variable", ["template-tag", "Abmi_Campaign"]] });
-  if (dateStart && dateEnd) params.push({ id: "date", type: "date/range", value: `${dateStart}~${dateEnd}`, target: ["dimension", ["template-tag", "Last_Updated"]] });
-  if (districts.length > 0) params.push({ id: "user_district", type: "string/=", value: sqlList(districts), target: ["variable", ["template-tag", "user_district"]] });
-  if (states.length > 0)    params.push({ id: "state",         type: "string/=", value: sqlList(states),    target: ["variable", ["template-tag", "state"]] });
+  if (campaign)               params.push({ id: "campaign",      type: "string/=",  value: campaign,  target: ["variable", ["template-tag", "Abmi_Campaign"]] });
+  if (dateStart && dateEnd)   params.push({ id: "date",          type: "date/range", value: `${dateStart}~${dateEnd}`, target: ["dimension", ["template-tag", "Last_Updated"]] });
+  if (district)               params.push({ id: "user_district", type: "string/=",  value: district,  target: ["variable", ["template-tag", "user_district"]] });
+  if (state)                  params.push({ id: "state",         type: "string/=",  value: state,     target: ["variable", ["template-tag", "state"]] });
 
   const [r175, r176, r177, r178, r179] = await Promise.all([
     fetchCard(175, params),
@@ -74,34 +73,50 @@ async function fetchSummaryForCampaign(
 }
 
 async function getResult(campaigns: string[], dateStart: string, dateEnd: string, districts: string[], states: string[]): Promise<SummaryResult> {
-  // Skip the in-memory cache when local filters are active — filter combinations are too numerous to cache effectively.
-  if (districts.length > 0 || states.length > 0) {
-    let result: SummaryResult;
-    if (campaigns.length <= 1) {
-      result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd, districts, states);
-    } else {
-      const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd, districts, states)));
-      result = {
-        totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
-        totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),
-        uniqueLeadDistrict: sum(perCampaign.map((r) => r.uniqueLeadDistrict)),
-        byContentType: mergeLabeledCounts(perCampaign.map((r) => r.byContentType)),
-        byContentName: mergeLabeledCounts(perCampaign.map((r) => r.byContentName)),
-      };
-    }
-    return result;
+  const useCache = districts.length === 0 && states.length === 0;
+
+  if (!useCache) {
+    // Make one Metabase call per (campaign × district × state) combination so
+    // each value is passed individually and quoted correctly by Metabase.
+    const campaignList = campaigns.length ? campaigns : [""];
+    const districtList = districts.length ? districts : [""];
+    const stateList    = states.length    ? states    : [""];
+
+    const combos: [string, string, string][] = campaignList.flatMap((c) =>
+      districtList.flatMap((d) =>
+        stateList.map((s): [string, string, string] => [c, d, s])
+      )
+    );
+
+    const perCombo = await Promise.all(
+      combos.map(([c, d, s]) => fetchSummaryForFilters(c, dateStart, dateEnd, d, s))
+    );
+
+    if (perCombo.length === 1) return perCombo[0];
+
+    return {
+      totalDownloads:     sum(perCombo.map((r) => r.totalDownloads)),
+      totalUniqueLeads:   sum(perCombo.map((r) => r.totalUniqueLeads)),
+      uniqueLeadDistrict: sum(perCombo.map((r) => r.uniqueLeadDistrict)),
+      byContentType: mergeLabeledCounts(perCombo.map((r) => r.byContentType)),
+      byContentName: mergeLabeledCounts(perCombo.map((r) => r.byContentName)),
+    };
   }
 
+  // Unfiltered path — use in-memory cache keyed by campaigns + date range.
   const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}`;
   const cached = memCache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
   if (!inflight.has(key)) {
     const p = (async () => {
       let result: SummaryResult;
-      if (campaigns.length <= 1) {
-        result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd, [], []);
+      const campaignList = campaigns.length ? campaigns : [""];
+      if (campaignList.length === 1) {
+        result = await fetchSummaryForFilters(campaignList[0], dateStart, dateEnd, "", "");
       } else {
-        const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd, [], [])));
+        const perCampaign = await Promise.all(
+          campaignList.map((c) => fetchSummaryForFilters(c, dateStart, dateEnd, "", ""))
+        );
         result = {
           totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
           totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),

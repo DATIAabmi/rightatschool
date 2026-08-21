@@ -39,10 +39,22 @@ function mergeLabeledCounts(rowSets: [string, number][][]): [string, number][] {
   return [...totals.entries()].sort((a, b) => b[1] - a[1]);
 }
 
-async function fetchSummaryForCampaign(campaign: string, dateStart: string, dateEnd: string) {
+function sqlList(values: string[]): string {
+  return values.map((v) => `'${v.replace(/'/g, "\\'")}'`).join(", ");
+}
+
+async function fetchSummaryForCampaign(
+  campaign: string,
+  dateStart: string,
+  dateEnd: string,
+  districts: string[],
+  states: string[],
+) {
   const params: object[] = [];
   if (campaign) params.push({ id: "campaign", type: "string/=", value: campaign, target: ["variable", ["template-tag", "Abmi_Campaign"]] });
   if (dateStart && dateEnd) params.push({ id: "date", type: "date/range", value: `${dateStart}~${dateEnd}`, target: ["dimension", ["template-tag", "Last_Updated"]] });
+  if (districts.length > 0) params.push({ id: "user_district", type: "string/=", value: sqlList(districts), target: ["variable", ["template-tag", "user_district"]] });
+  if (states.length > 0)    params.push({ id: "state",         type: "string/=", value: sqlList(states),    target: ["variable", ["template-tag", "state"]] });
 
   const [r175, r176, r177, r178, r179] = await Promise.all([
     fetchCard(175, params),
@@ -61,7 +73,25 @@ async function fetchSummaryForCampaign(campaign: string, dateStart: string, date
   };
 }
 
-async function getResult(campaigns: string[], dateStart: string, dateEnd: string): Promise<SummaryResult> {
+async function getResult(campaigns: string[], dateStart: string, dateEnd: string, districts: string[], states: string[]): Promise<SummaryResult> {
+  // Skip the in-memory cache when local filters are active — filter combinations are too numerous to cache effectively.
+  if (districts.length > 0 || states.length > 0) {
+    let result: SummaryResult;
+    if (campaigns.length <= 1) {
+      result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd, districts, states);
+    } else {
+      const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd, districts, states)));
+      result = {
+        totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
+        totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),
+        uniqueLeadDistrict: sum(perCampaign.map((r) => r.uniqueLeadDistrict)),
+        byContentType: mergeLabeledCounts(perCampaign.map((r) => r.byContentType)),
+        byContentName: mergeLabeledCounts(perCampaign.map((r) => r.byContentName)),
+      };
+    }
+    return result;
+  }
+
   const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}`;
   const cached = memCache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
@@ -69,9 +99,9 @@ async function getResult(campaigns: string[], dateStart: string, dateEnd: string
     const p = (async () => {
       let result: SummaryResult;
       if (campaigns.length <= 1) {
-        result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
+        result = await fetchSummaryForCampaign(campaigns[0] ?? "", dateStart, dateEnd, [], []);
       } else {
-        const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd)));
+        const perCampaign = await Promise.all(campaigns.map((c) => fetchSummaryForCampaign(c, dateStart, dateEnd, [], [])));
         result = {
           totalDownloads:     sum(perCampaign.map((r) => r.totalDownloads)),
           totalUniqueLeads:   sum(perCampaign.map((r) => r.totalUniqueLeads)),
@@ -92,8 +122,10 @@ async function getResult(campaigns: string[], dateStart: string, dateEnd: string
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  const dateStart = searchParams.get("dateStart") ?? "";
-  const dateEnd = searchParams.get("dateEnd") ?? "";
-  return cachedJson(await getResult(campaigns, dateStart, dateEnd));
+  const campaigns  = (searchParams.get("campaign")  ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const dateStart  = searchParams.get("dateStart")  ?? "";
+  const dateEnd    = searchParams.get("dateEnd")    ?? "";
+  const districts  = (searchParams.get("district")  ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const states     = (searchParams.get("state")     ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return cachedJson(await getResult(campaigns, dateStart, dateEnd, districts, states));
 }

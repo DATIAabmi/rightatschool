@@ -79,7 +79,12 @@ function HBarChart({ title, rows, searchable }: { title: string; rows: [string, 
   );
 }
 
-export default function LeadsSummaryPanel() {
+interface FilterProps {
+  districts?: string[];
+  states?: string[];
+}
+
+export default function LeadsSummaryPanel({ districts = [], states = [] }: FilterProps) {
   const { campaign, dateStart, dateEnd } = useFilter();
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,14 +92,16 @@ export default function LeadsSummaryPanel() {
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (campaign.length) params.set("campaign", campaign.join(","));
-    if (dateStart) params.set("dateStart", dateStart);
-    if (dateEnd) params.set("dateEnd", dateEnd);
-    fetch(`/api/leads-summary${params.size ? `?${params}` : ""}`)
+    if (campaign.length)  params.set("campaign",  campaign.join(","));
+    if (dateStart)        params.set("dateStart",  dateStart);
+    if (dateEnd)          params.set("dateEnd",    dateEnd);
+    if (districts.length) params.set("district",   districts.join(","));
+    if (states.length)    params.set("state",      states.join(","));
+    fetch(`/api/leads-summary?${params.toString()}`)
       .then((r) => r.json())
       .then((d: SummaryData) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [campaign, dateStart, dateEnd]);
+  }, [campaign, dateStart, dateEnd, districts, states]);
 
   if (loading) {
     return (

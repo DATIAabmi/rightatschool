@@ -17,7 +17,7 @@ function parseList(v: string | null): string[] {
   return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: string) {
+async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: string, contentNames: string[]) {
   const parameters: object[] = [];
 
   if (campaign) parameters.push({
@@ -32,6 +32,16 @@ async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: st
     value: `${dateStart}~${dateEnd}`,
     target: ["dimension", ["template-tag", "Last_Updated"]],
   });
+  if (contentNames.length > 0) {
+    // Format as SQL-safe quoted list for IN clause substitution
+    const quoted = contentNames.map((n) => `'${n.replace(/'/g, "\\'")}'`).join(", ");
+    parameters.push({
+      id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      type: "string/=",
+      value: quoted,
+      target: ["variable", ["template-tag", "Content_Name"]],
+    });
+  }
 
   const res = await fetch(`${METABASE_URL}/api/card/174/query`, {
     method: "POST",
@@ -64,16 +74,17 @@ async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: st
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
-    const campaigns   = parseList(searchParams.get("campaign"));
-    const districts   = parseList(searchParams.get("district"));
-    const states      = parseList(searchParams.get("state"));
+    const campaigns    = parseList(searchParams.get("campaign"));
+    const districts    = parseList(searchParams.get("district"));
+    const states       = parseList(searchParams.get("state"));
     const jobFunctions = searchParams.getAll("jobFunction").map((s) => s.trim()).filter(Boolean);
-    const dateStart   = searchParams.get("dateStart")   ?? "";
-    const dateEnd     = searchParams.get("dateEnd")     ?? "";
+    const contentNames = searchParams.getAll("contentName").map((s) => s.trim()).filter(Boolean);
+    const dateStart    = searchParams.get("dateStart")   ?? "";
+    const dateEnd      = searchParams.get("dateEnd")     ?? "";
 
     const results = campaigns.length > 0
-      ? await Promise.all(campaigns.map((c) => fetchForCampaign(c, dateStart, dateEnd)))
-      : [await fetchForCampaign("", dateStart, dateEnd)];
+      ? await Promise.all(campaigns.map((c) => fetchForCampaign(c, dateStart, dateEnd, contentNames)))
+      : [await fetchForCampaign("", dateStart, dateEnd, contentNames)];
 
     const first = results.find((r) => r !== null);
     if (!first) {

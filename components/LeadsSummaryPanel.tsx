@@ -64,12 +64,13 @@ function HBarChart({ title, rows, searchable }: { title: string; rows: [string, 
             <div className="flex-1 flex items-center gap-2 pt-0.5">
               <div className="flex-1 bg-gray-100 rounded-full overflow-hidden" style={{ height: 22 }}>
                 <div
-                  className="h-full rounded-full flex items-center justify-end pr-2"
+                  className="h-full rounded-full"
                   style={{ width: `${Math.max((value / max) * 100, 4)}%`, background: "#2D6DB5" }}
-                >
-                  <span className="text-white text-xs font-bold tabular-nums">{value.toLocaleString()}</span>
-                </div>
+                />
               </div>
+              <span className="text-xs font-bold tabular-nums text-gray-700 text-right" style={{ minWidth: 38, flexShrink: 0 }}>
+                {value.toLocaleString()}
+              </span>
             </div>
           </div>
         ))}

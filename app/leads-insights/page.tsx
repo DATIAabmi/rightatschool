@@ -8,7 +8,7 @@ import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import LeadsSummaryPanel from "@/components/LeadsSummaryPanel";
 import { exportToCsv } from "@/lib/exportCsv";
-function fetchFieldOptions(field: "district" | "state" | "job_function") {
+function fetchFieldOptions(field: "district" | "state" | "job_function" | "content_name") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
       .then((r) => r.json())
@@ -150,6 +150,7 @@ function LeadsInsightsContent() {
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterJobFunction, setFilterJobFunction] = useState<string[]>([]);
+  const [filterContentName, setFilterContentName] = useState<string[]>([]);
   const [cols, setCols] = useState<Col[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +180,7 @@ function LeadsInsightsContent() {
     if (filterDistrict.length)    params.set("district",    filterDistrict.join(","));
     if (filterState.length)       params.set("state",       filterState.join(","));
     filterJobFunction.forEach((v) => params.append("jobFunction", v));
+    filterContentName.forEach((v) => params.append("contentName", v));
 
     fetch(`/api/q174-data?${params.toString()}`)
       .then(async (r) => {
@@ -194,7 +196,7 @@ function LeadsInsightsContent() {
         setLoading(false);
       })
       .catch((err: Error) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [campaign, dateStart, dateEnd, filterDistrict, filterState, filterJobFunction]);
+  }, [campaign, dateStart, dateEnd, filterDistrict, filterState, filterJobFunction, filterContentName]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -203,6 +205,7 @@ function LeadsInsightsContent() {
     setFilterDistrict([]);
     setFilterState([]);
     setFilterJobFunction([]);
+    setFilterContentName([]);
   }, [resetSignal]);
 
   return (
@@ -217,6 +220,7 @@ function LeadsInsightsContent() {
             <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    search={fetchFieldOptions("district")} />
             <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
             <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
+            <MultiSelectDropdown label="Content"      value={filterContentName} onChange={setFilterContentName} search={fetchFieldOptions("content_name")} />
           </div>
           <SortDropdown sort={sort} onSort={setSort} />
         </div>

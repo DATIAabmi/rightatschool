@@ -17,7 +17,10 @@ function parseList(v: string | null): string[] {
   return (v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: string, contentNames: string[]) {
+// Fetch card 174 for a single (campaign, contentName) combination.
+// Values are passed without manual quoting — Metabase auto-quotes string/=
+// template tag values on substitution, so manual quotes cause double-quoting.
+async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: string, contentName: string) {
   const parameters: object[] = [];
 
   if (campaign) parameters.push({
@@ -32,13 +35,11 @@ async function fetchForCampaign(campaign: string, dateStart: string, dateEnd: st
     value: `${dateStart}~${dateEnd}`,
     target: ["dimension", ["template-tag", "Last_Updated"]],
   });
-  if (contentNames.length > 0) {
-    // Format as SQL-safe quoted list for IN clause substitution
-    const quoted = contentNames.map((n) => `'${n.replace(/'/g, "\\'")}'`).join(", ");
+  if (contentName) {
     parameters.push({
       id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       type: "string/=",
-      value: quoted,
+      value: contentName,
       target: ["variable", ["template-tag", "Content_Name"]],
     });
   }
@@ -82,16 +83,35 @@ export async function GET(req: NextRequest) {
     const dateStart    = searchParams.get("dateStart")   ?? "";
     const dateEnd      = searchParams.get("dateEnd")     ?? "";
 
-    const results = campaigns.length > 0
-      ? await Promise.all(campaigns.map((c) => fetchForCampaign(c, dateStart, dateEnd, contentNames)))
-      : [await fetchForCampaign("", dateStart, dateEnd, contentNames)];
+    // One Metabase call per (campaign × content_name) so each value is passed
+    // individually and quoted correctly. Empty string means "no filter".
+    const campaignList = campaigns.length > 0 ? campaigns : [""];
+    const contentNameList = contentNames.length > 0 ? contentNames : [""];
+    const results = await Promise.all(
+      campaignList.flatMap((c) => contentNameList.map((n) => fetchForCampaign(c, dateStart, dateEnd, n)))
+    );
 
     const first = results.find((r) => r !== null);
     if (!first) {
       return NextResponse.json({ cols: [], rows: [], error: "Metabase error" });
     }
     const cols = first.cols;
-    let rows = results.flatMap((r) => r?.rows ?? []);
+    // When multiple content names are selected, multiple result sets may return
+    // the same district+domain+state+job row. Merge by summing Total_Downloads.
+    const downloadCol = cols.length - 1; // always last column
+    const rowMap = new Map<string, unknown[]>();
+    for (const r of results) {
+      for (const row of r?.rows ?? []) {
+        const key = row.slice(0, downloadCol).join("\x00");
+        const existing = rowMap.get(key);
+        if (existing) {
+          existing[downloadCol] = Number(existing[downloadCol] ?? 0) + Number(row[downloadCol] ?? 0);
+        } else {
+          rowMap.set(key, [...row]);
+        }
+      }
+    }
+    let rows = [...rowMap.values()];
 
     // District/State/Job Function are real per-row columns here, so multiple
     // selections can be applied locally after fetching.

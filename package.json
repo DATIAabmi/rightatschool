@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "@metabase/embedding-sdk-react": "^0.62.0",
     "jose": "^6.2.4",
     "jsonwebtoken": "^9.0.3",
@@ -16,7 +17,8 @@
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-simple-maps": "^3.0.0"
+    "react-simple-maps": "^3.0.0",
+    "xlsx": "^0.18.5"
   },
   "engines": {
     "node": "22.x"

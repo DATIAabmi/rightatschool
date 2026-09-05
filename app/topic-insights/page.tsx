@@ -39,9 +39,9 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 const LEFT_ALIGN_COLS = new Set(["District", "Domain", "District Domain", "Topic"]);
 const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
 const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
-// Visual column order: District, Domain, State, Campaign, Topic, Topic Score.
-// Raw data order (card 181): 0=District 1=Domain 2=Campaign 3=State 4=Topic 5=Topic Score
-const COL_ORDER = [0, 1, 3, 2, 4, 5];
+// Visual column order: District, Domain, State, Campaign, Date, Topic, Topic Score.
+// Raw data order (card 181): 0=District 1=Domain 2=Campaign 3=State 4=Topic 5=Topic Score 6=Date
+const COL_ORDER = [0, 1, 3, 2, 6, 4, 5];
 
 // ─── AVG Topic Score chart ────────────────────────────────────────────────────
 
@@ -228,8 +228,8 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
     return sort.dir === "asc" ? cmp : -cmp;
   });
 
-  // col order: #, District, Domain, State, Campaign, Topic, Topic Score
-  const COL_WIDTHS = ["3%", "22%", "14%", "5%", "5%", "38%", "13%"];
+  // col order: #, District, Domain, State, Campaign, Date, Topic, Topic Score
+  const COL_WIDTHS = ["2%", "20%", "13%", "5%", "11%", "8%", "29%", "12%"];
 
   return (
     <div className="bg-white">
@@ -287,7 +287,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
 // ─── Skeleton loader ──────────────────────────────────────────────────────────
 
-const TOPIC_SKELETON_COLS = [28, 110, 90, 36, 48, 130, 72];
+const TOPIC_SKELETON_COLS = [28, 110, 90, 36, 70, 60, 130, 72];
 const TOPIC_LOADING_MSGS = [
   "Fetching Bombora intent signals…",
   "Calculating topic scores…",

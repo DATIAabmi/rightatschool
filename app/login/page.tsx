@@ -94,7 +94,7 @@ function LoginForm() {
             />
             <div style={{ height: 2, width: 48, background: "#ef4444", borderRadius: 2, marginTop: 14 }} />
             <p style={{ marginTop: 10, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6b7280" }}>
-              Analytics Portal
+              Intelligence Dashboard
             </p>
           </div>
 

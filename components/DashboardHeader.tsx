@@ -50,7 +50,7 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6 py-3 mb-4">
-      <div className="relative flex items-center">
+      <div className="flex items-center">
         {/* Left: Right At School logo */}
         <div className="flex-shrink-0 flex items-center gap-4">
           <Image
@@ -65,8 +65,8 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
           <div className="self-stretch w-px bg-gray-200 shrink-0" />
         </div>
 
-        {/* Center: absolutely centered in the full card */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+        {/* Center: truly centered between logo and right edge */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
           <h1
             className="font-bold text-gray-900 leading-tight"
             style={{ fontFamily: "'Lato', sans-serif", fontSize: "30px", letterSpacing: "-0.5px" }}

@@ -1,222 +1,155 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { InteractiveDashboard } from "@metabase/embedding-sdk-react";
-import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
+import { EMAIL_HTML } from "./email-html";
 
-const TAB_LABEL = "Ad Samples";
+const C7 = "C7: July 2026 - June 2027";
 
-/** Returns true if header cards were found and hidden. */
-function cleanAdSamples(container: HTMLElement): boolean {
-  // 1. Hide the tab bar — click already happened so this is safe
-  container.querySelectorAll<HTMLElement>(
-    '[role="tablist"], [data-testid="dashboard-tabs"], [class*="DashboardTabs"]'
-  ).forEach((el) => { el.style.display = "none"; });
+// Assets available per campaign. Add new entries here as campaigns are loaded.
+const CAMPAIGN_ASSETS: Record<string, { social: { src: string; alt: string }[]; email: string | null; display: { src: string; alt: string }[] }> = {
+  [C7]: {
+    social: [
+      { src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1787840518/RAS_FB_tlfggo.jpg",      alt: "Facebook ad" },
+      { src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1787840519/RAS_LinkedIn_kpx4hf.jpg", alt: "LinkedIn ad" },
+    ],
+    email: EMAIL_HTML,
+    display: [
+      { src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1787840518/300x250-2_d997kg.jpg",   alt: "Display 300x250" },
+      { src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1787840519/300x600_cdwcuu.jpg",     alt: "Display 300x600" },
+      { src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1787840519/970x250_1_anr7xj.gif",   alt: "Display 970x250" },
+    ],
+  },
+};
 
-  const cards = Array.from(container.querySelectorAll<HTMLElement>(
-    '[class*="DashCard"], [class*="dashcard"], [data-testid*="dashcard"]'
-  ));
+const EMAIL_NATIVE_W = 600;
+const EMAIL_NATIVE_H = 920;
 
-  if (cards.length === 0) return false;
-
-  const containerRect = container.getBoundingClientRect();
-
-  // 2. Identify the header row bottom via text-based cards
-  let headerBottom = 0;
-  for (const card of cards) {
-    const text = (card.textContent ?? "").trim();
-    if (text.includes("ABMi Always On") || text.includes("Last Update")) {
-      const rect = card.getBoundingClientRect();
-      headerBottom = Math.max(headerBottom, rect.bottom - containerRect.top);
-    }
-  }
-
-  if (headerBottom === 0) return false; // cards not rendered yet — caller should retry
-
-  // 3. Pass 1: hide every card that starts within the header row
-  for (const card of cards) {
-    const rect = card.getBoundingClientRect();
-    if (rect.top - containerRect.top < headerBottom) {
-      card.style.visibility = "hidden";
-    }
-  }
-
-  // 4. Pass 2: catch logo-only cards positioned just below (e.g. DATIA K12)
-  const scanZone = Math.max(headerBottom * 2, 280);
-  for (const card of cards) {
-    if (card.style.visibility === "hidden") continue;
-    const text = (card.textContent ?? "").trim();
-    const hasImg = card.querySelector("img") !== null;
-    if (!hasImg || text.length > 20) continue;
-    const rect = card.getBoundingClientRect();
-    if (rect.top - containerRect.top < scanZone) {
-      card.style.visibility = "hidden";
-    }
-  }
-
-  // 5. Eliminate the whitespace left by hidden cards.
-  //    Find the topmost visible content card, then shift the grid up
-  //    by that offset so content starts right at the top.
-  let contentTop = Infinity;
-  for (const card of cards) {
-    if (card.style.visibility === "hidden") continue;
-    const rect = card.getBoundingClientRect();
-    contentTop = Math.min(contentTop, rect.top - containerRect.top);
-  }
-
-  if (contentTop > 0 && contentTop !== Infinity) {
-    const gridEl = container.querySelector<HTMLElement>(
-      '[class*="react-grid-layout"], [data-testid="dashboard-grid"] > *'
-    );
-    if (gridEl) {
-      gridEl.style.marginTop = `-${Math.round(contentTop)}px`;
-    }
-  }
-
-  return true;
+function ColHeader({ label }: { label: string }) {
+  return (
+    <div style={{
+      textAlign: "center", fontWeight: 700, fontSize: 14,
+      letterSpacing: "0.08em", color: "#111",
+      padding: "10px 16px", border: "1px solid #d1d5db",
+      borderRadius: 6, marginBottom: 20, background: "#fff",
+    }}>
+      {label}
+    </div>
+  );
 }
 
-const LOADING_MSGS = [
-  "Loading ad samples…",
-  "Fetching campaign creatives…",
-  "Preparing ad preview…",
-  "Almost ready…",
-];
+function AdImg({ src, alt }: { src: string; alt: string }) {
+  return (
+    <img src={src} alt={alt} loading="lazy" style={{
+      width: "100%", display: "block", borderRadius: 6,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.10)",
+    }} />
+  );
+}
 
-function AdSamplesEmbed() {
-  const { campaign } = useFilter();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
-  const [msgIdx, setMsgIdx] = useState(0);
+function EmailPreview({ html }: { html: string }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.5);
 
   useEffect(() => {
-    const iv = setInterval(() => setMsgIdx((i) => (i + 1) % LOADING_MSGS.length), 2800);
-    return () => clearInterval(iv);
+    const el = wrapperRef.current;
+    if (!el) return;
+    const update = () => setScale(el.offsetWidth / EMAIL_NATIVE_W);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
-  const params: Record<string, string | string[]> = {
-    abmi_campaign_: campaign,
-    channel: "",
-    district: "",
-    job_function: "",
-    select_date_range: "",
-    state: "",
-    topic: "",
-  };
-
-  useEffect(() => {
-    setReady(false);
-    const container = containerRef.current;
-    if (!container) return;
-
-    let clickDone = false;
-    let cleanDone = false;
-
-    const clickInterval = setInterval(() => {
-      if (clickDone) return;
-      const candidates = container.querySelectorAll<HTMLElement>('[role="tab"], button, a');
-      for (const el of candidates) {
-        if (el.textContent?.trim() === TAB_LABEL) {
-          el.click();
-          clickDone = true;
-          clearInterval(clickInterval);
-
-          let attempts = 0;
-          const tryClean = () => {
-            if (cleanDone) return;
-            const ok = cleanAdSamples(container);
-            attempts++;
-            if (ok || attempts >= 10) {
-              cleanDone = true;
-              // Extra frame delay so DOM paint settles before lifting the overlay
-              requestAnimationFrame(() => requestAnimationFrame(() => setReady(true)));
-            } else {
-              setTimeout(tryClean, 400);
-            }
-          };
-          setTimeout(tryClean, 1500);
-          break;
-        }
-      }
-    }, 150);
-
-    const fallback = setTimeout(() => {
-      if (!cleanDone) {
-        cleanDone = true;
-        if (containerRef.current) cleanAdSamples(containerRef.current);
-        requestAnimationFrame(() => requestAnimationFrame(() => setReady(true)));
-      }
-    }, 10_000);
-
-    return () => { clearInterval(clickInterval); clearTimeout(fallback); };
-  }, [campaign]);
-
   return (
-    <>
-      <style>{`
-        .ad-samples-embed [data-testid="dashboard-parameters-widget-container"],
-        .ad-samples-embed [class*="ParametersWidget"],
-        .ad-samples-embed [class*="parameters-widget"],
-        .ad-samples-embed [class*="ParameterWidget"] { display: none !important; }
-        .ad-samples-embed [class*="DashboardBody"],
-        .ad-samples-embed [class*="dashboard-body"],
-        .ad-samples-embed [data-testid="dashboard-grid"] { padding-top: 0 !important; margin-top: 0 !important; }
-      `}</style>
+    <div ref={wrapperRef} style={{ width: "100%", height: EMAIL_NATIVE_H * scale, overflow: "hidden", borderRadius: 6, boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }}>
+      <iframe srcDoc={html} sandbox="allow-same-origin" style={{ width: EMAIL_NATIVE_W, height: EMAIL_NATIVE_H, border: "none", display: "block", transformOrigin: "top left", transform: `scale(${scale})` }} />
+    </div>
+  );
+}
 
-      <div style={{ position: "relative", height: "100%", width: "100%" }}>
-        {/* Embed is invisible while loading — overlay sits on top as well */}
-        <div ref={containerRef} className="ad-samples-embed"
-          style={{ height: "100%", width: "100%", visibility: ready ? "visible" : "hidden" }}>
-          <InteractiveDashboard
-            key={campaign.join(",")}
-            dashboardId={35}
-            initialParameters={params}
-            withTitle={false}
-            style={{ height: "100%" }}
-          />
-        </div>
+function CampaignBadge({ label }: { label: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, padding: "6px 14px", background: "#1e293b", borderRadius: 20, alignSelf: "flex-start" }}>
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#38bdf8", flexShrink: 0, display: "block" }} />
+      <span style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", letterSpacing: "0.05em" }}>{label}</span>
+    </div>
+  );
+}
 
-        {/* High-z overlay guarantees nothing from Metabase bleeds through */}
-        {!ready && (
-          <div style={{
-            position: "absolute", inset: 0, zIndex: 9999, background: "#f9fafb",
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
-          }}>
-            <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#6b7280", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            <span style={{ fontSize: 13, color: "#9ca3af" }}>{LOADING_MSGS[msgIdx]}</span>
-            <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-          </div>
-        )}
-      </div>
-    </>
+function NoSamples({ campaignLabel }: { campaignLabel: string }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 320, gap: 12, color: "#9ca3af" }}>
+      <svg width={40} height={40} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M9 9h6M9 13h4" strokeLinecap="round" />
+      </svg>
+      <p style={{ fontSize: 14, margin: 0, textAlign: "center" }}>
+        No ad samples loaded for<br />
+        <strong style={{ color: "#6b7280" }}>{campaignLabel}</strong>
+      </p>
+    </div>
   );
 }
 
 export default function Page() {
+  const { campaign } = useFilter();
+
+  // Determine which campaign's assets to show.
+  // Single campaign selected → use it if we have assets, else show empty state.
+  // Multiple or none → fall back to C7 (most recent with assets).
+  const activeCampaign = campaign.length === 1 ? campaign[0] : C7;
+  const assets = CAMPAIGN_ASSETS[activeCampaign] ?? null;
+  const campaignLabel = campaign.length === 1 ? activeCampaign : "All Campaigns (showing C7)";
+
   return (
-    <MetabaseProviderWrapper>
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: "16rem",
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          flexDirection: "column",
-          background: "#f9fafb",
-          zIndex: 1,
-        }}
-      >
-        <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
-          <DashboardHeader />
-        </div>
-        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          <AdSamplesEmbed />
-        </div>
+    <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0, display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
+      <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
+        <DashboardHeader />
       </div>
-    </MetabaseProviderWrapper>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "4px 28px 28px" }}>
+        <CampaignBadge label={campaignLabel} />
+
+        {!assets ? (
+          <NoSamples campaignLabel={activeCampaign} />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 28, alignItems: "start" }}>
+            {/* Social Media — images capped so they don't blow out the column */}
+            <div>
+              <ColHeader label="SOCIAL MEDIA" />
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {assets.social.map((img) => (
+                  <div key={img.src} style={{ maxWidth: 340, margin: "0 auto", width: "100%" }}>
+                    <AdImg src={img.src} alt={img.alt} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <ColHeader label="EMAIL" />
+              {assets.email ? <EmailPreview html={assets.email} /> : <NoSamples campaignLabel={activeCampaign} />}
+            </div>
+
+            {/* Digital Display — first two side by side, wide banner spans full width */}
+            <div>
+              <ColHeader label="DIGITAL DISPLAY" />
+              {assets.display.length === 0 ? null : (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {assets.display.slice(0, -1).map((img) => (
+                    <AdImg key={img.src} src={img.src} alt={img.alt} />
+                  ))}
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <AdImg src={assets.display[assets.display.length - 1].src} alt={assets.display[assets.display.length - 1].alt} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

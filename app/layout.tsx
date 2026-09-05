@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import LayoutShell from "@/components/LayoutShell";
 import BackgroundPrefetch from "@/components/BackgroundPrefetch";
+import MetabotChat from "@/components/MetabotChat";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DATIA K12 | Analytics Portal",
-  description: "Analytics Portal",
+  title: "DATIA K12 | Intelligence Dashboard",
+  description: "Intelligence Dashboard",
 };
 
 export default function RootLayout({
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className="min-h-full bg-gray-50">
         <LayoutShell>{children}</LayoutShell>
         <BackgroundPrefetch />
+        <MetabotChat />
       </body>
     </html>
   );

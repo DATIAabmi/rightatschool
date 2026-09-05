@@ -80,18 +80,30 @@ function mergeChannelClicks(rowSets: unknown[][][]): unknown[][] {
     .sort((a, b) => (b[1] as number) - (a[1] as number));
 }
 
-async function fetchContentForCampaign(campaign: string, dateStart: string, dateEnd: string) {
-  const params: object[] = [];
-  if (campaign)  params.push({ id: "campaign",   type: "string/=",   value: campaign,  target: ["variable", ["template-tag", "Abmi_Campaign"]] });
-  if (dateStart) params.push({ id: "date_start", type: "date/range",  value: dateStart, target: ["variable", ["template-tag", "Date"]] });
-  if (dateEnd)   params.push({ id: "date_end",   type: "date/range",  value: dateEnd,   target: ["variable", ["template-tag", "Date"]] });
+// Per-card template tag UUIDs — Metabase matches by id, not by tag name.
+const TAG_IDS = {
+  200: { Abmi_Campaign: "42673811-578c-499b-a7fb-67482c6015bb", Date: "dbe6f1b5-2fb5-475e-b7ed-03877fa37163" },
+  201: { Abmi_Campaign: "af6ff2ef-7c3d-4d58-9367-2d4e0a36c816", Date: "89865cc2-c75d-43ed-9d9b-3a55e264f3bb" },
+  202: { Abmi_Campaign: "0440695a-a7db-4478-ba49-b4b6de7bf3d5", Date: "70cf5f50-a5c2-4405-b3d2-df5b0ce98a7d" },
+  203: { Abmi_Campaign: "845b765b-7f12-4d62-8834-12918445eaa8", Date: "ad1166e3-6a2c-424e-aa1e-3b6445a3349e" },
+  204: { Abmi_Campaign: "aab79af5-1a19-4e31-90d7-ce19a6f8ebb9", Date: "2d93be9f-78e7-498a-8ccf-90e63accec6f" },
+} as const;
 
+function buildParams(cardId: keyof typeof TAG_IDS, campaign: string, dateStart: string, dateEnd: string): object[] {
+  const ids = TAG_IDS[cardId];
+  const params: object[] = [];
+  if (campaign)            params.push({ id: ids.Abmi_Campaign, type: "string/=",  value: campaign,                    target: ["variable",  ["template-tag", "Abmi_Campaign"]] });
+  if (dateStart && dateEnd) params.push({ id: ids.Date,          type: "date/range", value: `${dateStart}~${dateEnd}`, target: ["dimension", ["template-tag", "Date"]] });
+  return params;
+}
+
+async function fetchContentForCampaign(campaign: string, dateStart: string, dateEnd: string) {
   const [rows200, rows201, rows202, rows203, rows204] = await Promise.all([
-    fetchCard(200, params),
-    fetchCard(201, params),
-    fetchCard(202, params),
-    fetchCard(203, params),
-    fetchCard(204, params),
+    fetchCard(200, buildParams(200, campaign, dateStart, dateEnd)),
+    fetchCard(201, buildParams(201, campaign, dateStart, dateEnd)),
+    fetchCard(202, buildParams(202, campaign, dateStart, dateEnd)),
+    fetchCard(203, buildParams(203, campaign, dateStart, dateEnd)),
+    fetchCard(204, buildParams(204, campaign, dateStart, dateEnd)),
   ]);
 
   return {

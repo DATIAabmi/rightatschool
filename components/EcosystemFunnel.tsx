@@ -34,6 +34,7 @@ interface FunnelData {
 
 interface Stage {
   label: string;
+  cardLabel?: string;
   description: string;
   goal?: string;
   value: string;
@@ -121,17 +122,19 @@ export default function EcosystemFunnel() {
     },
     {
       label: "CTR",
+      cardLabel: "Click Through Rate",
       description: "Percentage of impressions that generated a click",
       value: fmt(data.ctr),
     },
     {
       label: "UEU",
+      cardLabel: "Unique Engaged Users",
       description: "Unique engaged users who engaged with your content",
       value: fmt(data.engagedUsers),
     },
     {
-      label: "Leads",
-      description: "Qualified leads generated across all channels",
+      label: "Downloads",
+      description: "Unique content downloads by contacts",
       goal: `Goal: ${goals.leads.toLocaleString()} Leads`,
       value: fmt(data.leads),
       goalValue: computePct(data.leads, goals.leads),
@@ -195,7 +198,7 @@ export default function EcosystemFunnel() {
                     className="block uppercase tracking-widest text-gray-400 font-semibold"
                     style={{ fontSize: 11, marginBottom: 2 }}
                   >
-                    {stage.label}
+                    {stage.cardLabel ?? stage.label}
                   </span>
                   <span
                     className="block font-black text-white tabular-nums"

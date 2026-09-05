@@ -10,7 +10,7 @@ export const CAMPAIGNS = [
 ] as const;
 
 // C6 is the most recently completed campaign — C7 only started July 1st and has minimal data.
-export const DEFAULT_CAMPAIGN = "C6: April - May 2026";
+export const DEFAULT_CAMPAIGN = "C7: July 2026 - June 2027";
 
 /** Strips the "C#: " prefix to get a display-friendly date range. */
 export function campaignDateRange(campaign: string): string {
@@ -22,10 +22,13 @@ interface Goals {
   leads: number;
 }
 
-// Per-campaign impression/lead goals — campaigns run for different lengths
-// of time so a single fixed goal doesn't apply across all of them.
-// TODO: confirm goals for C1-C6; using the C6 figures as a placeholder default.
 const CAMPAIGN_GOALS: Record<string, Goals> = {
+  "C1: April - May 2025":   { impressions:   100_000, leads:   100 },
+  "C2: May - June 2025":    { impressions:   100_000, leads:   100 },
+  "C3: June 2025":          { impressions:   400_000, leads:   410 },
+  "C4: Aug - Sept 2025":    { impressions:   345_000, leads:   412 },
+  "C5: Nov 2025 - May 2026":{ impressions: 1_025_000, leads: 2_054 },
+  "C6: April - May 2026":   { impressions:   300_000, leads:   300 },
   "C7: July 2026 - June 2027": { impressions: 1_200_000, leads: 1_200 },
 };
 

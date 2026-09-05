@@ -15,7 +15,7 @@ async function fetchRowsForCampaign(campaign: string, dateStart: string, dateEnd
   const parameters: object[] = [];
   if (campaign) {
     parameters.push({
-      id: "campaign",
+      id: "f80b70c2-fef2-490d-b023-e072e5610b21",
       type: "string/=",
       value: campaign,
       target: ["variable", ["template-tag", "Abmi_Campaign"]],
@@ -23,7 +23,7 @@ async function fetchRowsForCampaign(campaign: string, dateStart: string, dateEnd
   }
   if (dateStart && dateEnd) {
     parameters.push({
-      id: "date",
+      id: "f3ba60a6-034c-4711-95fb-60c59a2e13dd",
       type: "date/range",
       value: `${dateStart}~${dateEnd}`,
       target: ["dimension", ["template-tag", "Date"]],

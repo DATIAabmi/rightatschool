@@ -122,18 +122,19 @@ export default function EcosystemFunnel() {
     },
     {
       label: "Click-Through Rate (CTR)",
-      cardLabel: "Click Through Rate",
+      cardLabel: "CTR",
       description: "Percentage of impressions that generated a click",
       value: fmt(data.ctr),
     },
     {
       label: "Unique Engaged Users (UEU)",
-      cardLabel: "Unique Engaged Users",
+      cardLabel: "UEU",
       description: "Unique individuals who engaged",
       value: fmt(data.engagedUsers),
     },
     {
       label: "Leads",
+      cardLabel: "Leads",
       description: "Content downloads by personas",
       goal: `Goal: ${goals.leads.toLocaleString()} Leads`,
       value: fmt(data.leads),
@@ -218,7 +219,7 @@ export default function EcosystemFunnel() {
                       className="block uppercase tracking-widest text-gray-400 font-semibold"
                       style={{ fontSize: 9, marginBottom: 2 }}
                     >
-                      % to Goal
+                      % OF GOAL
                     </span>
                     <span
                       className="block font-black text-white tabular-nums"

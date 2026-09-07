@@ -21,6 +21,7 @@ const PRIMARY_COLS = new Set([
   "Signal Strength",
   "Action",
   "Ai Analysis",
+  "AI Analysis",
   "City",
   "County",
   "Amount",
@@ -106,15 +107,23 @@ export default function AIOpportunityFeed() {
   const categoryOptions = [...new Set(rows.map((r) => String(r["Category Tags"] ?? "")).filter(Boolean))].sort();
   const sourceOptions   = [...new Set(rows.map((r) => String(r["Source Tags"]   ?? "")).filter(Boolean))].sort();
 
+  // Metabase may return "Ai Analysis" or "AI Analysis" — normalise to whichever exists
+  const aiAnalysisKey = rows[0]
+    ? (Object.keys(rows[0]).find((k) => k.toLowerCase().replace(/\s/g, "") === "aianalysis") ?? "Ai Analysis")
+    : "Ai Analysis";
+  const strengthKey = rows[0]
+    ? (Object.keys(rows[0]).find((k) => k.toLowerCase().replace(/[\s_]/g, "") === "signalstrength") ?? "Signal Strength")
+    : "Signal Strength";
+
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
-    if (!r["Ai Analysis"] || !r["Signal Strength"]) return false;
+    if (!r[aiAnalysisKey] || !r[strengthKey]) return false;
     if (filterTopic.length    && !filterTopic.includes((r.Topic as string) ?? ""))               return false;
     if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
     if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
     if (q) {
       const haystack = [
-        r["AI Analysis"], r.District, r.State, r.Campaign,
+        r[aiAnalysisKey], r.District, r.State, r.Campaign,
         r["Source Tags"], r["Category Tags"],
         extractDomain(r["Verified Source Link"] as string),
       ].map((v) => String(v ?? "").toLowerCase()).join(" ");
@@ -262,7 +271,7 @@ export default function AIOpportunityFeed() {
                     {/* Signal Context (AI Analysis) + source link + chips */}
                     <div style={{ paddingTop: 3 }}>
                       <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
-                        {(row["Ai Analysis"] as string) ?? "—"}
+                        {(row[aiAnalysisKey] as string) ?? "—"}
                         {domain && link && (
                           <a href={link} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"

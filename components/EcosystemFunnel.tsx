@@ -110,14 +110,14 @@ export default function EcosystemFunnel() {
   const stages: Stage[] = [
     {
       label: "Impressions",
-      description: "Times your ads or content were displayed",
+      description: "Total times ads were displayed",
       goal: `Impression Goal: ${goals.impressions.toLocaleString()}`,
       value: fmt(data.impressions),
       goalValue: computePct(data.impressions, goals.impressions),
     },
     {
       label: "Engagements",
-      description: "Ad clicks and email opens",
+      description: "Clicks across digital channels and email opens",
       value: fmt(data.engagements),
     },
     {

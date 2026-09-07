@@ -27,18 +27,23 @@ const PRIMARY_COLS = new Set([
   "Amount",
   "Confidence",
   "Verified Source Link",
+  "Source Link",
   "Run Date",
+  "Date",
   "Source Tags",
   "District",
   "Domain",
   "State",
   "Campaign",
+  "Campaign #",
   "Sbm Link",
   "Sbm Date",
   "Sbm Context",
   "Nces ID",
   "Enrollment",
   "Curate Search Term",
+  "Currated Search Term",
+  "Internal Customer ID",
 ]);
 
 const TOPICS = ["Security & Access Control", "Construction & Renovation", "Safety Grants & Funding"];
@@ -107,25 +112,25 @@ export default function AIOpportunityFeed() {
   const categoryOptions = [...new Set(rows.map((r) => String(r["Category Tags"] ?? "")).filter(Boolean))].sort();
   const sourceOptions   = [...new Set(rows.map((r) => String(r["Source Tags"]   ?? "")).filter(Boolean))].sort();
 
-  // Metabase may return "Ai Analysis" or "AI Analysis" — normalise to whichever exists
-  const aiAnalysisKey = rows[0]
-    ? (Object.keys(rows[0]).find((k) => k.toLowerCase().replace(/\s/g, "") === "aianalysis") ?? "Ai Analysis")
-    : "Ai Analysis";
-  const strengthKey = rows[0]
-    ? (Object.keys(rows[0]).find((k) => k.toLowerCase().replace(/[\s_]/g, "") === "signalstrength") ?? "Signal Strength")
-    : "Signal Strength";
+  // Resolve column names flexibly — table uses "Campaign #", "Date", "Source Link", "Currated Search Term"
+  const keys = rows[0] ? Object.keys(rows[0]) : [];
+  const campaignKey  = keys.find((k) => k.toLowerCase().startsWith("campaign")) ?? "Campaign #";
+  const dateKey      = keys.find((k) => ["date", "run date"].includes(k.toLowerCase()))      ?? "Date";
+  const linkKey      = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source") || k.toLowerCase().includes("sbm link")) ?? "Source Link";
+  const contextKey   = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("ai analysis") || k.toLowerCase().includes("sbm context")) ?? "Currated Search Term";
+  const strengthKey  = keys.find((k) => k.toLowerCase().replace(/[\s_]/g, "") === "signalstrength") ?? "";
+  const amountKey    = keys.find((k) => k.toLowerCase() === "amount") ?? "Amount";
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
-    // temporarily not filtering on aiAnalysisKey/strengthKey for diagnostics
     if (filterTopic.length    && !filterTopic.includes((r.Topic as string) ?? ""))               return false;
     if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
     if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
     if (q) {
       const haystack = [
-        r[aiAnalysisKey], r.District, r.State, r.Campaign,
+        r[contextKey], r.District, r.State, r[campaignKey],
         r["Source Tags"], r["Category Tags"],
-        extractDomain(r["Verified Source Link"] as string),
+        extractDomain(r[linkKey] as string),
       ].map((v) => String(v ?? "").toLowerCase()).join(" ");
       if (!haystack.includes(q)) return false;
     }
@@ -214,9 +219,9 @@ export default function AIOpportunityFeed() {
               <div className="flex items-center justify-center h-40 text-gray-400 text-sm">No signals match filters</div>
             ) : (
               filtered.map((row, i) => {
-                const sc     = strengthColor(row["Signal Strength"]);
-                const amount = fmtAmount(row["Amount"]);
-                const link   = (row["Verified Source Link"] as string | null) || (row["Sbm Link"] as string | null);
+                const sc     = strengthKey ? strengthColor(row[strengthKey]) : { bg: "#F3F4F6", text: "#6B7280" };
+                const amount = fmtAmount(row[amountKey]);
+                const link   = (row[linkKey] as string | null);
                 const domain = (row["Domain"] as string) || extractDomain(link);
 
                 const chips = tagCols
@@ -255,12 +260,12 @@ export default function AIOpportunityFeed() {
 
                     {/* Campaign */}
                     <div className="text-xs text-gray-600 leading-snug" style={{ paddingTop: 4 }}>
-                      {(row.Campaign as string) || "—"}
+                      {(row[campaignKey] as string) || "—"}
                     </div>
 
                     {/* Date */}
                     <div className="text-xs text-gray-500 tabular-nums" style={{ paddingTop: 4 }}>
-                      {fmtDate(row["Run Date"])}
+                      {fmtDate(row[dateKey])}
                     </div>
 
                     {/* Source */}
@@ -271,7 +276,7 @@ export default function AIOpportunityFeed() {
                     {/* Signal Context (AI Analysis) + source link + chips */}
                     <div style={{ paddingTop: 3 }}>
                       <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
-                        {(row[aiAnalysisKey] as string) ?? "—"}
+                        {(row[contextKey] as string) ?? "—"}
                         {domain && link && (
                           <a href={link} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
@@ -308,12 +313,12 @@ export default function AIOpportunityFeed() {
                     {/* Strength */}
                     <div style={{ paddingTop: 1 }}>
                       <span style={{
-                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        display: strengthKey ? "inline-flex" : "none", alignItems: "center", justifyContent: "center",
                         width: 32, height: 32, borderRadius: 6,
                         background: sc.bg, color: sc.text,
                         fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums",
                       }}>
-                        {(row["Signal Strength"] as number) ?? "—"}
+                        {strengthKey ? ((row[strengthKey] as number) ?? "—") : ""}
                       </span>
                     </div>
                   </div>

@@ -74,8 +74,10 @@ async function fetchSignals(): Promise<SignalCache> {
     return entry;
   });
 
-  // Temporarily return all rows to diagnose empty feed — re-add filter once confirmed
-  const rows = allRows;
+  // Filter to Right at School — Internal Customer ID = 1
+  const rows = customerIdCol
+    ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "1")
+    : allRows;
 
   memCache = { rows, columns: cols, customerIdCol, totalBeforeFilter: allRows.length };
   memCacheAt = Date.now();

@@ -10,7 +10,7 @@ const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 const DB_ID    = 67;
 const TABLE_ID = 390;
 
-interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; }
+interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; customerIdCol?: string | null; totalBeforeFilter?: number; }
 let memCache: SignalCache | null = null;
 let memCacheAt = 0;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -55,12 +55,11 @@ async function fetchSignals(): Promise<SignalCache> {
   const sourceTagIdx   = cols.indexOf("Source Tags");
   const categoryTagIdx = cols.indexOf("Category Tags");
 
-  // Find the customer_id column regardless of exact casing/spacing used in the table
-  const CUSTOMER_ID_VARIANTS = [
-    "customer_id", "Customer Id", "Customer ID", "CustomerID",
-    "internal_customer_id", "Internal Customer Id", "Internal Customer ID",
-  ];
-  const customerIdCol = cols.find((c: string) => CUSTOMER_ID_VARIANTS.includes(c)) ?? null;
+  // Find the customer_id column — case-insensitive match against known variants
+  const CUSTOMER_ID_KEYWORDS = ["customer_id", "customerid", "internal_customer_id"];
+  const customerIdCol = cols.find((c: string) =>
+    CUSTOMER_ID_KEYWORDS.some((k) => c.toLowerCase().replace(/[\s-]/g, "_") === k)
+  ) ?? null;
 
   const allRows: Record<string, unknown>[] = rawRows.map((row) => {
     const entry = Object.fromEntries(cols.map((col, i) => [col, row[i]]));
@@ -75,12 +74,17 @@ async function fetchSignals(): Promise<SignalCache> {
     return entry;
   });
 
-  // Filter to Right at School (internal customer id = '0001') when the column exists
+  // Filter to Right at School (customer id 0001 / 1) when the column exists
+  // Accept '0001', '1', or numeric 1 to handle different storage formats
+  const RAS_IDS = new Set(["0001", "1"]);
   const rows = customerIdCol
-    ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "0001")
+    ? allRows.filter((r) => {
+        const val = String(r[customerIdCol] ?? "").trim().replace(/^0+/, "") || "0";
+        return RAS_IDS.has(val) || RAS_IDS.has(String(r[customerIdCol] ?? "").trim());
+      })
     : allRows;
 
-  memCache = { rows, columns: cols };
+  memCache = { rows, columns: cols, customerIdCol, totalBeforeFilter: allRows.length } as SignalCache & Record<string, unknown>;
   memCacheAt = Date.now();
   return memCache;
 }
@@ -90,7 +94,7 @@ export async function GET() {
     const { rows, columns } = await fetchSignals();
     // Serve from in-memory cache only — no CDN caching so stale data from the
     // old Card 432 source is never served after a source change.
-    return NextResponse.json({ rows, columns }, {
+    return NextResponse.json({ rows, columns, _debug: { customerIdCol, totalBeforeFilter } }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {

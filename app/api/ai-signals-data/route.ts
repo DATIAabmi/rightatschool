@@ -74,26 +74,19 @@ async function fetchSignals(): Promise<SignalCache> {
     return entry;
   });
 
-  // Filter to Right at School (customer id 0001 / 1) when the column exists
-  // Accept '0001', '1', or numeric 1 to handle different storage formats
-  const RAS_IDS = new Set(["0001", "1"]);
+  // Filter to Right at School — customer id is 1 (integer or string)
   const rows = customerIdCol
-    ? allRows.filter((r) => {
-        const val = String(r[customerIdCol] ?? "").trim().replace(/^0+/, "") || "0";
-        return RAS_IDS.has(val) || RAS_IDS.has(String(r[customerIdCol] ?? "").trim());
-      })
+    ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "1")
     : allRows;
 
-  memCache = { rows, columns: cols, customerIdCol, totalBeforeFilter: allRows.length } as SignalCache & Record<string, unknown>;
+  memCache = { rows, columns: cols, customerIdCol, totalBeforeFilter: allRows.length };
   memCacheAt = Date.now();
   return memCache;
 }
 
 export async function GET() {
   try {
-    const { rows, columns } = await fetchSignals();
-    // Serve from in-memory cache only — no CDN caching so stale data from the
-    // old Card 432 source is never served after a source change.
+    const { rows, columns, customerIdCol, totalBeforeFilter } = await fetchSignals();
     return NextResponse.json({ rows, columns, _debug: { customerIdCol, totalBeforeFilter } }, {
       headers: { "Cache-Control": "no-store" },
     });

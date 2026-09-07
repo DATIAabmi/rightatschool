@@ -117,7 +117,7 @@ export default function AIOpportunityFeed() {
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
-    if (!r[aiAnalysisKey] || !r[strengthKey]) return false;
+    // temporarily not filtering on aiAnalysisKey/strengthKey for diagnostics
     if (filterTopic.length    && !filterTopic.includes((r.Topic as string) ?? ""))               return false;
     if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
     if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;

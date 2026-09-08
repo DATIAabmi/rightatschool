@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
       .filter(matches(domains, domainCol))
       .filter(matches(states, stateCol));
 
-    return cachedJson({ cols, rows });
+    return cachedJson({ cols, rows, _cols: cols.map((c) => c.display_name) });
   } catch (err) {
     return NextResponse.json({ cols: [], rows: [], error: String(err) });
   }

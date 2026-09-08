@@ -322,7 +322,7 @@ function EngagedUsersContent() {
     fetch(`/api/q405-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.error) throw new Error(d.error);
+        if (d.error) throw new Error(d.error ?? "Unknown error from q405-data");
         setCols(d.cols);
         setRows(d.rows);
         setLoading(false);

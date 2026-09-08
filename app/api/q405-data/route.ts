@@ -43,9 +43,14 @@ async function fetchFullDataset() {
     clearTimeout(timeout);
   }
 
-  if (!res.ok) return { cols: [], rows: [] };
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Card 405 returned ${res.status}: ${body.slice(0, 300)}`);
+  }
 
   const data = await res.json();
+  if (data.error) throw new Error(`Card 405 error: ${data.error}`);
+
   const cols = (data.data?.cols ?? []).map((c: { name: string; display_name: string; base_type: string }) => ({
     display_name: DISPLAY_NAMES[c.name] ?? c.display_name,
     base_type: c.base_type,
@@ -97,7 +102,7 @@ export async function GET(req: NextRequest) {
       .filter(matches(states, stateCol));
 
     return cachedJson({ cols, rows });
-  } catch {
-    return NextResponse.json({ cols: [], rows: [] });
+  } catch (err) {
+    return NextResponse.json({ cols: [], rows: [], error: String(err) });
   }
 }

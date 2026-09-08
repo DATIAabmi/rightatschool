@@ -8,77 +8,33 @@ import { exportToCsv } from "@/lib/exportCsv";
 import { fmtDate } from "@/lib/fmtDate";
 
 type Signal = Record<string, unknown>;
+type TabKey = "Keywords" | "Category" | "Signal Analysis" | "Source Text";
 
-// Chip styling per column name
-function chipStyle(label: string): React.CSSProperties {
-  if (label === "Category Tags")
-    return { background: "#EDE9FE", color: "#4C1D95", border: "1px solid #C4B5FD" };
-  return { background: "#F3F4F6", color: "#374151", border: "1px solid #E5E7EB" };
-}
-
-// Columns handled explicitly as grid cells or excluded from chips
-const PRIMARY_COLS = new Set([
-  "Signal Strength",
-  "Action",
-  "Ai Analysis",
-  "AI Analysis",
-  "City",
-  "County",
-  "Amount",
-  "Confidence",
-  "Verified Source Link",
-  "Source Link",
-  "Run Date",
-  "Date",
-  "Source Tags",
-  "District",
-  "Domain",
-  "State",
-  "Campaign",
-  "Campaign #",
-  "Sbm Link",
-  "Sbm Date",
-  "Sbm Context",
-  "Nces ID",
-  "Enrollment",
-  "Curate Search Term",
-  "Currated Search Term",
-  "Internal Customer ID",
-]);
-
-const TOPICS = ["Security & Access Control", "Construction & Renovation", "Safety Grants & Funding"];
-
-function strengthColor(s: unknown): { bg: string; text: string } {
-  const v = typeof s === "number" ? s : 0;
-  if (v >= 8) return { bg: "#D4EFDF", text: "#145A32" };
-  if (v >= 5) return { bg: "#FEF3CD", text: "#7A5800" };
-  return { bg: "#F4E8E6", text: "#8A2010" };
-}
+const TABS: TabKey[] = ["Keywords", "Category", "Signal Analysis", "Source Text"];
 
 function extractDomain(url: string | null | undefined): string {
   if (!url) return "";
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
-function fmtAmount(v: unknown): string {
-  if (!v || typeof v !== "string") return "";
-  const n = parseFloat(v.replace(/[^0-9.]/g, ""));
-  if (isNaN(n)) return v;
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `$${(n / 1_000).toFixed(0)}K`;
-  return v.startsWith("$") ? v : `$${v}`;
-}
+// Columns excluded from all display (handled explicitly or hidden)
+const PRIMARY_COLS = new Set([
+  "Signal Strength", "Action", "Ai Analysis", "AI Analysis",
+  "City", "County", "Amount", "Confidence", "Verified Source Link",
+  "Source Link", "Run Date", "Date", "Source Tags", "District", "Domain",
+  "State", "Campaign", "Campaign #", "Sbm Link", "Sbm Date", "Sbm Context",
+  "Nces ID", "Enrollment", "Curate Search Term", "Currated Search Term",
+  "Internal Customer ID", "Category Tags",
+]);
 
-
-const GRID = "30px 95px 130px 45px 80px 82px 110px minmax(0,1fr) 68px 44px";
+const GRID = "30px 110px 140px 40px 80px 82px 115px minmax(0,1fr)";
 const GAP  = "0 8px";
 
 export default function AIOpportunityFeed() {
   const [rows, setRows]       = useState<Signal[]>([]);
-  const [tagCols, setTagCols] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
-  const [filterTopic,    setFilterTopic]    = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<TabKey>("Keywords");
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
   const [filterSource,   setFilterSource]   = useState<string[]>([]);
   const [searchText,     setSearchText]     = useState("");
@@ -103,7 +59,6 @@ export default function AIOpportunityFeed() {
       .then((d: { rows?: Signal[]; columns?: string[]; error?: string }) => {
         if (d.error) throw new Error(d.error);
         setRows(d.rows ?? []);
-        setTagCols((d.columns ?? []).filter((c) => !PRIMARY_COLS.has(c)));
         setLoading(false);
       })
       .catch((e: Error) => { setError(e.message ?? "Failed to load"); setLoading(false); });
@@ -112,18 +67,28 @@ export default function AIOpportunityFeed() {
   const categoryOptions = [...new Set(rows.map((r) => String(r["Category Tags"] ?? "")).filter(Boolean))].sort();
   const sourceOptions   = [...new Set(rows.map((r) => String(r["Source Tags"]   ?? "")).filter(Boolean))].sort();
 
-  // Resolve column names flexibly — table uses "Campaign #", "Date", "Source Link", "Currated Search Term"
+  // Resolve column names flexibly from actual API response
   const keys = rows[0] ? Object.keys(rows[0]) : [];
-  const campaignKey  = keys.find((k) => k.toLowerCase().startsWith("campaign")) ?? "Campaign #";
-  const dateKey      = keys.find((k) => ["date", "run date"].includes(k.toLowerCase()))      ?? "Date";
-  const linkKey      = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source") || k.toLowerCase().includes("sbm link")) ?? "Source Link";
-  const contextKey   = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("ai analysis") || k.toLowerCase().includes("sbm context")) ?? "Currated Search Term";
-  const strengthKey  = keys.find((k) => k.toLowerCase().replace(/[\s_]/g, "") === "signalstrength") ?? "";
-  const amountKey    = keys.find((k) => k.toLowerCase() === "amount") ?? "Amount";
+  const campaignKey = keys.find((k) => k.toLowerCase().startsWith("campaign")) ?? "Campaign #";
+  const dateKey     = keys.find((k) => ["date", "run date"].includes(k.toLowerCase())) ?? "Date";
+  const linkKey     = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source") || k.toLowerCase().includes("sbm link")) ?? "Source Link";
+  const contextKey  = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("ai analysis") || k.toLowerCase().includes("sbm context")) ?? "Currated Search Term";
+
+  // What to show in the Signal Context column based on active tab
+  function getTabContent(row: Signal): string {
+    switch (activeTab) {
+      case "Keywords":       return String(row[contextKey] ?? "—");
+      case "Category":       return String(row["Category Tags"] ?? "—");
+      case "Signal Analysis": return String(row[contextKey] ?? "—");
+      case "Source Text": {
+        const link = row[linkKey] as string | null;
+        return link || "—";
+      }
+    }
+  }
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
-    if (filterTopic.length    && !filterTopic.includes((r.Topic as string) ?? ""))               return false;
     if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
     if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
     if (q) {
@@ -137,8 +102,9 @@ export default function AIOpportunityFeed() {
     return true;
   });
 
-  const csvCols = Object.keys(rows[0] ?? {}).map((k) => ({ display_name: k, base_type: "type/Text" }));
-  const csvRows = filtered.map((r) => Object.values(r));
+  const csvCols = Object.keys(rows[0] ?? {}).filter(k => !PRIMARY_COLS.has(k) || ["District","Domain","State","Campaign #","Date","Source Tags","Source Link","Currated Search Term","Category Tags"].includes(k))
+    .map((k) => ({ display_name: k, base_type: "type/Text" }));
+  const csvRows = filtered.map((r) => csvCols.map(c => r[c.display_name]));
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
@@ -161,25 +127,40 @@ export default function AIOpportunityFeed() {
           </div>
           <MultiSelectDropdown label="Category" value={filterCategory} onChange={setFilterCategory} options={categoryOptions} />
           <MultiSelectDropdown label="Source"   value={filterSource}   onChange={setFilterSource}   options={sourceOptions} />
-          <MultiSelectDropdown label="Topic"    value={filterTopic}    onChange={setFilterTopic}    options={TOPICS} />
         </div>
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
-        {/* Title bar */}
+        {/* Title bar with tab buttons */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="font-bold text-sm tracking-wide uppercase">AI Opportunity Signals</span>
+            <span className="font-bold text-sm tracking-wide uppercase">Account Intelligence</span>
             {!loading && <span className="text-gray-400 text-xs">{filtered.length.toLocaleString()} signals</span>}
           </div>
-          {!loading && filtered.length > 0 && (
-            <button
-              onClick={() => exportToCsv("ai-signals", csvCols as never, csvRows as never)}
-              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
-            >
-              <Download size={13} /> Export CSV
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Tab selector buttons */}
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
+                style={activeTab === tab
+                  ? { background: "#4ade80", color: "#111827" }
+                  : { background: "rgba(255,255,255,0.1)", color: "#d1d5db" }
+                }
+              >
+                {tab}
+              </button>
+            ))}
+            {!loading && filtered.length > 0 && (
+              <button
+                onClick={() => exportToCsv("ai-signals", csvCols as never, csvRows as never)}
+                className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors ml-1"
+              >
+                <Download size={13} /> Export CSV
+              </button>
+            )}
+          </div>
         </div>
 
         {loading && (
@@ -210,33 +191,23 @@ export default function AIOpportunityFeed() {
               <span>Campaign</span>
               <span>Date</span>
               <span>Source</span>
-              <span>Signal Context</span>
-              <span>Amount</span>
-              <span>Strength</span>
+              <span style={{ color: "#16a34a", fontWeight: 700 }}>{activeTab}</span>
             </div>
 
             {filtered.length === 0 ? (
               <div className="flex items-center justify-center h-40 text-gray-400 text-sm">No signals match filters</div>
             ) : (
               filtered.map((row, i) => {
-                const sc     = strengthKey ? strengthColor(row[strengthKey]) : { bg: "#F3F4F6", text: "#6B7280" };
-                const amount = fmtAmount(row[amountKey]);
-                const link   = (row[linkKey] as string | null);
+                const link   = row[linkKey] as string | null;
                 const domain = (row["Domain"] as string) || extractDomain(link);
-
-                const chips = tagCols
-                  .map((col) => ({ label: col, value: row[col] }))
-                  .filter(({ value }) => value !== null && value !== undefined && value !== "");
+                const tabContent = getTabContent(row);
+                const isLink = activeTab === "Source Text";
 
                 return (
                   <div
                     key={i}
                     className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors items-start"
-                    style={{
-                      gridTemplateColumns: GRID,
-                      gap: GAP,
-                      padding: "12px 20px",
-                    }}
+                    style={{ gridTemplateColumns: GRID, gap: GAP, padding: "12px 20px" }}
                   >
                     {/* # */}
                     <div className="text-xs text-gray-400 tabular-nums" style={{ paddingTop: 4 }}>
@@ -248,7 +219,7 @@ export default function AIOpportunityFeed() {
                       {(row.District as string) || "—"}
                     </div>
 
-                    {/* Domain — plain text only; link moved to Signal Context */}
+                    {/* Domain */}
                     <div className="min-w-0 overflow-hidden text-xs text-gray-600 leading-snug truncate" style={{ paddingTop: 4 }}>
                       {domain || "—"}
                     </div>
@@ -268,58 +239,35 @@ export default function AIOpportunityFeed() {
                       {fmtDate(row[dateKey])}
                     </div>
 
-                    {/* Source */}
+                    {/* Source Tags */}
                     <div className="text-xs text-gray-600 leading-snug" style={{ paddingTop: 4 }}>
                       {(row["Source Tags"] as string) || "—"}
                     </div>
 
-                    {/* Signal Context (AI Analysis) + source link + chips */}
+                    {/* Signal Context — content switches per tab */}
                     <div style={{ paddingTop: 3 }}>
-                      <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
-                        {(row[contextKey] as string) ?? "—"}
-                        {domain && link && (
+                      {isLink ? (
+                        link ? (
                           <a href={link} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
-                            title={link}>
-                            <span>{domain}</span>
-                            <ExternalLink size={10} className="shrink-0" />
+                            className="text-xs text-blue-600 hover:text-blue-800 break-all leading-relaxed inline-flex items-start gap-1">
+                            <span className="break-all">{link}</span>
+                            <ExternalLink size={10} className="shrink-0 mt-0.5" />
                           </a>
-                        )}
-                      </div>
-                      {chips.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {chips.map(({ label, value }) => (
-                            <span key={label} style={{
-                              display: "inline-flex", alignItems: "center", gap: 4,
-                              fontSize: 10, lineHeight: 1, padding: "3px 7px", borderRadius: 4,
-                              whiteSpace: "nowrap",
-                              ...chipStyle(label),
-                            }}>
-                              <span style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", opacity: 0.6 }}>
-                                {label}
-                              </span>
-                              <span style={{ fontWeight: 500 }}>{String(value)}</span>
-                            </span>
-                          ))}
+                        ) : <span className="text-xs text-gray-400">—</span>
+                      ) : (
+                        <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
+                          {tabContent !== "—" ? tabContent : <span className="text-gray-400">—</span>}
+                          {/* Source link appended at end for non-link tabs */}
+                          {tabContent !== "—" && domain && link && (
+                            <a href={link} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
+                              title={link}>
+                              <span>{domain}</span>
+                              <ExternalLink size={10} className="shrink-0" />
+                            </a>
+                          )}
                         </div>
                       )}
-                    </div>
-
-                    {/* Amount */}
-                    <div className="text-xs font-semibold text-gray-800 tabular-nums" style={{ paddingTop: 4 }}>
-                      {amount || "—"}
-                    </div>
-
-                    {/* Strength */}
-                    <div style={{ paddingTop: 1 }}>
-                      <span style={{
-                        display: strengthKey ? "inline-flex" : "none", alignItems: "center", justifyContent: "center",
-                        width: 32, height: 32, borderRadius: 6,
-                        background: sc.bg, color: sc.text,
-                        fontSize: 15, fontWeight: 800, fontVariantNumeric: "tabular-nums",
-                      }}>
-                        {strengthKey ? ((row[strengthKey] as number) ?? "—") : ""}
-                      </span>
                     </div>
                   </div>
                 );

@@ -1,36 +1,109 @@
 "use client";
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ExternalLink, Loader2, Download, Search } from "lucide-react";
+import { ExternalLink, Loader2, Download, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
 import { fmtDate } from "@/lib/fmtDate";
 
 type Signal = Record<string, unknown>;
+type SortDir = "asc" | "desc";
+interface SortState { col: string; dir: SortDir }
 
 function extractDomain(url: string | null | undefined): string {
   if (!url) return "";
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
-// Columns excluded from all display (handled explicitly or hidden)
-const PRIMARY_COLS = new Set([
-  "Signal Strength", "Action", "Ai Analysis", "AI Analysis",
-  "City", "County", "Amount", "Confidence", "Verified Source Link",
-  "Source Link", "Run Date", "Date", "Source Tags", "District", "Domain",
-  "State", "Campaign", "Campaign #", "Sbm Link", "Sbm Date", "Sbm Context",
-  "Nces ID", "Enrollment", "Curate Search Term", "Currated Search Term",
-  "Internal Customer ID", "Category Tags",
-]);
+// Full column grid — table scrolls horizontally
+// # | District | Domain | State | Campaign | Keywords | Source Link | Date | Category | Source | Signal Analysis | Source Text | Strength
+const COLS = [
+  { key: "#",               width: 30,  sort: false },
+  { key: "District",        width: 120, sort: true  },
+  { key: "Domain",          width: 120, sort: true  },
+  { key: "State",           width: 40,  sort: true  },
+  { key: "Campaign",        width: 65,  sort: true  },
+  { key: "Keywords",        width: 160, sort: true  },
+  { key: "Source Link",     width: 90,  sort: false },
+  { key: "Date",            width: 75,  sort: true  },
+  { key: "Category",        width: 115, sort: true  },
+  { key: "Source",          width: 90,  sort: true  },
+  { key: "Signal Analysis", width: 220, sort: true  },
+  { key: "Source Text",     width: 110, sort: false },
+  { key: "Strength",        width: 70,  sort: true  },
+];
 
-const GRID = "30px 110px 140px 40px 80px 82px 115px minmax(0,1fr)";
+const SORT_OPTIONS = COLS.filter((c) => c.sort);
+
+const GRID = COLS.map((c) => `${c.width}px`).join(" ");
 const GAP  = "0 8px";
+const MIN_W = COLS.reduce((s, c) => s + c.width, 0) + (COLS.length - 1) * 8 + 40;
+
+// ── Sort dropdown ─────────────────────────────────────────────────────────────
+function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors">
+        <ArrowUpDown size={13} className="text-gray-400" />
+        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Sort by:</span>
+        <span className="text-blue-600 font-medium text-xs">{sort.col}</span>
+        <span className="text-gray-400 text-xs">{sort.dir === "asc" ? "↑" : "↓"}</span>
+        <ChevronDown size={13} className="text-gray-400 shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-[180px] py-1">
+          {SORT_OPTIONS.map((c) => {
+            const active = sort.col === c.key;
+            return (
+              <button key={c.key}
+                onClick={() => { onSort({ col: c.key, dir: active && sort.dir === "desc" ? "asc" : "desc" }); setOpen(false); }}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 ${active ? "text-blue-600 font-semibold" : "text-gray-600"}`}>
+                {c.key}
+                {active && (sort.dir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Map column header key → the row field it sorts by
+function getRowValue(row: Signal, colKey: string, campaignKey: string, contextKey: string, dateKey: string, linkKey: string, strengthKey: string): unknown {
+  switch (colKey) {
+    case "District":        return row.District;
+    case "Domain":          return (row["Domain"] as string) || extractDomain(row[linkKey] as string);
+    case "State":           return row.State;
+    case "Campaign":        return row[campaignKey];
+    case "Keywords":        return row[contextKey];
+    case "Date":            return row[dateKey];
+    case "Category":        return row["Category Tags"];
+    case "Source":          return row["Source Tags"];
+    case "Signal Analysis": return row[contextKey];
+    case "Strength":        return strengthKey ? row[strengthKey] : null;
+    default:                return null;
+  }
+}
 
 export default function AIOpportunityFeed() {
   const [rows, setRows]       = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
+  const [sort, setSort]       = useState<SortState>({ col: "Date", dir: "desc" });
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
   const [filterSource,   setFilterSource]   = useState<string[]>([]);
   const [searchText,     setSearchText]     = useState("");
@@ -67,8 +140,9 @@ export default function AIOpportunityFeed() {
   const keys = rows[0] ? Object.keys(rows[0]) : [];
   const campaignKey = keys.find((k) => k.toLowerCase().startsWith("campaign")) ?? "Campaign #";
   const dateKey     = keys.find((k) => ["date", "run date"].includes(k.toLowerCase())) ?? "Date";
-  const linkKey     = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source") || k.toLowerCase().includes("sbm link")) ?? "Source Link";
-  const contextKey  = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("ai analysis") || k.toLowerCase().includes("sbm context")) ?? "Currated Search Term";
+  const linkKey     = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source")) ?? "Source Link";
+  const contextKey  = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("currat")) ?? "Currated Search Term";
+  const strengthKey = keys.find((k) => k.toLowerCase().replace(/[\s_]/g, "") === "signalstrength") ?? "";
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
@@ -85,151 +159,189 @@ export default function AIOpportunityFeed() {
     return true;
   });
 
-  const csvCols = Object.keys(rows[0] ?? {}).filter(k => !PRIMARY_COLS.has(k) || ["District","Domain","State","Campaign #","Date","Source Tags","Source Link","Currated Search Term","Category Tags"].includes(k))
-    .map((k) => ({ display_name: k, base_type: "type/Text" }));
-  const csvRows = filtered.map((r) => csvCols.map(c => r[c.display_name]));
+  const sorted = [...filtered].sort((a, b) => {
+    const av = getRowValue(a, sort.col, campaignKey, contextKey, dateKey, linkKey, strengthKey);
+    const bv = getRowValue(b, sort.col, campaignKey, contextKey, dateKey, linkKey, strengthKey);
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    const cmp = typeof av === "number" && typeof bv === "number"
+      ? av - bv : String(av).localeCompare(String(bv));
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+
+  const csvCols = [
+    "District", "Domain", "State", campaignKey, contextKey,
+    linkKey, dateKey, "Category Tags", "Source Tags",
+  ].map((k) => ({ display_name: k, base_type: "type/Text" }));
+  const csvRows = sorted.map((r) => csvCols.map((c) => r[c.display_name]));
 
   return (
     <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
+      {/* Filters */}
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
-            <Search size={13} className="text-gray-400 shrink-0" />
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search district, state…"
-              className="text-xs text-gray-700 bg-transparent border-none outline-none w-44 placeholder-gray-400"
-            />
-            {searchText && (
-              <button onClick={() => setSearchText("")} className="text-gray-300 hover:text-gray-500 ml-0.5 text-xs leading-none">✕</button>
-            )}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+              <Search size={13} className="text-gray-400 shrink-0" />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Search district, state…"
+                className="text-xs text-gray-700 bg-transparent border-none outline-none w-44 placeholder-gray-400"
+              />
+              {searchText && (
+                <button onClick={() => setSearchText("")} className="text-gray-300 hover:text-gray-500 ml-0.5 text-xs leading-none">✕</button>
+              )}
+            </div>
+            <MultiSelectDropdown label="Category" value={filterCategory} onChange={setFilterCategory} options={categoryOptions} />
+            <MultiSelectDropdown label="Source"   value={filterSource}   onChange={setFilterSource}   options={sourceOptions} />
           </div>
-          <MultiSelectDropdown label="Category" value={filterCategory} onChange={setFilterCategory} options={categoryOptions} />
-          <MultiSelectDropdown label="Source"   value={filterSource}   onChange={setFilterSource}   options={sourceOptions} />
+          <SortDropdown sort={sort} onSort={setSort} />
         </div>
       </div>
 
+      {/* Horizontally scrollable content area */}
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
-        {/* Title bar with tab buttons */}
-        <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="font-bold text-sm tracking-wide uppercase">Account Intelligence</span>
-            {!loading && <span className="text-gray-400 text-xs">{filtered.length.toLocaleString()} signals</span>}
-          </div>
-          {!loading && filtered.length > 0 && (
-            <button
-              onClick={() => exportToCsv("ai-signals", csvCols as never, csvRows as never)}
-              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
-            >
-              <Download size={13} /> Export CSV
-            </button>
-          )}
-        </div>
-
-        {loading && (
-          <div className="flex items-center justify-center h-64 gap-2 text-gray-400 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">
-            <Loader2 size={18} className="animate-spin" /> Loading AI signals…
-          </div>
-        )}
-        {!loading && error && (
-          <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
-        )}
-        {!loading && !error && (
-          <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm bg-white">
-            {/* Column headers */}
-            <div
-              className="sticky z-10 bg-white border-b border-gray-200 grid text-xs font-semibold"
-              style={{
-                top: titleBarHeight,
-                color: "#111827",
-                gridTemplateColumns: GRID,
-                gap: GAP,
-                padding: "10px 20px",
-              }}
-            >
-              <span>#</span>
-              <span>District</span>
-              <span>Domain</span>
-              <span>State</span>
-              <span>Campaign</span>
-              <span>Date</span>
-              <span>Source</span>
-              <span>Signal Context</span>
+        <div style={{ minWidth: MIN_W }}>
+          {/* Title bar */}
+          <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="font-bold text-sm tracking-wide uppercase">Account Intelligence</span>
+              {!loading && <span className="text-gray-400 text-xs">{sorted.length.toLocaleString()} signals</span>}
             </div>
-
-            {filtered.length === 0 ? (
-              <div className="flex items-center justify-center h-40 text-gray-400 text-sm">No signals match filters</div>
-            ) : (
-              filtered.map((row, i) => {
-                const link   = row[linkKey] as string | null;
-                const domain = (row["Domain"] as string) || extractDomain(link);
-                const signalContext = String(row[contextKey] ?? "—");
-
-                return (
-                  <div
-                    key={i}
-                    className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors items-start"
-                    style={{ gridTemplateColumns: GRID, gap: GAP, padding: "12px 20px" }}
-                  >
-                    {/* # */}
-                    <div className="text-xs text-gray-400 tabular-nums" style={{ paddingTop: 4 }}>
-                      {i + 1}
-                    </div>
-
-                    {/* District */}
-                    <div className="text-xs text-gray-700 leading-snug" style={{ paddingTop: 4 }}>
-                      {(row.District as string) || "—"}
-                    </div>
-
-                    {/* Domain */}
-                    <div className="min-w-0 overflow-hidden text-xs text-gray-600 leading-snug truncate" style={{ paddingTop: 4 }}>
-                      {domain || "—"}
-                    </div>
-
-                    {/* State */}
-                    <div className="text-xs text-gray-600" style={{ paddingTop: 4 }}>
-                      {(row.State as string) || "—"}
-                    </div>
-
-                    {/* Campaign */}
-                    <div className="text-xs text-gray-600 leading-snug" style={{ paddingTop: 4 }}>
-                      {(row[campaignKey] as string) || "—"}
-                    </div>
-
-                    {/* Date */}
-                    <div className="text-xs text-gray-500 tabular-nums" style={{ paddingTop: 4 }}>
-                      {fmtDate(row[dateKey])}
-                    </div>
-
-                    {/* Source Tags */}
-                    <div className="text-xs text-gray-600 leading-snug" style={{ paddingTop: 4 }}>
-                      {(row["Source Tags"] as string) || "—"}
-                    </div>
-
-                    {/* Signal Context */}
-                    <div style={{ paddingTop: 3 }}>
-                      <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
-                        {signalContext !== "—" ? signalContext : <span className="text-gray-400">—</span>}
-                        {signalContext !== "—" && domain && link && (
-                          <a href={link} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
-                            title={link}>
-                            <span>{domain}</span>
-                            <ExternalLink size={10} className="shrink-0" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
+            {!loading && sorted.length > 0 && (
+              <button
+                onClick={() => exportToCsv("ai-signals", csvCols as never, csvRows as never)}
+                className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
+              >
+                <Download size={13} /> Export CSV
+              </button>
             )}
           </div>
-        )}
+
+          {loading && (
+            <div className="flex items-center justify-center h-64 gap-2 text-gray-400 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">
+              <Loader2 size={18} className="animate-spin" /> Loading AI signals…
+            </div>
+          )}
+          {!loading && error && (
+            <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
+          )}
+          {!loading && !error && (
+            <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm bg-white">
+              {/* Column headers */}
+              <div
+                className="sticky z-10 bg-white border-b border-gray-200 grid text-xs font-semibold"
+                style={{ top: titleBarHeight, color: "#111827", gridTemplateColumns: GRID, gap: GAP, padding: "10px 20px" }}
+              >
+                {COLS.map((c) => (
+                  <span
+                    key={c.key}
+                    onClick={c.sort ? () => setSort({ col: c.key, dir: sort.col === c.key && sort.dir === "desc" ? "asc" : "desc" }) : undefined}
+                    className={c.sort ? "cursor-pointer hover:opacity-70 inline-flex items-center gap-0.5" : ""}
+                  >
+                    {c.key}
+                    {c.sort && sort.col === c.key && (
+                      sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />
+                    )}
+                  </span>
+                ))}
+              </div>
+
+              {sorted.length === 0 ? (
+                <div className="flex items-center justify-center h-40 text-gray-400 text-sm">No signals match filters</div>
+              ) : (
+                sorted.map((row, i) => {
+                  const link     = row[linkKey] as string | null;
+                  const domain   = (row["Domain"] as string) || extractDomain(link);
+                  const keywords = String(row[contextKey] ?? "");
+                  const strength = strengthKey ? row[strengthKey] : null;
+
+                  return (
+                    <div
+                      key={i}
+                      className="grid border-b border-gray-100 hover:bg-gray-50 transition-colors items-start"
+                      style={{ gridTemplateColumns: GRID, gap: GAP, padding: "11px 20px" }}
+                    >
+                      {/* # */}
+                      <div className="text-xs text-gray-400 tabular-nums pt-0.5">{i + 1}</div>
+
+                      {/* District */}
+                      <div className="text-xs text-gray-700 leading-snug pt-0.5 truncate">
+                        {(row.District as string) || "—"}
+                      </div>
+
+                      {/* Domain */}
+                      <div className="text-xs text-gray-600 leading-snug pt-0.5 truncate">
+                        {domain || "—"}
+                      </div>
+
+                      {/* State */}
+                      <div className="text-xs text-gray-600 pt-0.5">
+                        {(row.State as string) || "—"}
+                      </div>
+
+                      {/* Campaign */}
+                      <div className="text-xs text-gray-600 pt-0.5">
+                        {(row[campaignKey] as string) || "—"}
+                      </div>
+
+                      {/* Keywords */}
+                      <div className="text-xs text-gray-800 leading-snug pt-0.5 break-words">
+                        {keywords || "—"}
+                      </div>
+
+                      {/* Source Link */}
+                      <div className="text-xs pt-0.5">
+                        {link ? (
+                          <a href={link} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-800 transition-colors"
+                            title={link}>
+                            <span className="truncate max-w-[72px] inline-block">{domain}</span>
+                            <ExternalLink size={10} className="shrink-0" />
+                          </a>
+                        ) : "—"}
+                      </div>
+
+                      {/* Date */}
+                      <div className="text-xs text-gray-500 tabular-nums pt-0.5">
+                        {fmtDate(row[dateKey])}
+                      </div>
+
+                      {/* Category */}
+                      <div className="text-xs text-gray-700 leading-snug pt-0.5 break-words">
+                        {(row["Category Tags"] as string) || "—"}
+                      </div>
+
+                      {/* Source */}
+                      <div className="text-xs text-gray-600 leading-snug pt-0.5 truncate">
+                        {(row["Source Tags"] as string) || "—"}
+                      </div>
+
+                      {/* Signal Analysis (Currated Search Term — placeholder until field is added to DB) */}
+                      <div className="text-xs text-gray-800 leading-relaxed pt-0.5 break-words">
+                        {keywords || "—"}
+                      </div>
+
+                      {/* Source Text */}
+                      <div className="text-xs text-gray-500 pt-0.5 break-all leading-snug">
+                        {link || "—"}
+                      </div>
+
+                      {/* Strength */}
+                      <div className="text-xs text-gray-600 tabular-nums pt-0.5">
+                        {strength !== null && strength !== undefined && strength !== "" ? String(strength) : "—"}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

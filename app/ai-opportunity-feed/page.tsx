@@ -19,24 +19,25 @@ function extractDomain(url: string | null | undefined): string {
 // Full column grid — table scrolls horizontally
 // # | District | Domain | State | Campaign | Keywords | Source Link | Date | Category | Source | Signal Analysis | Source Text | Strength
 const COLS = [
-  { key: "#",               width: 30,  sort: false },
-  { key: "District",        width: 120, sort: true  },
-  { key: "Domain",          width: 120, sort: true  },
-  { key: "State",           width: 40,  sort: true  },
-  { key: "Campaign",        width: 65,  sort: true  },
-  { key: "Keywords",        width: 160, sort: true  },
-  { key: "Source Link",     width: 90,  sort: false },
-  { key: "Date",            width: 75,  sort: true  },
-  { key: "Category",        width: 115, sort: true  },
-  { key: "Source",          width: 90,  sort: true  },
-  { key: "Signal Analysis", width: 220, sort: true  },
-  { key: "Source Text",     width: 110, sort: false },
-  { key: "Strength",        width: 70,  sort: true  },
+  { key: "#",               width: 30,  sort: false, flex: false },
+  { key: "District",        width: 120, sort: true,  flex: false },
+  { key: "Domain",          width: 120, sort: true,  flex: false },
+  { key: "State",           width: 40,  sort: true,  flex: false },
+  { key: "Campaign",        width: 65,  sort: true,  flex: false },
+  { key: "Keywords",        width: 160, sort: true,  flex: false },
+  { key: "Source Link",     width: 90,  sort: false, flex: false },
+  { key: "Date",            width: 75,  sort: true,  flex: false },
+  { key: "Category",        width: 115, sort: true,  flex: false },
+  { key: "Source",          width: 90,  sort: true,  flex: false },
+  { key: "Signal Analysis", width: 220, sort: true,  flex: true  },
+  { key: "Source Text",     width: 110, sort: false, flex: false },
+  { key: "Strength",        width: 70,  sort: true,  flex: false },
 ];
 
 const SORT_OPTIONS = COLS.filter((c) => c.sort);
 
-const GRID = COLS.map((c) => `${c.width}px`).join(" ");
+// Signal Analysis expands to fill extra horizontal space; all others are fixed
+const GRID = COLS.map((c) => c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`).join(" ");
 const GAP  = "0 8px";
 const MIN_W = COLS.reduce((s, c) => s + c.width, 0) + (COLS.length - 1) * 8 + 40;
 
@@ -205,7 +206,7 @@ export default function AIOpportunityFeed() {
 
       {/* Horizontally scrollable content area */}
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: MIN_W }}>
+        <div style={{ minWidth: MIN_W, width: "100%" }}>
           {/* Title bar */}
           <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
             <div className="flex items-center gap-3">

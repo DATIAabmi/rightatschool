@@ -8,9 +8,6 @@ import { exportToCsv } from "@/lib/exportCsv";
 import { fmtDate } from "@/lib/fmtDate";
 
 type Signal = Record<string, unknown>;
-type TabKey = "Keywords" | "Category" | "Signal Analysis" | "Source Text";
-
-const TABS: TabKey[] = ["Keywords", "Category", "Signal Analysis", "Source Text"];
 
 function extractDomain(url: string | null | undefined): string {
   if (!url) return "";
@@ -34,7 +31,6 @@ export default function AIOpportunityFeed() {
   const [rows, setRows]       = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
-  const [activeTab, setActiveTab] = useState<TabKey>("Keywords");
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
   const [filterSource,   setFilterSource]   = useState<string[]>([]);
   const [searchText,     setSearchText]     = useState("");
@@ -73,19 +69,6 @@ export default function AIOpportunityFeed() {
   const dateKey     = keys.find((k) => ["date", "run date"].includes(k.toLowerCase())) ?? "Date";
   const linkKey     = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source") || k.toLowerCase().includes("sbm link")) ?? "Source Link";
   const contextKey  = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("ai analysis") || k.toLowerCase().includes("sbm context")) ?? "Currated Search Term";
-
-  // What to show in the Signal Context column based on active tab
-  function getTabContent(row: Signal): string {
-    switch (activeTab) {
-      case "Keywords":       return String(row[contextKey] ?? "—");
-      case "Category":       return String(row["Category Tags"] ?? "—");
-      case "Signal Analysis": return String(row[contextKey] ?? "—");
-      case "Source Text": {
-        const link = row[linkKey] as string | null;
-        return link || "—";
-      }
-    }
-  }
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
@@ -137,30 +120,14 @@ export default function AIOpportunityFeed() {
             <span className="font-bold text-sm tracking-wide uppercase">Account Intelligence</span>
             {!loading && <span className="text-gray-400 text-xs">{filtered.length.toLocaleString()} signals</span>}
           </div>
-          <div className="flex items-center gap-2">
-            {/* Tab selector buttons */}
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="px-3 py-1 rounded-full text-xs font-semibold transition-colors"
-                style={activeTab === tab
-                  ? { background: "#4ade80", color: "#111827" }
-                  : { background: "rgba(255,255,255,0.1)", color: "#d1d5db" }
-                }
-              >
-                {tab}
-              </button>
-            ))}
-            {!loading && filtered.length > 0 && (
-              <button
-                onClick={() => exportToCsv("ai-signals", csvCols as never, csvRows as never)}
-                className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors ml-1"
-              >
-                <Download size={13} /> Export CSV
-              </button>
-            )}
-          </div>
+          {!loading && filtered.length > 0 && (
+            <button
+              onClick={() => exportToCsv("ai-signals", csvCols as never, csvRows as never)}
+              className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+          )}
         </div>
 
         {loading && (
@@ -191,7 +158,7 @@ export default function AIOpportunityFeed() {
               <span>Campaign</span>
               <span>Date</span>
               <span>Source</span>
-              <span style={{ color: "#16a34a", fontWeight: 700 }}>{activeTab}</span>
+              <span>Signal Context</span>
             </div>
 
             {filtered.length === 0 ? (
@@ -200,8 +167,7 @@ export default function AIOpportunityFeed() {
               filtered.map((row, i) => {
                 const link   = row[linkKey] as string | null;
                 const domain = (row["Domain"] as string) || extractDomain(link);
-                const tabContent = getTabContent(row);
-                const isLink = activeTab === "Source Text";
+                const signalContext = String(row[contextKey] ?? "—");
 
                 return (
                   <div
@@ -244,30 +210,19 @@ export default function AIOpportunityFeed() {
                       {(row["Source Tags"] as string) || "—"}
                     </div>
 
-                    {/* Signal Context — content switches per tab */}
+                    {/* Signal Context */}
                     <div style={{ paddingTop: 3 }}>
-                      {isLink ? (
-                        link ? (
+                      <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
+                        {signalContext !== "—" ? signalContext : <span className="text-gray-400">—</span>}
+                        {signalContext !== "—" && domain && link && (
                           <a href={link} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:text-blue-800 break-all leading-relaxed inline-flex items-start gap-1">
-                            <span className="break-all">{link}</span>
-                            <ExternalLink size={10} className="shrink-0 mt-0.5" />
+                            className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
+                            title={link}>
+                            <span>{domain}</span>
+                            <ExternalLink size={10} className="shrink-0" />
                           </a>
-                        ) : <span className="text-xs text-gray-400">—</span>
-                      ) : (
-                        <div className="text-xs text-gray-800 leading-relaxed break-words whitespace-normal">
-                          {tabContent !== "—" ? tabContent : <span className="text-gray-400">—</span>}
-                          {/* Source link appended at end for non-link tabs */}
-                          {tabContent !== "—" && domain && link && (
-                            <a href={link} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-0.5 ml-1.5 text-blue-600 hover:text-blue-800 transition-colors align-baseline"
-                              title={link}>
-                              <span>{domain}</span>
-                              <ExternalLink size={10} className="shrink-0" />
-                            </a>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

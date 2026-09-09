@@ -84,18 +84,18 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 }
 
 // Map column header key → the row field it sorts by
-function getRowValue(row: Signal, colKey: string, campaignKey: string, contextKey: string, dateKey: string, linkKey: string, strengthKey: string): unknown {
+function getRowValue(row: Signal, colKey: string): unknown {
   switch (colKey) {
-    case "District":        return row.District;
-    case "Domain":          return (row["Domain"] as string) || extractDomain(row[linkKey] as string);
-    case "State":           return row.State;
-    case "Campaign":        return row[campaignKey];
-    case "Keywords":        return row[contextKey];
-    case "Date":            return row[dateKey];
-    case "Category":        return row["Category Tags"];
-    case "Source":          return row["Source Tags"];
-    case "Signal Analysis": return row[contextKey];
-    case "Strength":        return strengthKey ? row[strengthKey] : null;
+    case "District":        return row["Organization"];
+    case "Domain":          return (row["Domain"] as string) || extractDomain(row["Source Link"] as string);
+    case "State":           return row["State"];
+    case "Campaign":        return row["Campaign #"];
+    case "Keywords":        return row["Keywords"];
+    case "Date":            return row["Date"];
+    case "Category":        return row["Category"];
+    case "Source":          return row["Source"];
+    case "Signal Analysis": return row["Signal Analysis"];
+    case "Strength":        return row["Strength"];
     default:                return null;
   }
 }
@@ -134,26 +134,18 @@ export default function AIOpportunityFeed() {
       .catch((e: Error) => { setError(e.message ?? "Failed to load"); setLoading(false); });
   }, []);
 
-  const categoryOptions = [...new Set(rows.map((r) => String(r["Category Tags"] ?? "")).filter(Boolean))].sort();
-  const sourceOptions   = [...new Set(rows.map((r) => String(r["Source Tags"]   ?? "")).filter(Boolean))].sort();
-
-  // Resolve column names flexibly from actual API response
-  const keys = rows[0] ? Object.keys(rows[0]) : [];
-  const campaignKey = keys.find((k) => k.toLowerCase().startsWith("campaign")) ?? "Campaign #";
-  const dateKey     = keys.find((k) => ["date", "run date"].includes(k.toLowerCase())) ?? "Date";
-  const linkKey     = keys.find((k) => k.toLowerCase().includes("source link") || k.toLowerCase().includes("verified source")) ?? "Source Link";
-  const contextKey  = keys.find((k) => k.toLowerCase().includes("search term") || k.toLowerCase().includes("currat")) ?? "Currated Search Term";
-  const strengthKey = keys.find((k) => k.toLowerCase().replace(/[\s_]/g, "") === "signalstrength") ?? "";
+  const categoryOptions = [...new Set(rows.map((r) => String(r["Category"] ?? "")).filter(Boolean))].sort();
+  const sourceOptions   = [...new Set(rows.map((r) => String(r["Source"]   ?? "")).filter(Boolean))].sort();
 
   const q = searchText.trim().toLowerCase();
   const filtered = rows.filter((r) => {
-    if (filterCategory.length && !filterCategory.includes((r["Category Tags"] as string) ?? "")) return false;
-    if (filterSource.length   && !filterSource.includes((r["Source Tags"] as string) ?? ""))     return false;
+    if (filterCategory.length && !filterCategory.includes((r["Category"] as string) ?? "")) return false;
+    if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (q) {
       const haystack = [
-        r[contextKey], r.District, r.State, r[campaignKey],
-        r["Source Tags"], r["Category Tags"],
-        extractDomain(r[linkKey] as string),
+        r["Keywords"], r["Organization"], r["State"], r["Campaign #"],
+        r["Source"], r["Category"],
+        extractDomain(r["Source Link"] as string),
       ].map((v) => String(v ?? "").toLowerCase()).join(" ");
       if (!haystack.includes(q)) return false;
     }
@@ -161,8 +153,8 @@ export default function AIOpportunityFeed() {
   });
 
   const sorted = [...filtered].sort((a, b) => {
-    const av = getRowValue(a, sort.col, campaignKey, contextKey, dateKey, linkKey, strengthKey);
-    const bv = getRowValue(b, sort.col, campaignKey, contextKey, dateKey, linkKey, strengthKey);
+    const av = getRowValue(a, sort.col);
+    const bv = getRowValue(b, sort.col);
     if (av === null || av === undefined) return 1;
     if (bv === null || bv === undefined) return -1;
     const cmp = typeof av === "number" && typeof bv === "number"
@@ -171,8 +163,8 @@ export default function AIOpportunityFeed() {
   });
 
   const csvCols = [
-    "District", "Domain", "State", campaignKey, contextKey,
-    linkKey, dateKey, "Category Tags", "Source Tags",
+    "Organization", "Domain", "State", "Campaign #", "Keywords",
+    "Source Link", "Date", "Category", "Source", "Signal Analysis", "Source Text", "Strength",
   ].map((k) => ({ display_name: k, base_type: "type/Text" }));
   const csvRows = sorted.map((r) => csvCols.map((c) => r[c.display_name]));
 
@@ -256,10 +248,8 @@ export default function AIOpportunityFeed() {
                 <div className="flex items-center justify-center h-40 text-gray-400 text-sm">No signals match filters</div>
               ) : (
                 sorted.map((row, i) => {
-                  const link     = row[linkKey] as string | null;
-                  const domain   = (row["Domain"] as string) || extractDomain(link);
-                  const keywords = String(row[contextKey] ?? "");
-                  const strength = strengthKey ? row[strengthKey] : null;
+                  const link   = row["Source Link"] as string | null;
+                  const domain = (row["Domain"] as string) || extractDomain(link);
 
                   return (
                     <div
@@ -270,9 +260,9 @@ export default function AIOpportunityFeed() {
                       {/* # */}
                       <div className="text-xs text-gray-400 tabular-nums pt-0.5">{i + 1}</div>
 
-                      {/* District */}
+                      {/* District (Organization in DB) */}
                       <div className="text-xs text-gray-700 leading-snug pt-0.5 truncate">
-                        {(row.District as string) || "—"}
+                        {(row["Organization"] as string) || "—"}
                       </div>
 
                       {/* Domain */}
@@ -282,17 +272,17 @@ export default function AIOpportunityFeed() {
 
                       {/* State */}
                       <div className="text-xs text-gray-600 pt-0.5">
-                        {(row.State as string) || "—"}
+                        {(row["State"] as string) || "—"}
                       </div>
 
                       {/* Campaign */}
                       <div className="text-xs text-gray-600 pt-0.5">
-                        {(row[campaignKey] as string) || "—"}
+                        {(row["Campaign #"] as string) || "—"}
                       </div>
 
                       {/* Keywords */}
                       <div className="text-xs text-gray-800 leading-snug pt-0.5 break-words">
-                        {keywords || "—"}
+                        {(row["Keywords"] as string) || "—"}
                       </div>
 
                       {/* Source Link */}
@@ -309,32 +299,32 @@ export default function AIOpportunityFeed() {
 
                       {/* Date */}
                       <div className="text-xs text-gray-500 tabular-nums pt-0.5">
-                        {fmtDate(row[dateKey])}
+                        {fmtDate(row["Date"])}
                       </div>
 
                       {/* Category */}
                       <div className="text-xs text-gray-700 leading-snug pt-0.5 break-words">
-                        {(row["Category Tags"] as string) || "—"}
+                        {(row["Category"] as string) || "—"}
                       </div>
 
                       {/* Source */}
                       <div className="text-xs text-gray-600 leading-snug pt-0.5 truncate">
-                        {(row["Source Tags"] as string) || "—"}
+                        {(row["Source"] as string) || "—"}
                       </div>
 
-                      {/* Signal Analysis (Currated Search Term — placeholder until field is added to DB) */}
+                      {/* Signal Analysis */}
                       <div className="text-xs text-gray-800 leading-relaxed pt-0.5 break-words">
-                        {keywords || "—"}
+                        {(row["Signal Analysis"] as string) || "—"}
                       </div>
 
                       {/* Source Text */}
                       <div className="text-xs text-gray-500 pt-0.5 break-words leading-snug">
-                        {link || "—"}
+                        {(row["Source Text"] as string) || "—"}
                       </div>
 
                       {/* Strength */}
                       <div className="text-xs text-gray-600 tabular-nums pt-0.5">
-                        {strength !== null && strength !== undefined && strength !== "" ? String(strength) : "—"}
+                        {row["Strength"] !== null && row["Strength"] !== undefined && row["Strength"] !== "" ? String(row["Strength"]) : "—"}
                       </div>
                     </div>
                   );

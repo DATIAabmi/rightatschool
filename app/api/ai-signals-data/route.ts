@@ -35,48 +35,19 @@ async function fetchSignals(): Promise<SignalCache> {
   const cols: string[] = (data.data?.cols ?? []).map((c: { display_name: string }) => c.display_name);
   const rawRows: unknown[][] = data.data?.rows ?? [];
 
-  // Normalize Source Tags values to consolidated display labels
-  const SOURCE_TAG_MAP: Record<string, string> = {
-    "news":      "News & Media",
-    "articles":  "News & Media",
-    "posts":     "News & Media",
-    "interview": "News & Media",
-  };
-
-  // Normalize Category Tags values to consolidated display labels
-  const CATEGORY_TAG_MAP: Record<string, string> = {
-    "rfp bids":            "RFPs/Grants/Bonds",
-    "bonds/grants":        "RFPs/Grants/Bonds",
-    "vendor selection":    "RFPs/Grants/Bonds",
-    "leadership changes":  "Leader & Strategic Initiatives",
-    "strategic initiatives": "Leader & Strategic Initiatives",
-  };
-
-  const sourceTagIdx   = cols.indexOf("Source Tags");
-  const categoryTagIdx = cols.indexOf("Category Tags");
-
-  // Find the customer_id column — case-insensitive match against known variants
+  // Find the customer_id column — handles "Customer ID" and legacy variants
   const CUSTOMER_ID_KEYWORDS = ["customer_id", "customerid", "internal_customer_id"];
   const customerIdCol = cols.find((c: string) =>
     CUSTOMER_ID_KEYWORDS.some((k) => c.toLowerCase().replace(/[\s-]/g, "_") === k)
   ) ?? null;
 
-  const allRows: Record<string, unknown>[] = rawRows.map((row) => {
-    const entry = Object.fromEntries(cols.map((col, i) => [col, row[i]]));
-    if (sourceTagIdx >= 0 && typeof entry["Source Tags"] === "string") {
-      const normalized = SOURCE_TAG_MAP[entry["Source Tags"].trim().toLowerCase()];
-      if (normalized) entry["Source Tags"] = normalized;
-    }
-    if (categoryTagIdx >= 0 && typeof entry["Category Tags"] === "string") {
-      const normalized = CATEGORY_TAG_MAP[entry["Category Tags"].trim().toLowerCase()];
-      if (normalized) entry["Category Tags"] = normalized;
-    }
-    return entry;
-  });
+  const allRows: Record<string, unknown>[] = rawRows.map((row) =>
+    Object.fromEntries(cols.map((col, i) => [col, row[i]]))
+  );
 
-  // Filter to Right at School — Internal Customer ID = 1
+  // Filter to Right at School — Internal Customer ID = 11564
   const rows = customerIdCol
-    ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "1")
+    ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "11564")
     : allRows;
 
   memCache = { rows, columns: cols, customerIdCol, totalBeforeFilter: allRows.length };

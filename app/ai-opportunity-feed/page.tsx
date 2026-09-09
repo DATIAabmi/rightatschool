@@ -30,7 +30,7 @@ const COLS = [
   { key: "Category",        width: 115, sort: true,  flex: false },
   { key: "Source",          width: 90,  sort: true,  flex: false },
   { key: "Signal Analysis", width: 220, sort: true,  flex: true  },
-  { key: "Source Text",     width: 110, sort: false, flex: false },
+  { key: "Source Text",     width: 260, sort: false, flex: true  },
   { key: "Strength",        width: 70,  sort: true,  flex: false },
 ];
 
@@ -328,7 +328,7 @@ export default function AIOpportunityFeed() {
                       </div>
 
                       {/* Source Text */}
-                      <div className="text-xs text-gray-500 pt-0.5 break-all leading-snug">
+                      <div className="text-xs text-gray-500 pt-0.5 break-words leading-snug">
                         {link || "—"}
                       </div>
 

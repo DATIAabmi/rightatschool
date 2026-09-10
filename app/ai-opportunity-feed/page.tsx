@@ -6,6 +6,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
 import { fmtDate } from "@/lib/fmtDate";
+import { useFilter } from "@/components/FilterContext";
 
 type Signal = Record<string, unknown>;
 type SortDir = "asc" | "desc";
@@ -101,6 +102,7 @@ function getRowValue(row: Signal, colKey: string): unknown {
 }
 
 export default function AIOpportunityFeed() {
+  const { resetSignal } = useFilter();
   const [rows, setRows]       = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
@@ -108,6 +110,15 @@ export default function AIOpportunityFeed() {
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
   const [filterSource,   setFilterSource]   = useState<string[]>([]);
   const [searchText,     setSearchText]     = useState("");
+
+  // Clear local filters when the global Reset Filters button is pressed
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setFilterCategory([]);
+    setFilterSource([]);
+    setSearchText("");
+    setSort({ col: "Date", dir: "desc" });
+  }, [resetSignal]);
 
   const titleBarRef = useRef<HTMLDivElement>(null);
   const [titleBarHeight, setTitleBarHeight] = useState(0);

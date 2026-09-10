@@ -319,7 +319,14 @@ function PersonaInsightsContent() {
           </div>
           {rows.length > 0 && (
             <button
-              onClick={() => exportToCsv("persona-insights", cols, rows)}
+              onClick={() => {
+                // Desired export order: District, Domain, State, Campaign, Job Function, Engagements, Leads
+                // API returns: 0=District 1=Domain 2=State 3=Job Function 4=Campaign 5=Engagements 6=Leads
+                const ORDER = [0, 1, 2, 4, 3, 5, 6];
+                const exportCols = ORDER.map((i) => cols[i]).filter(Boolean);
+                const exportRows = rows.map((r) => ORDER.map((i) => r[i]));
+                exportToCsv("persona-insights", exportCols, exportRows);
+              }}
               className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
             >
               <Download size={13} /> Export CSV

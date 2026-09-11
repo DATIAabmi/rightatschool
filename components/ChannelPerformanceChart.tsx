@@ -40,9 +40,9 @@ function DonutChart({ rows }: { rows: Row[] }) {
               fill="none"
               stroke={seg.color}
               strokeWidth={SW}
-              strokeDasharray={`${seg.pct * circumference} ${circumference}`}
+              strokeLinecap="butt"
+              strokeDasharray={`${seg.pct * circumference + 0.5} ${circumference}`}
               strokeDashoffset={seg.offset}
-              style={{ transition: "stroke-dasharray 0.4s ease" }}
             />
           ))}
           {/* Center label */}

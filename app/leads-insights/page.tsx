@@ -236,7 +236,14 @@ function LeadsInsightsContent() {
             )}
           </div>
           {rows.length > 0 && (
-            <button onClick={() => exportToCsv("leads-insights", cols, rows)}
+            <button onClick={() => {
+                // Raw order: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads
+                // Desired: District, Domain, State, Campaign, Job Function, Total Downloads
+                const ORDER = [0, 1, 3, 2, 4, 5];
+                const exportCols = ORDER.map((i) => cols[i]).filter(Boolean);
+                const exportRows = rows.map((r) => ORDER.map((i) => r[i]));
+                exportToCsv("leads-insights", exportCols, exportRows);
+              }}
               className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors">
               <Download size={13} /> Export CSV
             </button>

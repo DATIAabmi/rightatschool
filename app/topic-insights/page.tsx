@@ -437,7 +437,18 @@ function TopicInsightsContent() {
           </div>
           {rows.length > 0 && (
             <button
-              onClick={() => exportToCsv("topic-insights", cols, rows)}
+              onClick={() => {
+                // Raw order (card 181): 0=District 1=Domain 2=Campaign 3=State 4=Topic 5=Topic_Score 6=Date
+                // Desired: District, Domain, State, Campaign, Topic, Topic Score, Date
+                const ORDER = [0, 1, 3, 2, 4, 5, 6];
+                const exportCols = ORDER.map((i) => cols[i]).filter(Boolean);
+                // Strip campaign description to just the C# code (e.g. "C7: July..." → "C7")
+                const exportRows = rows.map((r) => ORDER.map((i) => {
+                  if (i === 2) return String(r[i] ?? "").split(":")[0].trim();
+                  return r[i];
+                }));
+                exportToCsv("topic-insights", exportCols, exportRows);
+              }}
               className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
             >
               <Download size={13} /> Export CSV

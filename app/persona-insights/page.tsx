@@ -245,15 +245,16 @@ function PersonaInsightsContent() {
     return () => ro.disconnect();
   }, []);
 
+  // Only date and state are server-side filters; district and job function are
+  // client-side so allRows stays stable and the district dropdown always shows
+  // the full set of available districts regardless of current selection.
   const fetchData = useCallback(() => {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (dateStart)             params.set("dateStart", dateStart);
-    if (dateEnd)               params.set("dateEnd",   dateEnd);
-    if (filterDistrict.length) params.set("district",  filterDistrict.join(","));
-    if (filterState.length)    params.set("state",     filterState.join(","));
-    // Job function is filtered client-side (normalizeJobTitle maps raw titles to categories)
+    if (dateStart)          params.set("dateStart", dateStart);
+    if (dateEnd)            params.set("dateEnd",   dateEnd);
+    if (filterState.length) params.set("state",     filterState.join(","));
 
     fetch(`/api/q168-data?${params.toString()}`)
       .then((r) => r.json())
@@ -264,22 +265,23 @@ function PersonaInsightsContent() {
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [dateStart, dateEnd, filterDistrict, filterState]);
+  }, [dateStart, dateEnd, filterState]);
 
-  // Filter campaign and job function client-side.
-  // Campaign is at index 4 (short codes like "C6").
-  // Job Function is at index 3 (raw job_title) — normalize to category for comparison.
+  // Client-side filters: campaign (index 4), district (index 0), job function (index 3).
   useEffect(() => {
     const prefixes = campaign.map((c) => c.split(":")[0].trim());
     let filtered = allRows;
     if (prefixes.length > 0) {
       filtered = filtered.filter((row) => prefixes.includes(String(row[4] ?? "")));
     }
+    if (filterDistrict.length > 0) {
+      filtered = filtered.filter((row) => filterDistrict.includes(String(row[0] ?? "")));
+    }
     if (filterJobFunction.length > 0) {
       filtered = filtered.filter((row) => filterJobFunction.includes(normalizeJobTitle(String(row[3] ?? ""))));
     }
     setRows(filtered);
-  }, [campaign, allRows, filterJobFunction]);
+  }, [campaign, allRows, filterDistrict, filterJobFunction]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

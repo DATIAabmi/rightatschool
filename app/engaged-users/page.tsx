@@ -226,7 +226,7 @@ function DataTable({
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse" style={{ minWidth: 824 }}>
+      <table className="text-xs border-collapse" style={{ minWidth: 1200 }}>
         <thead>
           <tr className="border-b border-gray-200">
             <th className="sticky z-10 bg-white px-2 py-2 w-8 text-[11px] font-bold text-gray-900 border-b border-gray-200" style={{ textAlign: "center", top: headerTop }}>#</th>
@@ -368,7 +368,7 @@ function EngagedUsersContent() {
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }} className="eu-scroll">
         <style>{`.eu-scroll::-webkit-scrollbar{width:10px}.eu-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb{background:#6b7280;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb:hover{background:#374151}`}</style>
-        <div style={{ minWidth: 900, width: "100%" }}>
+        <div style={{ minWidth: 1200, width: "100%" }}>
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Engaged Users By District</span>

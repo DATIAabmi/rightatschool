@@ -98,7 +98,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse" style={{ minWidth: 800 }}>
+      <table className="text-xs border-collapse" style={{ minWidth: 1100 }}>
         <thead>
           <tr className="border-b border-gray-200">
             <th className="sticky z-10 bg-white px-3 py-2 w-12 text-xs font-bold border-b border-gray-200" style={{ color: "#111827", textAlign: "center", top: headerTop }}>#</th>
@@ -228,7 +228,7 @@ function LeadsInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 900, width: "100%" }}>
+        <div style={{ minWidth: 1100, width: "100%" }}>
         <LeadsSummaryPanel districts={filterDistrict} states={filterState} />
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">

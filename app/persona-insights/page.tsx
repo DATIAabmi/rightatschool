@@ -155,7 +155,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse table-fixed" style={{ width: 776, minWidth: 776 }}>
+      <table className="text-xs border-collapse table-fixed" style={{ width: 1050, minWidth: 1050 }}>
         <colgroup>
           <col style={{ width: 36 }} />   {/* # */}
           <col style={{ width: 160 }} />  {/* District */}
@@ -324,7 +324,7 @@ function PersonaInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 800, width: "100%" }}>
+        <div style={{ minWidth: 1050, width: "100%" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">

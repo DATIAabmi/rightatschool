@@ -59,7 +59,7 @@ SELECT
   ANY_VALUE(email_domain) AS Domain,
   ANY_VALUE(state) AS ST,
   ANY_VALUE(abm_campaign) AS Camp,
-  IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS SBM,
+  IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Intel,
   IF(MAX(CASE WHEN topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
   SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
   COUNT(user_engagement_score_trend) AS EngagedUser,

@@ -323,7 +323,8 @@ function PersonaInsightsContent() {
         {showDefs && <DefinitionsModal onClose={() => setShowDefs(false)} />}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
+        <div style={{ minWidth: 800, width: "100%" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -362,6 +363,7 @@ function PersonaInsightsContent() {
             <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

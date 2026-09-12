@@ -416,7 +416,7 @@ function TopicInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 750 }}>
+        <div style={{ minWidth: 750, width: "100%" }}>
 
         {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>

@@ -6,6 +6,42 @@ export const maxDuration = 60;
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
+const DB_ID = 34;
+const TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
+
+function sqlStr(v: string): string { return `'${v.replace(/'/g, "''")}'`; }
+
+// Returns a map of lowercase district name → "Y" | "N"
+async function fetchSBMByDistrict(campaigns: string[]): Promise<Map<string, string>> {
+  const where = ["topic_district IS NOT NULL", "topic_district != ''"];
+  if (campaigns.length) {
+    const likeExprs = campaigns.map((c) => `LOWER(abm_campaign) LIKE LOWER('%${c.replace(/'/g, "''")}%')`);
+    where.push(`(${likeExprs.join(" OR ")})`);
+  }
+  const sql = `
+SELECT
+  topic_district,
+  IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS SBM
+FROM ${TABLE}
+WHERE ${where.join(" AND ")}
+GROUP BY topic_district`;
+
+  try {
+    const res = await fetch(`${METABASE_URL}/api/dataset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      body: JSON.stringify({ database: DB_ID, type: "native", native: { query: sql }, middleware: { "js-int-to-string?": true } }),
+      cache: "no-store",
+    });
+    if (!res.ok) return new Map();
+    const data = await res.json();
+    const map = new Map<string, string>();
+    for (const row of (data.data?.rows ?? []) as [string, string][]) {
+      if (row[0]) map.set(String(row[0]).toLowerCase(), row[1] ?? "N");
+    }
+    return map;
+  } catch { return new Map(); }
+}
 
 const DISPLAY_NAMES: Record<string, string> = {
   Job_Function:    "Job Function",
@@ -87,27 +123,34 @@ export async function GET(req: NextRequest) {
     // individually and quoted correctly. Empty string means "no filter".
     const campaignList = campaigns.length > 0 ? campaigns : [""];
     const contentNameList = contentNames.length > 0 ? contentNames : [""];
-    const results = await Promise.all(
-      campaignList.flatMap((c) => contentNameList.map((n) => fetchForCampaign(c, dateStart, dateEnd, n)))
-    );
+    const [results, sbmMap] = await Promise.all([
+      Promise.all(campaignList.flatMap((c) => contentNameList.map((n) => fetchForCampaign(c, dateStart, dateEnd, n)))),
+      fetchSBMByDistrict(campaigns),
+    ]);
 
     const first = results.find((r) => r !== null);
     if (!first) {
       return NextResponse.json({ cols: [], rows: [], error: "Metabase error" });
     }
-    const cols = first.cols;
+    // Append SBM as column index 6 (after District, Domain, Campaign, State, Job Function, Downloads)
+    const sbmCol = { display_name: "SBM", base_type: "type/Text" };
+    const cols = [...first.cols, sbmCol];
     // When multiple content names are selected, multiple result sets may return
     // the same district+domain+state+job row. Merge by summing Total_Downloads.
-    const downloadCol = cols.length - 1; // always last column
+    // cols: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=SBM
+    const downloadCol = 5;
     const rowMap = new Map<string, unknown[]>();
     for (const r of results) {
       for (const row of r?.rows ?? []) {
-        const key = row.slice(0, downloadCol).join("\x00");
+        const districtKey = String(row[0] ?? "").toLowerCase();
+        const sbm = sbmMap.get(districtKey) ?? "N";
+        const fullRow = [...row, sbm];
+        const key = fullRow.slice(0, downloadCol).join("\x00");
         const existing = rowMap.get(key);
         if (existing) {
-          existing[downloadCol] = Number(existing[downloadCol] ?? 0) + Number(row[downloadCol] ?? 0);
+          existing[downloadCol] = Number(existing[downloadCol] ?? 0) + Number(fullRow[downloadCol] ?? 0);
         } else {
-          rowMap.set(key, [...row]);
+          rowMap.set(key, fullRow);
         }
       }
     }

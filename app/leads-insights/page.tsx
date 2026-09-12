@@ -24,6 +24,7 @@ const SORT_COLUMNS = [
   { label: "State",           index: 3 },
   { label: "Job Function",    index: 4 },
   { label: "Total Downloads", index: 5 },
+  { label: "SBM",             index: 6 },
 ];
 
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {
@@ -71,11 +72,11 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const FORCE_CENTER_COLS = new Set(["Campaign", "State"]);
+const FORCE_CENTER_COLS = new Set(["Campaign", "State", "SBM"]);
 const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
-// Visual column order: District, Domain, State, Campaign, then the rest as-is.
-// Raw data order (card 174): 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads
-const COL_ORDER = [0, 1, 3, 2, 4, 5];
+// Visual column order: District, Domain, State, Campaign, SBM, Job Function, Total Downloads
+// Raw data order (card 174 + SBM join): 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=SBM
+const COL_ORDER = [0, 1, 3, 2, 6, 4, 5];
 
 function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
   cols: Col[]; rows: Row[];
@@ -237,9 +238,9 @@ function LeadsInsightsContent() {
           </div>
           {rows.length > 0 && (
             <button onClick={() => {
-                // Raw order: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads
-                // Desired: District, Domain, State, Campaign, Job Function, Total Downloads
-                const ORDER = [0, 1, 3, 2, 4, 5];
+                // Raw order: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=SBM
+                // Desired: District, Domain, State, Campaign, SBM, Job Function, Total Downloads
+                const ORDER = [0, 1, 3, 2, 6, 4, 5];
                 const exportCols = ORDER.map((i) => cols[i]).filter(Boolean);
                 const exportRows = rows.map((r) => ORDER.map((i) => r[i]));
                 exportToCsv("leads-insights", exportCols, exportRows);

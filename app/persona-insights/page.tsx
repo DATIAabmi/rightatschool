@@ -7,6 +7,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
+import { normalizeJobTitle } from "@/lib/jobFunctionCategories";
 function fetchFieldOptions(field: "district" | "state" | "job_function") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
@@ -248,11 +249,11 @@ function PersonaInsightsContent() {
     setLoading(true);
     setError("");
     const params = new URLSearchParams();
-    if (dateStart)              params.set("dateStart",   dateStart);
-    if (dateEnd)                params.set("dateEnd",     dateEnd);
-    if (filterDistrict.length)    params.set("district",    filterDistrict.join(","));
-    if (filterState.length)       params.set("state",       filterState.join(","));
-    if (filterJobFunction.length) params.set("jobFunction", filterJobFunction.join(","));
+    if (dateStart)             params.set("dateStart", dateStart);
+    if (dateEnd)               params.set("dateEnd",   dateEnd);
+    if (filterDistrict.length) params.set("district",  filterDistrict.join(","));
+    if (filterState.length)    params.set("state",     filterState.join(","));
+    // Job function is filtered client-side (normalizeJobTitle maps raw titles to categories)
 
     fetch(`/api/q168-data?${params.toString()}`)
       .then((r) => r.json())
@@ -263,14 +264,22 @@ function PersonaInsightsContent() {
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [dateStart, dateEnd, filterDistrict, filterState, filterJobFunction]);
+  }, [dateStart, dateEnd, filterDistrict, filterState]);
 
-  // Card 168 has no template tags — filter campaign client-side.
-  // Campaign column is at index 4 and stores short codes ("C6").
+  // Filter campaign and job function client-side.
+  // Campaign is at index 4 (short codes like "C6").
+  // Job Function is at index 3 (raw job_title) — normalize to category for comparison.
   useEffect(() => {
     const prefixes = campaign.map((c) => c.split(":")[0].trim());
-    setRows(prefixes.length === 0 ? allRows : allRows.filter((row) => prefixes.includes(String(row[4] ?? ""))));
-  }, [campaign, allRows]);
+    let filtered = allRows;
+    if (prefixes.length > 0) {
+      filtered = filtered.filter((row) => prefixes.includes(String(row[4] ?? "")));
+    }
+    if (filterJobFunction.length > 0) {
+      filtered = filtered.filter((row) => filterJobFunction.includes(normalizeJobTitle(String(row[3] ?? ""))));
+    }
+    setRows(filtered);
+  }, [campaign, allRows, filterJobFunction]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -281,6 +290,10 @@ function PersonaInsightsContent() {
     setFilterJobFunction([]);
   }, [resetSignal]);
 
+  // Derive district options from loaded data so the dropdown only shows
+  // districts that actually appear in the persona insights results.
+  const districtOptions = [...new Set(allRows.map((r) => String(r[0] ?? "")).filter(Boolean))].sort();
+
   return (
     <div style={{ position: "fixed", top: 0, left: "14rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
@@ -290,7 +303,7 @@ function PersonaInsightsContent() {
         {/* Filter + sort row */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    search={fetchFieldOptions("district")} />
+            <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    options={districtOptions} />
             <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
             <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
             <button

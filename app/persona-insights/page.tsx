@@ -155,7 +155,7 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse w-full table-fixed">
+      <table className="text-xs border-collapse table-fixed" style={{ width: 776, minWidth: 776 }}>
         <colgroup>
           <col style={{ width: 36 }} />   {/* # */}
           <col style={{ width: 160 }} />  {/* District */}

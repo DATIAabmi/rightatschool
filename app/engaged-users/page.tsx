@@ -226,7 +226,7 @@ function DataTable({
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse min-w-full">
+      <table className="text-xs border-collapse" style={{ minWidth: 824 }}>
         <thead>
           <tr className="border-b border-gray-200">
             <th className="sticky z-10 bg-white px-2 py-2 w-8 text-[11px] font-bold text-gray-900 border-b border-gray-200" style={{ textAlign: "center", top: headerTop }}>#</th>

@@ -389,7 +389,7 @@ function TopicInsightsContent() {
   }, [resetSignal]);
 
   return (
-    <div style={{ position: "fixed", top: 0, left: "14rem", right: 0, bottom: 0,
+    <div style={{ position: "fixed", top: 0, left: "12rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />
@@ -415,7 +415,8 @@ function TopicInsightsContent() {
         {showDefs && <DefinitionsModal onClose={() => setShowDefs(false)} />}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 24px 24px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
+        <div style={{ minWidth: 750 }}>
 
         {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>
@@ -465,6 +466,7 @@ function TopicInsightsContent() {
             <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

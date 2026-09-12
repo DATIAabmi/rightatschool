@@ -104,7 +104,7 @@ export default function Page() {
   const campaignLabel = campaign.length === 1 ? activeCampaign : "All Campaigns (showing C7)";
 
   return (
-    <div style={{ position: "fixed", top: 0, left: "14rem", right: 0, bottom: 0, display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
+    <div style={{ position: "fixed", top: 0, left: "12rem", right: 0, bottom: 0, display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
       <div style={{ flexShrink: 0, padding: "16px 24px 12px" }}>
         <DashboardHeader />
       </div>

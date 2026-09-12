@@ -28,7 +28,7 @@ const navItems = [
   { label: "Topic Insights", icon: BookOpen, href: "/topic-insights" },
   { label: "Content Insights", icon: FileText, href: "/content-insights" },
   { label: "Ad Samples", icon: MonitorPlay, href: "/ad-samples" },
-  { label: "School Board Minutes", icon: ScrollText, href: "/school-board-minutes" },
+  // { label: "School Board Minutes", icon: ScrollText, href: "/school-board-minutes" }, // hidden — re-enable when ready
 ];
 
 export default function Sidebar() {

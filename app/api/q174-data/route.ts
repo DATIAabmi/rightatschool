@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ cols: [], rows: [], error: "Metabase error" });
     }
     // Append SBM as column index 6 (after District, Domain, Campaign, State, Job Function, Downloads)
-    const sbmCol = { display_name: "SBM", base_type: "type/Text" };
+    const sbmCol = { display_name: "Intel", base_type: "type/Text" };
     const cols = [...first.cols, sbmCol];
     // When multiple content names are selected, multiple result sets may return
     // the same district+domain+state+job row. Merge by summing Total_Downloads.

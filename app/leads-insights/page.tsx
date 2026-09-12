@@ -24,7 +24,7 @@ const SORT_COLUMNS = [
   { label: "State",           index: 3 },
   { label: "Job Function",    index: 4 },
   { label: "Total Downloads", index: 5 },
-  { label: "SBM",             index: 6 },
+  { label: "Intel",            index: 6 },
 ];
 
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {
@@ -72,7 +72,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const FORCE_CENTER_COLS = new Set(["Campaign", "State", "SBM"]);
+const FORCE_CENTER_COLS = new Set(["Campaign", "State", "Intel"]);
 const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
 // Visual column order: District, Domain, State, Campaign, SBM, Job Function, Total Downloads
 // Raw data order (card 174 + SBM join): 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=SBM
@@ -210,7 +210,7 @@ function LeadsInsightsContent() {
   }, [resetSignal]);
 
   return (
-    <div style={{ position: "fixed", top: 0, left: "16rem", right: 0, bottom: 0,
+    <div style={{ position: "fixed", top: 0, left: "14rem", right: 0, bottom: 0,
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
         <DashboardHeader />

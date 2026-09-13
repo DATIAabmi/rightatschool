@@ -179,17 +179,7 @@ function SkeletonTable() {
 
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
-const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-// Columns 0 (District) and 1 (Domain) are left-aligned; all others center
-const isLeftCol = (j: number) => j === 0 || j === 1;
 const SCORE_TREND_COL = 11;
-
-// Shorter/matches-reference labels so multi-word headers can wrap onto two
-// lines instead of forcing extra column width.
-const HEADER_LABELS: Record<string, string> = {
-  Downloads: "Total Downloads",
-  "Score Trend": "Intent Score Trend",
-};
 
 interface TrendColor { bg: string; text: string }
 
@@ -198,18 +188,33 @@ function trendColor(row: Row): TrendColor | null {
   if (val === null || val === undefined || val === "") return null;
   const n = typeof val === "number" ? val : parseFloat(String(val));
   if (isNaN(n) || n === 0) return null;
-  return n < 0
-    ? null
-    : { bg: "rgba(34,197,94,0.14)", text: "#15803d" };
+  return n < 0 ? null : { bg: "rgba(34,197,94,0.14)", text: "#15803d" };
 }
 
+// Column definitions — shared between sticky header div and data rows
+const EU_COLS = [
+  { label: "#",                  width: 32,  align: "center" as const, colIdx: -1 },
+  { label: "District",           width: 140, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",             width: 100, align: "left"   as const, colIdx: 1  },
+  { label: "State",              width: 48,  align: "center" as const, colIdx: 2  },
+  { label: "Campaign",           width: 80,  align: "center" as const, colIdx: 3  },
+  { label: "Intel",              width: 52,  align: "center" as const, colIdx: 4  },
+  { label: "Topic",              width: 52,  align: "center" as const, colIdx: 5  },
+  { label: "Engagements",        width: 90,  align: "center" as const, colIdx: 6  },
+  { label: "Engaged Users",      width: 80,  align: "center" as const, colIdx: 7  },
+  { label: "Leads",              width: 60,  align: "center" as const, colIdx: 8  },
+  { label: "Total Downloads",    width: 100, align: "center" as const, colIdx: 9  },
+  { label: "Intent Score",       width: 80,  align: "center" as const, colIdx: 10 },
+  { label: "Intent Score Trend", width: 100, align: "center" as const, colIdx: 11 },
+];
+const EU_GRID = EU_COLS.map(c => `${c.width}px`).join(" ");
+
 function DataTable({
-  cols, rows, sort, onSort, onDistrictClick, headerTop = 0,
+  rows, sort, onSort, onDistrictClick,
 }: {
-  cols: Col[]; rows: Row[];
+  rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
   onDistrictClick: (district: string) => void;
-  headerTop?: number;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">No results</div>;
@@ -226,54 +231,32 @@ function DataTable({
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse" style={{ minWidth: 1200 }}>
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-2 py-2 w-8 text-[11px] font-bold text-gray-900 border-b border-gray-200" style={{ textAlign: "center", top: headerTop }}>#</th>
-            {cols.map((col, j) => {
-              const active = sort.col === j;
-              const left = isLeftCol(j);
-              const label = HEADER_LABELS[col.display_name] ?? col.display_name;
+      {sorted.map((row, i) => {
+        const trend = trendColor(row);
+        return (
+          <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors text-xs"
+               style={{ display: "grid", gridTemplateColumns: EU_GRID, backgroundColor: trend?.bg }}>
+            <span className="px-2 py-1.5 text-center text-gray-400 text-[11px] font-medium">{i + 1}</span>
+            {EU_COLS.slice(1).map((cd) => {
+              const j = cd.colIdx;
+              const cell = row[j];
+              const display = cell === null || cell === undefined ? "" : String(cell);
               return (
-                <th key={j}
-                  onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="sticky z-10 bg-white px-2 py-2 font-bold text-gray-900 cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200"
-                  style={{ textAlign: left ? "left" : "center", top: headerTop, ...(col.display_name === "Engagements" ? { minWidth: 100 } : {}) }}>
-                  <span className={`inline-flex flex-wrap items-center gap-0.5 ${left ? "justify-start" : "justify-center"}`}>
-                    <span style={col.display_name === "Engagements" ? { whiteSpace: "nowrap" } : undefined}>{label}</span>
-                    {active && (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)}
-                  </span>
-                </th>
+                <span key={j} className={`px-2 py-1.5 tabular-nums ${trend ? "" : "text-gray-800"}`}
+                      style={{ textAlign: cd.align, color: trend?.text }}>
+                  {j === 0 ? (
+                    <button onClick={() => onDistrictClick(display)}
+                      className="block w-full text-left hover:underline font-medium"
+                      style={{ color: trend?.text ?? "#2563eb" }}>
+                      {display}
+                    </button>
+                  ) : display}
+                </span>
               );
             })}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row, i) => {
-            const trend = trendColor(row);
-            return (
-              <tr key={i} className="border-b border-gray-100" style={{ backgroundColor: trend?.bg, color: trend?.text }}>
-                <td className="px-2 py-1 text-gray-400 text-[11px] font-medium" style={{ textAlign: "center" }}>{i + 1}</td>
-                {row.map((cell, j) => {
-                  const display = cell === null || cell === undefined ? "" : String(cell);
-                  const left = isLeftCol(j);
-                  return (
-                    <td key={j} className={`px-2 py-1 ${trend ? "" : "text-gray-800"} ${left ? "text-left" : "text-center tabular-nums"}`}>
-                      {j === 0 ? (
-                        <button onClick={() => onDistrictClick(display)}
-                          className="block w-full text-left hover:underline font-medium"
-                          style={{ color: trend?.text ?? "#2563eb" }}>
-                          {display}
-                        </button>
-                      ) : display}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -389,10 +372,26 @@ function EngagedUsersContent() {
           <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
         )}
         {!loading && !error && (
-          <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
-            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight}
-              onDistrictClick={(d) => router.push(`/school-board-minutes?district=${encodeURIComponent(d)}`)} />
-          </div>
+          <>
+            {/* Sticky column headers — outside overflow:clip so sticky works in Safari */}
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 text-[11px] font-semibold text-gray-700"
+                 style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
+              {EU_COLS.map((cd, i) => (
+                <span key={i}
+                  className={`px-2 py-2 inline-flex items-center gap-0.5 select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
+                  onClick={cd.colIdx >= 0 ? () => setSort({ col: cd.colIdx, dir: sort.col === cd.colIdx && sort.dir === "desc" ? "asc" : "desc" }) : undefined}>
+                  {cd.label}
+                  {cd.colIdx >= 0 && (sort.col === cd.colIdx
+                    ? (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)
+                    : <ArrowUpDown size={10} className="opacity-30 shrink-0" />)}
+                </span>
+              ))}
+            </div>
+            <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
+              <DataTable rows={rows} sort={sort} onSort={setSort}
+                onDistrictClick={(d) => router.push(`/school-board-minutes?district=${encodeURIComponent(d)}`)} />
+            </div>
+          </>
         )}
         </div>
       </div>

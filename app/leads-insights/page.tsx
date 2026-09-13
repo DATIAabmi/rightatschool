@@ -72,16 +72,23 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-const FORCE_CENTER_COLS = new Set(["Campaign", "State", "Intel"]);
-const HEADER_LABELS: Record<string, string> = { "District Domain": "Domain" };
-// Visual column order: District, Domain, State, Campaign, SBM, Job Function, Total Downloads
-// Raw data order (card 174 + SBM join): 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=SBM
-const COL_ORDER = [0, 1, 3, 2, 6, 4, 5];
 
-function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
+// Raw: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=Intel
+const LI_COLS = [
+  { label: "#",               width: 36,  align: "center" as const, colIdx: -1 },
+  { label: "District",        width: 150, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",          width: 110, align: "left"   as const, colIdx: 1  },
+  { label: "State",           width: 48,  align: "center" as const, colIdx: 3  },
+  { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },
+  { label: "Intel",           width: 52,  align: "center" as const, colIdx: 6  },
+  { label: "Job Function",    width: 200, align: "left"   as const, colIdx: 4  },
+  { label: "Total Downloads", width: 110, align: "center" as const, colIdx: 5  },
+];
+const LI_GRID = LI_COLS.map(c => `${c.width}px`).join(" ");
+
+function DataTable({ cols, rows, sort, onSort }: {
   cols: Col[]; rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
-  headerTop?: number;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">No results</div>;
@@ -98,50 +105,23 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse" style={{ minWidth: 1100 }}>
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-3 py-2 w-12 text-xs font-bold border-b border-gray-200" style={{ color: "#111827", textAlign: "center", top: headerTop }}>#</th>
-            {COL_ORDER.map((j) => {
-              const col = cols[j];
-              if (!col) return null;
-              const isNum = NUMBER_TYPES.has(col.base_type);
-              const isCenter = isNum || FORCE_CENTER_COLS.has(col.display_name);
-              const active = sort.col === j;
-              return (
-                <th key={j}
-                  onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className="sticky z-10 bg-white px-4 py-2 font-semibold whitespace-nowrap cursor-pointer select-none hover:opacity-70 border-b border-gray-200"
-                  style={{ color: "#111827", textAlign: isCenter ? "center" : "left", top: headerTop }}>
-                  <span className={`inline-flex items-center gap-1 ${isCenter ? "justify-center" : ""}`}>
-                    {HEADER_LABELS[col.display_name] ?? col.display_name}
-                    {active ? (sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} className="opacity-30" />}
-                  </span>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row, i) => (
-            <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td className="px-3 py-1.5 text-gray-500 text-xs font-medium" style={{ textAlign: "center" }}>{i + 1}</td>
-              {COL_ORDER.map((j) => {
-                const cell = row[j];
-                const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
-                const colName = cols[j]?.display_name ?? "";
-                const isCenter = isNum || FORCE_CENTER_COLS.has(colName);
-                return (
-                  <td key={j} className={`px-4 py-1.5 text-gray-800 ${isNum ? "tabular-nums" : ""}`}
-                    style={{ textAlign: isCenter ? "center" : "left" }}>
-                    {cell === null || cell === undefined ? "" : String(cell)}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {sorted.map((row, i) => (
+        <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors text-xs"
+             style={{ display: "grid", gridTemplateColumns: LI_GRID }}>
+          <span className="px-3 py-1.5 text-center text-gray-400 font-medium">{i + 1}</span>
+          {LI_COLS.slice(1).map((cd) => {
+            const j = cd.colIdx;
+            const cell = row[j];
+            const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
+            return (
+              <span key={j} className={`px-4 py-1.5 text-gray-800 ${isNum ? "tabular-nums" : ""}`}
+                    style={{ textAlign: cd.align }}>
+                {cell === null || cell === undefined ? "" : String(cell)}
+              </span>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -261,9 +241,24 @@ function LeadsInsightsContent() {
           <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
         )}
         {!loading && !error && (
-          <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
-            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
-          </div>
+          <>
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 text-[11px] font-semibold text-gray-700"
+                 style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: LI_GRID }}>
+              {LI_COLS.map((cd, i) => (
+                <span key={i}
+                  className={`px-3 py-2 inline-flex items-center gap-0.5 select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
+                  onClick={cd.colIdx >= 0 ? () => setSort({ col: cd.colIdx, dir: sort.col === cd.colIdx && sort.dir === "desc" ? "asc" : "desc" }) : undefined}>
+                  {cd.label}
+                  {cd.colIdx >= 0 && (sort.col === cd.colIdx
+                    ? (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)
+                    : <ArrowUpDown size={10} className="opacity-30 shrink-0" />)}
+                </span>
+              ))}
+            </div>
+            <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
+              <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} />
+            </div>
+          </>
         )}
         </div>
       </div>

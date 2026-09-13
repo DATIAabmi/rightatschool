@@ -127,18 +127,24 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 
 type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
-const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","type/Decimal","type/Number"]);
-// Raw column indices (card 168): 0=District 1=Domain 2=State 3=Job Function 4=Campaign 5=Engagements 6=Leads
-// Visual column order shown to user
-const COL_ORDER = [0, 1, 2, 4, 3, 6, 5];
-// Columns that are always left-aligned, identified by raw card index (avoids display_name mismatch)
-const LEFT_ALIGN_INDICES = new Set([0, 1, 3]); // District, Domain, Job Function
-const COL_LABELS: Record<number, string> = { 1: "Domain", 3: "Job Function" };
 
-function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
-  cols: Col[]; rows: Row[];
+// Raw: 0=District 1=Domain 2=State 3=Job Function 4=Campaign 5=Engagements 6=Leads
+// Visual: # | District | Domain | State | Campaign | Job Function | Leads | Engagements
+const PI_COLS = [
+  { label: "#",            width: 36,  align: "center" as const, colIdx: -1 },
+  { label: "District",     width: 160, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",       width: 120, align: "left"   as const, colIdx: 1  },
+  { label: "State",        width: 48,  align: "center" as const, colIdx: 2  },
+  { label: "Campaign",     width: 80,  align: "center" as const, colIdx: 4  },
+  { label: "Job Function", width: 200, align: "left"   as const, colIdx: 3  },
+  { label: "Leads",        width: 70,  align: "center" as const, colIdx: 6  },
+  { label: "Engagements",  width: 88,  align: "center" as const, colIdx: 5  },
+];
+const PI_GRID = PI_COLS.map(c => `${c.width}px`).join(" ");
+
+function DataTable({ rows, sort, onSort }: {
+  rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
-  headerTop?: number;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">No results</div>;
@@ -155,61 +161,22 @@ function DataTable({ cols, rows, sort, onSort, headerTop = 0 }: {
 
   return (
     <div className="bg-white">
-      <table className="text-xs border-collapse table-fixed" style={{ width: 1050, minWidth: 1050 }}>
-        <colgroup>
-          <col style={{ width: 36 }} />   {/* # */}
-          <col style={{ width: 160 }} />  {/* District */}
-          <col style={{ width: 120 }} />  {/* Domain */}
-          <col style={{ width: 50 }} />   {/* State */}
-          <col style={{ width: 80 }} />   {/* Campaign */}
-          <col style={{ width: 170 }} />  {/* Job Function */}
-          <col style={{ width: 72 }} />   {/* Leads */}
-          <col style={{ width: 88 }} />   {/* Engagements */}
-        </colgroup>
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="sticky z-10 bg-white px-2 py-2 text-center w-10 font-bold whitespace-nowrap border-b border-gray-200" style={{ color: "#111827", top: headerTop }}>#</th>
-            {COL_ORDER.map((j) => {
-              const col = cols[j];
-              if (!col) return null;
-              const isLeft = LEFT_ALIGN_INDICES.has(j);
-              const active = sort.col === j;
-              const label = COL_LABELS[j] ?? col.display_name;
-              return (
-                <th key={j}
-                  onClick={() => onSort({ col: j, dir: active && sort.dir === "desc" ? "asc" : "desc" })}
-                  className={`sticky z-10 bg-white px-4 py-2 font-bold whitespace-nowrap cursor-pointer select-none hover:opacity-70 leading-tight border-b border-gray-200 ${isLeft ? "text-left" : "text-center"}`}
-                  style={{ color: "#111827", top: headerTop }}
-                >
-                  <span className={`inline-flex items-center gap-1 ${isLeft ? "justify-start" : "justify-center"}`}>
-                    {label}
-                    {active
-                      ? sort.dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />
-                      : <ArrowUpDown size={11} className="opacity-30" />}
-                  </span>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row, i) => (
-            <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td className="px-3 py-1.5 text-center text-gray-400 text-xs w-10 shrink-0">{i + 1}</td>
-              {COL_ORDER.map((j) => {
-                const cell = row[j];
-                const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
-                const isLeft = LEFT_ALIGN_INDICES.has(j);
-                return (
-                  <td key={j} className={`px-4 py-1.5 ${isLeft ? "text-left" : "text-center"} ${isNum ? "tabular-nums whitespace-nowrap" : ""} text-gray-800`}>
-                    {cell === null || cell === undefined ? "" : String(cell)}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {sorted.map((row, i) => (
+        <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors text-xs"
+             style={{ display: "grid", gridTemplateColumns: PI_GRID }}>
+          <span className="px-2 py-1.5 text-center text-gray-400 font-medium">{i + 1}</span>
+          {PI_COLS.slice(1).map((cd) => {
+            const j = cd.colIdx;
+            const cell = row[j];
+            return (
+              <span key={j} className="px-3 py-1.5 text-gray-800"
+                    style={{ textAlign: cd.align }}>
+                {cell === null || cell === undefined ? "" : String(cell)}
+              </span>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -324,7 +291,7 @@ function PersonaInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 1050, width: "100%" }}>
+        <div style={{ minWidth: 802, width: "100%" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -359,9 +326,24 @@ function PersonaInsightsContent() {
           <div className="flex items-center justify-center h-64 text-red-500 text-sm bg-white border border-t-0 border-gray-200 rounded-b-xl">{error}</div>
         )}
         {!loading && !error && (
-          <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
-            <DataTable cols={cols} rows={rows} sort={sort} onSort={setSort} headerTop={titleBarHeight} />
-          </div>
+          <>
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 text-[11px] font-semibold text-gray-700"
+                 style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: PI_GRID }}>
+              {PI_COLS.map((cd, i) => (
+                <span key={i}
+                  className={`px-3 py-2 inline-flex items-center gap-0.5 select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
+                  onClick={cd.colIdx >= 0 ? () => setSort({ col: cd.colIdx, dir: sort.col === cd.colIdx && sort.dir === "desc" ? "asc" : "desc" }) : undefined}>
+                  {cd.label}
+                  {cd.colIdx >= 0 && (sort.col === cd.colIdx
+                    ? (sort.dir === "asc" ? <ArrowUp size={10} className="shrink-0" /> : <ArrowDown size={10} className="shrink-0" />)
+                    : <ArrowUpDown size={10} className="opacity-30 shrink-0" />)}
+                </span>
+              ))}
+            </div>
+            <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
+              <DataTable rows={rows} sort={sort} onSort={setSort} />
+            </div>
+          </>
         )}
         </div>
       </div>

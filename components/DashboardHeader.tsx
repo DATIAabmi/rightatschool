@@ -92,11 +92,17 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
         <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
           <CalendarSearch size={14} className="text-orange-400 shrink-0" />
           <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider shrink-0">Date Range:</span>
-          <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
-            className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+          <div className="relative flex items-center">
+            {!dateStart && <span className="absolute left-0 text-xs text-gray-400 pointer-events-none select-none">Start</span>}
+            <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
+              className={`text-xs text-gray-700 bg-transparent border-none outline-none cursor-pointer ${dateStart ? "w-[95px]" : "w-[30px] opacity-0"}`} />
+          </div>
           <span className="text-gray-300 text-xs">–</span>
-          <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
-            className="text-xs text-gray-700 bg-transparent border-none outline-none w-[110px] cursor-pointer" />
+          <div className="relative flex items-center">
+            {!dateEnd && <span className="absolute left-0 text-xs text-gray-400 pointer-events-none select-none">End</span>}
+            <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)}
+              className={`text-xs text-gray-700 bg-transparent border-none outline-none cursor-pointer ${dateEnd ? "w-[95px]" : "w-[28px] opacity-0"}`} />
+          </div>
           {(dateStart || dateEnd) && (
             <button onClick={() => { setDateStart(""); setDateEnd(""); }} className="text-gray-300 hover:text-gray-500 ml-0.5">
               <X size={12} />

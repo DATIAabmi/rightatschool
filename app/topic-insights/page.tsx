@@ -214,13 +214,13 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 // Visual: # | District | Domain | State | Campaign | Date | Topic | Topic Score
 const TI_COLS = [
   { label: "#",           width: 32,  align: "center" as const, colIdx: -1 },
-  { label: "District",    width: 150, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",      width: 110, align: "left"   as const, colIdx: 1  },
-  { label: "State",       width: 48,  align: "center" as const, colIdx: 3  },
-  { label: "Campaign",    width: 80,  align: "center" as const, colIdx: 2  },
-  { label: "Date",        width: 80,  align: "center" as const, colIdx: 6  },
-  { label: "Topic",       width: 200, align: "left"   as const, colIdx: 4  },
-  { label: "Topic Score", width: 80,  align: "center" as const, colIdx: 5  },
+  { label: "District",    width: 160, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",      width: 120, align: "left"   as const, colIdx: 1  },
+  { label: "State",       width: 52,  align: "center" as const, colIdx: 3  },
+  { label: "Campaign",    width: 90,  align: "center" as const, colIdx: 2  },
+  { label: "Date",        width: 90,  align: "center" as const, colIdx: 6  },
+  { label: "Topic",       width: 260, align: "left"   as const, colIdx: 4  },
+  { label: "Topic Score", width: 90,  align: "center" as const, colIdx: 5  },
 ];
 const TI_GRID = TI_COLS.map(c => `${c.width}px`).join(" ");
 
@@ -395,7 +395,7 @@ function TopicInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 780, width: "100%" }}>
+        <div style={{ minWidth: 904, width: "100%" }}>
 
         {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>

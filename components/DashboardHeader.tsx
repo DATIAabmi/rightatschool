@@ -120,7 +120,7 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
           title="Export all table data to Excel"
         >
           {exporting ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />}
-          {exporting ? "Exporting…" : "Export Excel"}
+          {exporting ? "Exporting…" : "Export"}
         </button>
         <button
           type="button"

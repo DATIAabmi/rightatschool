@@ -43,7 +43,7 @@ async function mcpCall(sid: string, name: string, args: object): Promise<string>
   return JSON.stringify(d.result ?? d.error ?? "no result");
 }
 
-const SYSTEM = `You are Metabot, an AI assistant embedded in the DATIA K12 / Right at School ABMi Intelligence Dashboard.
+const SYSTEM = `You are Metabot, an AI assistant embedded in the DATIA K12 / Right at School ABMxi Intelligence Dashboard.
 You help users explore campaign performance data using Metabase tools.
 
 ## Database

@@ -89,11 +89,12 @@ function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 
-const COLORS = ["#111827", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
+const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
 
 function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
+  const [active, setActive] = useState<number | null>(null);
   const total = rows.reduce((s, r) => s + (r[1] ?? 0), 0);
-  const R = 70, SW = 36, CX = 100, CY = 100;
+  const R = 70, SW = 32, CX = 100, CY = 100;
   const circumference = 2 * Math.PI * R;
 
   let cumulative = 0;
@@ -104,41 +105,73 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
     return { label: row[0], clicks: row[1] ?? 0, pct, offset, color: COLORS[i % COLORS.length] };
   });
 
+  const activeSeg = active !== null ? segments[active] : null;
+
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Channel Performance By Clicks</p>
       <div className="flex items-center gap-8 w-full">
         <div className="shrink-0">
-          <svg viewBox="0 0 200 200" width={180} height={180}>
-            <circle cx={CX} cy={CY} r={R} fill="none" stroke="#f3f4f6" strokeWidth={SW} />
-            {segments.map((seg, i) => (
-              <circle key={i} cx={CX} cy={CY} r={R} fill="none"
-                stroke={seg.color} strokeWidth={SW}
-                strokeDasharray={`${seg.pct * circumference} ${circumference}`}
-                strokeDashoffset={seg.offset} />
-            ))}
-            <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">Total Clicks</text>
-            <text x={CX} y={CY + 10} textAnchor="middle" fontSize={14} fontWeight="700" fill="#111827" fontFamily="inherit">
-              {Math.round(total).toLocaleString()}
-            </text>
+          <svg viewBox="0 0 200 200" width={180} height={180} style={{ cursor: "pointer" }}>
+            {segments.map((seg, i) => {
+              const isActive = active === i;
+              const dimmed = active !== null && !isActive;
+              return (
+                <circle key={i} cx={CX} cy={CY} r={R} fill="none"
+                  stroke={seg.color}
+                  strokeWidth={isActive ? SW + 6 : SW}
+                  strokeDasharray={`${seg.pct * circumference} ${circumference}`}
+                  strokeDashoffset={seg.offset}
+                  opacity={dimmed ? 0.25 : 1}
+                  style={{ transition: "opacity 0.15s, stroke-width 0.15s", cursor: "pointer" }}
+                  onClick={() => setActive(active === i ? null : i)} />
+              );
+            })}
+            {activeSeg ? (
+              <>
+                <text x={CX} y={CY - 10} textAnchor="middle" fontSize={10} fill="#6b7280" fontFamily="inherit">{activeSeg.label}</text>
+                <text x={CX} y={CY + 8} textAnchor="middle" fontSize={15} fontWeight="700" fill={activeSeg.color} fontFamily="inherit">
+                  {(activeSeg.pct * 100).toFixed(1)}%
+                </text>
+                <text x={CX} y={CY + 22} textAnchor="middle" fontSize={10} fill="#9ca3af" fontFamily="inherit">
+                  {Math.round(activeSeg.clicks).toLocaleString()} clicks
+                </text>
+              </>
+            ) : (
+              <>
+                <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">Total Clicks</text>
+                <text x={CX} y={CY + 10} textAnchor="middle" fontSize={14} fontWeight="700" fill="#111827" fontFamily="inherit">
+                  {Math.round(total).toLocaleString()}
+                </text>
+              </>
+            )}
           </svg>
         </div>
         <div className="flex flex-col gap-3 flex-1 min-w-0">
-          {segments.map((seg, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-gray-800 truncate">{seg.label}</span>
-                  <span className="text-sm tabular-nums font-semibold text-gray-800 shrink-0">{(seg.pct * 100).toFixed(1)}%</span>
+          {segments.map((seg, i) => {
+            const isActive = active === i;
+            const dimmed = active !== null && !isActive;
+            return (
+              <div key={i} className="flex items-center gap-3 cursor-pointer rounded-lg px-2 py-1 -mx-2 transition-colors"
+                   style={{ backgroundColor: isActive ? seg.color + "18" : "transparent" }}
+                   onClick={() => setActive(active === i ? null : i)}>
+                <div className="w-3 h-3 rounded-full shrink-0 transition-transform"
+                     style={{ backgroundColor: seg.color, transform: isActive ? "scale(1.4)" : "scale(1)", opacity: dimmed ? 0.35 : 1 }} />
+                <div className="flex-1 min-w-0" style={{ opacity: dimmed ? 0.35 : 1 }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-sm truncate ${isActive ? "font-bold" : "font-medium text-gray-800"}`}
+                          style={{ color: isActive ? seg.color : undefined }}>{seg.label}</span>
+                    <span className="text-sm tabular-nums font-semibold shrink-0"
+                          style={{ color: isActive ? seg.color : "#1f2937" }}>{(seg.pct * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
+                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5">{Math.round(seg.clicks).toLocaleString()} clicks</div>
                 </div>
-                <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
-                </div>
-                <div className="text-xs text-gray-400 mt-0.5">{Math.round(seg.clicks).toLocaleString()} clicks</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

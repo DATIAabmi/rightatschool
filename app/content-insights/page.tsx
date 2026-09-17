@@ -97,18 +97,12 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
   const R = 70, SW = 32, CX = 100, CY = 100;
   const circumference = 2 * Math.PI * R;
 
-  // Normalize so arcs always sum to exactly circumference (avoids float gap)
-  const rawPcts = rows.map((r) => (total > 0 ? (r[1] ?? 0) / total : 0));
-  const pctSum = rawPcts.reduce((s, p) => s + p, 0) || 1;
-  const normPcts = rawPcts.map((p) => p / pctSum);
-
-  let cumulativeArc = 0;
+  let cumPct = 0;
   const segments = rows.map((row, i) => {
-    const pct = normPcts[i];
-    const arc = i === rows.length - 1 ? circumference - cumulativeArc : pct * circumference;
-    const offset = -cumulativeArc + circumference * 0.25;
-    cumulativeArc += arc;
-    return { label: row[0], clicks: row[1] ?? 0, pct, arc, offset, color: COLORS[i % COLORS.length] };
+    const pct = total > 0 ? (row[1] ?? 0) / total : 0;
+    const arcStart = cumPct * circumference;
+    cumPct += pct;
+    return { label: row[0], clicks: row[1] ?? 0, pct, arcStart, color: COLORS[i % COLORS.length] };
   });
 
   const activeSeg = active !== null ? segments[active] : null;
@@ -119,20 +113,23 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
       <div className="flex items-center gap-8 w-full">
         <div className="shrink-0">
           <svg viewBox="0 0 200 200" width={180} height={180} style={{ cursor: "pointer" }}>
-            {segments.map((seg, i) => {
-              const isActive = active === i;
-              const dimmed = active !== null && !isActive;
-              return (
-                <circle key={i} cx={CX} cy={CY} r={R} fill="none"
-                  stroke={seg.color}
-                  strokeWidth={isActive ? SW + 6 : SW}
-                  strokeDasharray={`${seg.arc} ${circumference}`}
-                  strokeDashoffset={seg.offset}
-                  opacity={dimmed ? 0.25 : 1}
-                  style={{ transition: "opacity 0.15s, stroke-width 0.15s", cursor: "pointer" }}
-                  onClick={() => setActive(active === i ? null : i)} />
-              );
-            })}
+            <g transform={`rotate(-90 ${CX} ${CY})`}>
+              {segments.map((seg, i) => {
+                const isActive = active === i;
+                const dimmed = active !== null && !isActive;
+                return (
+                  <circle key={i} cx={CX} cy={CY} r={R} fill="none"
+                    stroke={seg.color}
+                    strokeWidth={isActive ? SW + 6 : SW}
+                    strokeLinecap="butt"
+                    strokeDasharray={`${seg.pct * circumference + 0.5} ${circumference}`}
+                    strokeDashoffset={-seg.arcStart}
+                    opacity={dimmed ? 0.25 : 1}
+                    style={{ transition: "opacity 0.15s, stroke-width 0.15s", cursor: "pointer" }}
+                    onClick={() => setActive(active === i ? null : i)} />
+                );
+              })}
+            </g>
             {activeSeg ? (
               <>
                 <text x={CX} y={CY - 10} textAnchor="middle" fontSize={10} fill="#6b7280" fontFamily="inherit">{activeSeg.label}</text>

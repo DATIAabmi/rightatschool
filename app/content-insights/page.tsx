@@ -97,12 +97,18 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
   const R = 70, SW = 32, CX = 100, CY = 100;
   const circumference = 2 * Math.PI * R;
 
-  let cumulative = 0;
+  // Normalize so arcs always sum to exactly circumference (avoids float gap)
+  const rawPcts = rows.map((r) => (total > 0 ? (r[1] ?? 0) / total : 0));
+  const pctSum = rawPcts.reduce((s, p) => s + p, 0) || 1;
+  const normPcts = rawPcts.map((p) => p / pctSum);
+
+  let cumulativeArc = 0;
   const segments = rows.map((row, i) => {
-    const pct = total > 0 ? (row[1] ?? 0) / total : 0;
-    const offset = -(cumulative * circumference) + circumference * 0.25;
-    cumulative += pct;
-    return { label: row[0], clicks: row[1] ?? 0, pct, offset, color: COLORS[i % COLORS.length] };
+    const pct = normPcts[i];
+    const arc = i === rows.length - 1 ? circumference - cumulativeArc : pct * circumference;
+    const offset = -cumulativeArc + circumference * 0.25;
+    cumulativeArc += arc;
+    return { label: row[0], clicks: row[1] ?? 0, pct, arc, offset, color: COLORS[i % COLORS.length] };
   });
 
   const activeSeg = active !== null ? segments[active] : null;
@@ -120,7 +126,7 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
                 <circle key={i} cx={CX} cy={CY} r={R} fill="none"
                   stroke={seg.color}
                   strokeWidth={isActive ? SW + 6 : SW}
-                  strokeDasharray={`${seg.pct * circumference} ${circumference}`}
+                  strokeDasharray={`${seg.arc} ${circumference}`}
                   strokeDashoffset={seg.offset}
                   opacity={dimmed ? 0.25 : 1}
                   style={{ transition: "opacity 0.15s, stroke-width 0.15s", cursor: "pointer" }}

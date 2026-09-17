@@ -24,7 +24,6 @@ const SORT_COLUMNS = [
   { label: "State",           index: 3 },
   { label: "Job Function",    index: 4 },
   { label: "Total Downloads", index: 5 },
-  { label: "Intel",            index: 6 },
 ];
 
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {
@@ -80,7 +79,6 @@ const LI_COLS = [
   { label: "Domain",          width: 110, align: "left"   as const, colIdx: 1  },
   { label: "State",           width: 48,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },
-  { label: "Intel",           width: 52,  align: "center" as const, colIdx: 6  },
   { label: "Job Function",    width: 200, align: "left"   as const, colIdx: 4  },
   { label: "Total Downloads", width: 110, align: "center" as const, colIdx: 5  },
 ];

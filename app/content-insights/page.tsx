@@ -183,7 +183,7 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
 
 // ─── Gated Content Table ──────────────────────────────────────────────────────
 
-function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[]; dateStart: string; dateEnd: string }) {
+function GatedContentTable({ campaign, dateStart, dateEnd, filterChannel }: { campaign: string[]; dateStart: string; dateEnd: string; filterChannel: string[] }) {
   const [rows, setRows] = useState<GatedRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -226,7 +226,11 @@ function GatedContentTable({ campaign, dateStart, dateEnd }: { campaign: string[
     { label: "CTR",               col: 7 },
   ];
 
-  const sorted = [...rows].sort((a, b) => {
+  const filtered = filterChannel.length > 0
+    ? rows.filter((r) => filterChannel.includes(String(r[4] ?? "")))
+    : rows;
+
+  const sorted = [...filtered].sort((a, b) => {
     const av = a[sort.col]; const bv = b[sort.col];
     if (av === null || av === undefined) return 1;
     if (bv === null || bv === undefined) return -1;
@@ -418,7 +422,7 @@ export default function Page() {
             </div>
 
             {/* Gated Content table */}
-            <GatedContentTable campaign={campaign} dateStart={dateStart} dateEnd={dateEnd} />
+            <GatedContentTable campaign={campaign} dateStart={dateStart} dateEnd={dateEnd} filterChannel={filterChannel} />
           </>
         )}
       </div>

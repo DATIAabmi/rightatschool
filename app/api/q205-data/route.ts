@@ -50,12 +50,13 @@ SELECT
   asset_name      AS \`Asset Name\`,
   URL             AS \`Asset Link\`,
   Abmi_Campaign   AS Campaign,
+  Channel,
   SUM(impressions) AS Impressions,
   SUM(clicks)      AS Clicks,
   CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') AS CTR
 FROM ${TABLE}
 WHERE ${where.join(" AND ")}
-GROUP BY asset_name, URL, DASH_Image_URL, Abmi_Campaign
+GROUP BY asset_name, URL, DASH_Image_URL, Abmi_Campaign, Channel
 ORDER BY Impressions DESC`;
 
   const res = await fetch(`${METABASE_URL}/api/dataset`, {

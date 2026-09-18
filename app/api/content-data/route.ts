@@ -122,9 +122,10 @@ export async function GET(req: NextRequest) {
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
-  // When no campaign is selected, sum all known campaigns individually.
+  // When no campaign is selected, sum all completed campaigns individually.
   // Querying Metabase cards without a campaign filter does not return all-campaign totals.
-  const effectiveCampaigns = campaigns.length > 0 ? campaigns : [...CAMPAIGNS];
+  // CAMPAIGNS is ordered newest→oldest; slice(1) excludes the current in-progress campaign (C7).
+  const effectiveCampaigns = campaigns.length > 0 ? campaigns : [...CAMPAIGNS].slice(1);
 
   if (effectiveCampaigns.length === 1) {
     const result = await fetchContentForCampaign(effectiveCampaigns[0], dateStart, dateEnd);

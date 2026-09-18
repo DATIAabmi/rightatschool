@@ -53,8 +53,20 @@ function ScalarCard({ label, value }: { label: string; value: string }) {
 
 // ─── Channel Breakdown Table ──────────────────────────────────────────────────
 
-function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
+const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
+
+function channelColor(label: string, allLabels: string[]): string {
+  const idx = allLabels.indexOf(label);
+  return idx >= 0 ? COLORS[idx % COLORS.length] : "#d1d5db";
+}
+
+function ChannelBreakdownTable({ rows, activeChannel, onChannelClick }: {
+  rows: ChannelBreakdownRow[];
+  activeChannel: string | null;
+  onChannelClick: (ch: string | null) => void;
+}) {
   const headers = ["Channel", "Impressions", "Clicks", "CTR"];
+  const labels = rows.map((r) => String(r[0] ?? ""));
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="bg-gray-900 text-white px-5 py-3">
@@ -73,14 +85,28 @@ function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                <td className="px-4 py-3 text-left text-gray-800 font-medium">{String(row[0] ?? "")}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtNum(row[1])}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtNum(row[2])}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtPct(row[3])}</td>
-              </tr>
-            ))}
+            {rows.map((row, i) => {
+              const ch = String(row[0] ?? "");
+              const isActive = activeChannel === ch;
+              const dimmed = activeChannel !== null && !isActive;
+              const color = channelColor(ch, labels);
+              return (
+                <tr key={i}
+                  onClick={() => onChannelClick(isActive ? null : ch)}
+                  className="border-b border-gray-100 cursor-pointer transition-colors"
+                  style={{ backgroundColor: isActive ? color + "18" : undefined, opacity: dimmed ? 0.4 : 1 }}>
+                  <td className="px-4 py-3 text-left font-medium" style={{ color: isActive ? color : "#1f2937" }}>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                      {ch}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtNum(row[1])}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtNum(row[2])}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-800">{fmtPct(row[3])}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -90,10 +116,11 @@ function ChannelBreakdownTable({ rows }: { rows: ChannelBreakdownRow[] }) {
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 
-const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
-
-function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
-  const [active, setActive] = useState<number | null>(null);
+function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
+  rows: ChannelClickRow[];
+  activeChannel: string | null;
+  onChannelClick: (ch: string | null) => void;
+}) {
   const cardRef = useRef<HTMLDivElement>(null);
   const total = rows.reduce((s, r) => s + (r[1] ?? 0), 0);
   const R = 70, SW = 32, CX = 100, CY = 100;
@@ -107,7 +134,8 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
     return { label: row[0], clicks: row[1] ?? 0, pct, arcStart, color: COLORS[i % COLORS.length] };
   });
 
-  const activeSeg = active !== null ? segments[active] : null;
+  const activeIdx = activeChannel !== null ? segments.findIndex((s) => s.label === activeChannel) : -1;
+  const activeSeg = activeIdx >= 0 ? segments[activeIdx] : null;
 
   return (
     <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
@@ -126,8 +154,8 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
           <svg viewBox="0 0 200 200" width={180} height={180} style={{ cursor: "pointer" }}>
             <g transform={`rotate(-90 ${CX} ${CY})`}>
               {segments.map((seg, i) => {
-                const isActive = active === i;
-                const dimmed = active !== null && !isActive;
+                const isActive = activeIdx === i;
+                const dimmed = activeChannel !== null && !isActive;
                 return (
                   <circle key={i} cx={CX} cy={CY} r={R} fill="none"
                     stroke={seg.color}
@@ -137,7 +165,7 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
                     strokeDashoffset={-seg.arcStart}
                     opacity={dimmed ? 0.25 : 1}
                     style={{ transition: "opacity 0.15s, stroke-width 0.15s", cursor: "pointer" }}
-                    onClick={() => setActive(active === i ? null : i)} />
+                    onClick={() => onChannelClick(activeChannel === seg.label ? null : seg.label)} />
                 );
               })}
             </g>
@@ -163,12 +191,12 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
         </div>
         <div className="flex flex-col gap-3 flex-1 min-w-0">
           {segments.map((seg, i) => {
-            const isActive = active === i;
-            const dimmed = active !== null && !isActive;
+            const isActive = activeIdx === i;
+            const dimmed = activeChannel !== null && !isActive;
             return (
               <div key={i} className="flex items-center gap-3 cursor-pointer rounded-lg px-2 py-1 -mx-2 transition-colors"
                    style={{ backgroundColor: isActive ? seg.color + "18" : "transparent" }}
-                   onClick={() => setActive(active === i ? null : i)}>
+                   onClick={() => onChannelClick(activeChannel === seg.label ? null : seg.label)}>
                 <div className="w-3 h-3 rounded-full shrink-0 transition-transform"
                      style={{ backgroundColor: seg.color, transform: isActive ? "scale(1.4)" : "scale(1)", opacity: dimmed ? 0.35 : 1 }} />
                 <div className="flex-1 min-w-0" style={{ opacity: dimmed ? 0.35 : 1 }}>
@@ -353,6 +381,7 @@ export default function Page() {
   const [data, setData] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterChannel, setFilterChannel] = useState<string[]>([]);
+  const [activeChannel, setActiveChannel] = useState<string | null>(null);
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -371,6 +400,7 @@ export default function Page() {
   useEffect(() => {
     if (resetSignal === 0) return;
     setFilterChannel([]);
+    setActiveChannel(null);
   }, [resetSignal]);
 
   // Derive available channels from loaded data
@@ -428,8 +458,8 @@ export default function Page() {
 
             {/* Channel charts */}
             <div className="grid grid-cols-2 gap-4 mb-4">
-              <ChannelBreakdownTable rows={filteredBreakdown} />
-              <ClicksDonutChart rows={filteredClicks} />
+              <ChannelBreakdownTable rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
+              <ClicksDonutChart rows={filteredClicks} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
             </div>
 
             {/* Gated Content table */}

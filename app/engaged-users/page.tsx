@@ -194,8 +194,8 @@ function trendColor(row: Row): TrendColor | null {
 // Column definitions — shared between sticky header div and data rows
 const EU_COLS = [
   { label: "#",                  width: 32,  align: "center" as const, colIdx: -1 },
-  { label: "District",           width: 140, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",             width: 100, align: "left"   as const, colIdx: 1  },
+  { label: "District",           width: 200, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",             width: 160, align: "left"   as const, colIdx: 1  },
   { label: "State",              width: 48,  align: "center" as const, colIdx: 2  },
   { label: "Campaign",           width: 80,  align: "center" as const, colIdx: 3  },
   { label: "Intel",              width: 52,  align: "center" as const, colIdx: 4  },
@@ -243,11 +243,11 @@ function DataTable({
               const display = cell === null || cell === undefined ? "" : String(cell);
               return (
                 <span key={j} className={`px-2 py-1.5 tabular-nums ${trend ? "" : "text-gray-800"}`}
-                      style={{ textAlign: cd.align, color: trend?.text }}>
+                      style={{ textAlign: cd.align, color: trend?.text, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                   {j === 0 ? (
                     <button onClick={() => onDistrictClick(display)}
-                      className="block w-full text-left hover:underline font-medium"
-                      style={{ color: trend?.text ?? "#2563eb" }}>
+                      className="block w-full text-left hover:underline font-medium overflow-hidden"
+                      style={{ color: trend?.text ?? "#2563eb", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
                       {display}
                     </button>
                   ) : display}
@@ -351,7 +351,7 @@ function EngagedUsersContent() {
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }} className="eu-scroll">
         <style>{`.eu-scroll::-webkit-scrollbar{width:10px}.eu-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb{background:#6b7280;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb:hover{background:#374151}`}</style>
-        <div style={{ minWidth: 1200, width: "100%" }}>
+        <div style={{ minWidth: 1300, width: "100%" }}>
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Engaged Users By District</span>

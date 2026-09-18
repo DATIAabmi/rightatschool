@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CAMPAIGNS } from "@/lib/campaigns";
 
 export const maxDuration = 60;
 
@@ -41,9 +42,13 @@ export async function GET(req: NextRequest) {
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
+  // When no campaign selected, default to completed campaigns (C1-C6); exclude C7 (in progress).
+  // CAMPAIGNS is newest-first so slice(1) drops C7.
+  const effectiveCampaigns = campaigns.length > 0 ? campaigns : [...CAMPAIGNS].slice(1);
+
   const where: string[] = ["1=1"];
-  if (campaigns.length)     where.push(`Abmi_Campaign IN ${sqlInList(campaigns)}`);
-  if (channels.length)      where.push(`Channel IN ${sqlInList(channels)}`);
+  where.push(`Abmi_Campaign IN ${sqlInList(effectiveCampaigns)}`);
+  if (channels.length) where.push(`Channel IN ${sqlInList(channels)}`);
   if (dateStart && dateEnd) where.push(`DATE(date) BETWEEN ${sqlStr(dateStart)} AND ${sqlStr(dateEnd)}`);
 
   const sql = `

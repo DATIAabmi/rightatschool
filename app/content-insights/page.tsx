@@ -244,14 +244,15 @@ function GatedContentTable({ campaign, dateStart, dateEnd, filterChannel }: { ca
   const fetchData = useCallback(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (campaign.length) params.set("campaign",  campaign.join(","));
-    if (dateStart)       params.set("dateStart", dateStart);
-    if (dateEnd)         params.set("dateEnd",   dateEnd);
+    if (campaign.length)      params.set("campaign",  campaign.join(","));
+    if (filterChannel.length) params.set("channel",   filterChannel.join(","));
+    if (dateStart)            params.set("dateStart", dateStart);
+    if (dateEnd)              params.set("dateEnd",   dateEnd);
     fetch(`/api/q205-data?${params.toString()}`)
       .then((r) => r.json())
       .then((d) => { setRows(d.rows ?? []); setLoading(false); })
       .catch(() => { setError("Failed to load"); setLoading(false); });
-  }, [campaign, dateStart, dateEnd]);
+  }, [campaign, filterChannel, dateStart, dateEnd]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -265,11 +266,7 @@ function GatedContentTable({ campaign, dateStart, dateEnd, filterChannel }: { ca
     { label: "CTR",               col: 7 },
   ];
 
-  const filtered = filterChannel.length > 0
-    ? rows.filter((r) => filterChannel.includes(String(r[4] ?? "")))
-    : rows;
-
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = [...rows].sort((a, b) => {
     const av = a[sort.col]; const bv = b[sort.col];
     if (av === null || av === undefined) return 1;
     if (bv === null || bv === undefined) return -1;
@@ -339,8 +336,8 @@ function GatedContentTable({ campaign, dateStart, dateEnd, filterChannel }: { ca
                       <span className="text-gray-800 font-medium">{String(row[1] ?? "")}</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-center text-gray-700 whitespace-nowrap text-xs font-medium">
-                    {String(row[3] ?? "").split(":")[0].trim()}
+                  <td className="px-4 py-3 text-center text-gray-700 text-xs font-medium">
+                    {String(row[3] ?? "").split(",").map((c) => c.trim().split(":")[0].trim()).join(", ")}
                   </td>
                   <td className="px-4 py-3 text-center text-gray-700 whitespace-nowrap text-xs font-medium">
                     {String(row[4] ?? "")}

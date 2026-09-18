@@ -37,11 +37,13 @@ async function linkReachable(url: string): Promise<boolean> {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const campaigns = parseList(searchParams.get("campaign"));
+  const channels  = parseList(searchParams.get("channel"));
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
   const where: string[] = ["1=1"];
   if (campaigns.length)     where.push(`Abmi_Campaign IN ${sqlInList(campaigns)}`);
+  if (channels.length)      where.push(`Channel IN ${sqlInList(channels)}`);
   if (dateStart && dateEnd) where.push(`DATE(date) BETWEEN ${sqlStr(dateStart)} AND ${sqlStr(dateEnd)}`);
 
   const sql = `
@@ -49,14 +51,14 @@ SELECT
   DASH_Image_URL  AS Image,
   asset_name      AS \`Asset Name\`,
   URL             AS \`Asset Link\`,
-  Abmi_Campaign   AS Campaign,
-  Channel,
+  STRING_AGG(DISTINCT Abmi_Campaign ORDER BY Abmi_Campaign) AS Campaign,
+  STRING_AGG(DISTINCT Channel       ORDER BY Channel)       AS Channel,
   SUM(impressions) AS Impressions,
   SUM(clicks)      AS Clicks,
   CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') AS CTR
 FROM ${TABLE}
 WHERE ${where.join(" AND ")}
-GROUP BY asset_name, URL, DASH_Image_URL, Abmi_Campaign, Channel
+GROUP BY asset_name, URL, DASH_Image_URL
 ORDER BY Impressions DESC`;
 
   const res = await fetch(`${METABASE_URL}/api/dataset`, {

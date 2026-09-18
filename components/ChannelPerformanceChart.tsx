@@ -128,8 +128,7 @@ export default function ChannelPerformanceChart({ filterChannel, onChannelsLoade
 
   return (
     <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Engagements by Channel</p>
+      <div className="flex justify-end mb-1">
         <button
           onClick={() => cardRef.current && exportDivToPng(cardRef.current, "engagements-by-channel")}
           className="text-gray-300 hover:text-gray-500 transition-colors"

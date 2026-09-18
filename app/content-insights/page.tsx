@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, ExternalLink, Loader2 } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
+import { exportDivToPng } from "@/lib/exportChartToPng";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"
 
 function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
   const [active, setActive] = useState<number | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const total = rows.reduce((s, r) => s + (r[1] ?? 0), 0);
   const R = 70, SW = 32, CX = 100, CY = 100;
   const circumference = 2 * Math.PI * R;
@@ -108,8 +110,17 @@ function ClicksDonutChart({ rows }: { rows: ChannelClickRow[] }) {
   const activeSeg = active !== null ? segments[active] : null;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Channel Performance By Clicks</p>
+    <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Channel Performance By Clicks</p>
+        <button
+          onClick={() => cardRef.current && exportDivToPng(cardRef.current, "channel-performance-clicks")}
+          className="text-gray-300 hover:text-gray-500 transition-colors"
+          title="Export as PNG"
+        >
+          <Download size={14} />
+        </button>
+      </div>
       <div className="flex items-center gap-8 w-full">
         <div className="shrink-0">
           <svg viewBox="0 0 200 200" width={180} height={180} style={{ cursor: "pointer" }}>

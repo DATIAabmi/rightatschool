@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, Loader2 } from "lucide-react";
 import { useFilter } from "./FilterContext";
+import { exportDivToPng } from "@/lib/exportChartToPng";
 
 const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
 
@@ -112,6 +113,8 @@ export default function ChannelPerformanceChart({ filterChannel, onChannelsLoade
     ? rows.filter((r) => filterChannel.includes(r[0]))
     : rows;
 
+  const cardRef = useRef<HTMLDivElement>(null);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 gap-2 text-gray-400 text-sm">
@@ -123,5 +126,19 @@ export default function ChannelPerformanceChart({ filterChannel, onChannelsLoade
     return <div className="flex items-center justify-center h-64 text-red-500 text-sm">{error}</div>;
   }
 
-  return <DonutChart rows={visibleRows} />;
+  return (
+    <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Engagements by Channel</p>
+        <button
+          onClick={() => cardRef.current && exportDivToPng(cardRef.current, "engagements-by-channel")}
+          className="text-gray-300 hover:text-gray-500 transition-colors"
+          title="Export as PNG"
+        >
+          <Download size={14} />
+        </button>
+      </div>
+      <DonutChart rows={visibleRows} />
+    </div>
+  );
 }

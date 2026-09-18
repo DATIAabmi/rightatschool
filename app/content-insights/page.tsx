@@ -116,38 +116,81 @@ function ChannelBreakdownTable({ rows, activeChannel, onChannelClick }: {
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 
+type DonutMode = "Clicks" | "Impressions" | "CTR";
+
 function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
-  rows: ChannelClickRow[];
+  rows: ChannelBreakdownRow[];
   activeChannel: string | null;
   onChannelClick: (ch: string | null) => void;
 }) {
+  const [mode, setMode] = useState<DonutMode>("Clicks");
   const cardRef = useRef<HTMLDivElement>(null);
-  const total = rows.reduce((s, r) => s + (r[1] ?? 0), 0);
   const R = 70, SW = 32, CX = 100, CY = 100;
   const circumference = 2 * Math.PI * R;
 
+  const getValue = (row: ChannelBreakdownRow): number => {
+    if (mode === "Impressions") return Number(row[1]) || 0;
+    if (mode === "Clicks")      return Number(row[2]) || 0;
+    return Number(row[3]) || 0; // CTR
+  };
+
+  const total = rows.reduce((s, r) => s + getValue(r), 0);
+
+  // For CTR center: show weighted average (total clicks / total impressions)
+  const totalImp = rows.reduce((s, r) => s + (Number(r[1]) || 0), 0);
+  const totalClk = rows.reduce((s, r) => s + (Number(r[2]) || 0), 0);
+  const avgCtr   = totalImp > 0 ? (totalClk / totalImp) * 100 : 0;
+
   let cumPct = 0;
   const segments = rows.map((row, i) => {
-    const pct = total > 0 ? (row[1] ?? 0) / total : 0;
+    const value = getValue(row);
+    const pct = total > 0 ? value / total : 0;
     const arcStart = cumPct * circumference;
     cumPct += pct;
-    return { label: row[0], clicks: row[1] ?? 0, pct, arcStart, color: COLORS[i % COLORS.length] };
+    return { label: String(row[0]), value, pct, arcStart, color: COLORS[i % COLORS.length] };
   });
 
   const activeIdx = activeChannel !== null ? segments.findIndex((s) => s.label === activeChannel) : -1;
   const activeSeg = activeIdx >= 0 ? segments[activeIdx] : null;
 
+  const fmtValue = (v: number) =>
+    mode === "CTR" ? v.toFixed(2) + "%" : Math.round(v).toLocaleString();
+
+  const centerLabel = mode === "CTR" ? "Avg CTR" : `Total ${mode}`;
+  const centerValue = mode === "CTR"
+    ? avgCtr.toFixed(2) + "%"
+    : Math.round(total).toLocaleString();
+
+  const legendSub = (seg: (typeof segments)[number]) =>
+    mode === "CTR"
+      ? seg.value.toFixed(2) + "% CTR"
+      : fmtValue(seg.value) + " " + mode.toLowerCase();
+
+  const activeSubLabel = (seg: (typeof segments)[number]) =>
+    mode === "CTR"
+      ? seg.value.toFixed(2) + "% CTR"
+      : fmtValue(seg.value) + " " + mode.toLowerCase();
+
   return (
     <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Channel Performance By Clicks</p>
-        <button
-          onClick={() => cardRef.current && exportDivToPng(cardRef.current, "channel-performance-clicks")}
-          className="text-gray-300 hover:text-gray-500 transition-colors"
-          title="Export as PNG"
-        >
-          <Download size={14} />
-        </button>
+        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Channel Performance</p>
+        <div className="flex items-center gap-1">
+          {(["Clicks", "Impressions", "CTR"] as DonutMode[]).map((m) => (
+            <button key={m} onClick={() => setMode(m)}
+              className="text-xs px-2.5 py-1 rounded-full font-medium transition-colors"
+              style={{ background: mode === m ? "#111827" : "#f3f4f6", color: mode === m ? "#fff" : "#6b7280" }}>
+              {m}
+            </button>
+          ))}
+          <button
+            onClick={() => cardRef.current && exportDivToPng(cardRef.current, `channel-performance-${mode.toLowerCase()}`)}
+            className="ml-2 text-gray-300 hover:text-gray-500 transition-colors"
+            title="Export as PNG"
+          >
+            <Download size={14} />
+          </button>
+        </div>
       </div>
       <div className="flex items-center gap-8 w-full">
         <div className="shrink-0">
@@ -176,14 +219,14 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
                   {(activeSeg.pct * 100).toFixed(1)}%
                 </text>
                 <text x={CX} y={CY + 22} textAnchor="middle" fontSize={10} fill="#9ca3af" fontFamily="inherit">
-                  {Math.round(activeSeg.clicks).toLocaleString()} clicks
+                  {activeSubLabel(activeSeg)}
                 </text>
               </>
             ) : (
               <>
-                <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">Total Clicks</text>
+                <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">{centerLabel}</text>
                 <text x={CX} y={CY + 10} textAnchor="middle" fontSize={14} fontWeight="700" fill="#111827" fontFamily="inherit">
-                  {Math.round(total).toLocaleString()}
+                  {centerValue}
                 </text>
               </>
             )}
@@ -209,7 +252,7 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
                   <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
                   </div>
-                  <div className="text-xs text-gray-400 mt-0.5">{Math.round(seg.clicks).toLocaleString()} clicks</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{legendSub(seg)}</div>
                 </div>
               </div>
             );
@@ -456,7 +499,7 @@ export default function Page() {
             {/* Channel charts */}
             <div className="grid grid-cols-2 gap-4 mb-4">
               <ChannelBreakdownTable rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
-              <ClicksDonutChart rows={filteredClicks} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
+              <ClicksDonutChart rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
             </div>
 
             {/* Gated Content table */}

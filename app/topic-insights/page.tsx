@@ -215,7 +215,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 const TI_COLS = [
   { label: "#",           width: 32,  align: "center" as const, colIdx: -1 },
   { label: "District",    width: 240, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",      width: 120, align: "left"   as const, colIdx: 1  },
+  { label: "Domain",      width: 160, align: "left"   as const, colIdx: 1  },
   { label: "State",       width: 52,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",    width: 90,  align: "center" as const, colIdx: 2  },
   { label: "Date",        width: 90,  align: "center" as const, colIdx: 6  },
@@ -253,7 +253,8 @@ function DataTable({ rows, sort, onSort }: {
             const text = cell === null || cell === undefined ? "" : String(cell);
             return (
               <span key={j} className="px-2 py-1.5 text-gray-800"
-                    style={{ textAlign: cd.align }}>
+                    style={{ textAlign: cd.align, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
+                    title={text}>
                 {text}
               </span>
             );

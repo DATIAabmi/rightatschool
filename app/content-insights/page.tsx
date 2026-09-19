@@ -6,6 +6,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportDivToPng } from "@/lib/exportChartToPng";
+import { channelColor as getChannelColor } from "@/lib/channelColors";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,11 +54,10 @@ function ScalarCard({ label, value }: { label: string; value: string }) {
 
 // ─── Channel Breakdown Table ──────────────────────────────────────────────────
 
-const COLORS = ["#509EE3", "#88BF4D", "#EF8C8C", "#F9D45C", "#A989C5", "#98D9D9"];
+const COLORS = ["#4F86D9", "#2FA7A0", "#E46F61", "#8A70C9", "#F9D45C", "#98D9D9"];
 
 function channelColor(label: string, allLabels: string[]): string {
-  const idx = allLabels.indexOf(label);
-  return idx >= 0 ? COLORS[idx % COLORS.length] : "#d1d5db";
+  return getChannelColor(label, allLabels.indexOf(label));
 }
 
 function ChannelBreakdownTable({ rows, activeChannel, onChannelClick }: {
@@ -147,7 +147,7 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
     const pct = total > 0 ? value / total : 0;
     const arcStart = cumPct * circumference;
     cumPct += pct;
-    return { label: String(row[0]), value, pct, arcStart, color: COLORS[i % COLORS.length] };
+    return { label: String(row[0]), value, pct, arcStart, color: getChannelColor(String(row[0]), i) };
   });
 
   const activeIdx = activeChannel !== null ? segments.findIndex((s) => s.label === activeChannel) : -1;

@@ -172,17 +172,18 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
       : fmtValue(seg.value) + " " + mode.toLowerCase();
 
   return (
-    <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Channel Performance</p>
+    <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-gray-900 text-white px-5 py-3 flex items-center justify-between">
+        <span className="font-bold text-sm tracking-wide uppercase">Channel Performance</span>
         <button
           onClick={() => cardRef.current && exportDivToPng(cardRef.current, `channel-performance-${mode.toLowerCase()}`)}
-          className="text-gray-300 hover:text-gray-500 transition-colors"
+          className="text-gray-400 hover:text-white transition-colors"
           title="Export as PNG"
         >
           <Download size={14} />
         </button>
       </div>
+      <div className="p-4">
       <div className="flex items-center gap-1 mb-3 p-1 bg-gray-100 rounded-lg w-fit">
         {(["Clicks", "Impressions", "CTR"] as DonutMode[]).map((m) => (
           <button key={m} onClick={() => setMode(m)}
@@ -262,6 +263,7 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );

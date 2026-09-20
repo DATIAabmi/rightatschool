@@ -27,7 +27,7 @@ const navItems = [
   { label: "Leads Insights", icon: TrendingUp, href: "/leads-insights" },
   { label: "Topic Insights", icon: BookOpen, href: "/topic-insights" },
   { label: "Content Insights", icon: FileText, href: "/content-insights" },
-  { label: "Ad Samples", icon: MonitorPlay, href: "/ad-samples" },
+  { label: "Campaign Creative", icon: MonitorPlay, href: "/ad-samples" },
   // { label: "School Board Minutes", icon: ScrollText, href: "/school-board-minutes" }, // hidden — re-enable when ready
 ];
 

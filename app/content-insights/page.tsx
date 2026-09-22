@@ -172,7 +172,7 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
       : fmtValue(seg.value) + " " + mode.toLowerCase();
 
   return (
-    <div ref={cardRef} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div ref={cardRef} className="bg-white rounded-xl overflow-hidden">
       <div className="bg-gray-900 text-white px-5 py-3 flex items-center justify-between">
         <span className="font-bold text-sm tracking-wide uppercase">Channel Performance</span>
         <button

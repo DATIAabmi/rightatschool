@@ -43,7 +43,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-48 bg-white border-r border-gray-100 flex flex-col z-10" style={{ fontSize: "83.33%" }}>
+    <aside className="fixed left-0 top-0 h-screen w-56 bg-white border-r border-gray-100 flex flex-col z-10" style={{ fontSize: "83.33%" }}>
       {/* Branding */}
       <div className="px-4 py-4 border-b border-gray-100">
         {lastUpdated && (

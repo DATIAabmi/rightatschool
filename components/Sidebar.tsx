@@ -19,7 +19,7 @@ import {
 
 const navItems = [
   { label: "Ecosystem Insights", icon: Globe, href: "/" },
-  { label: "Engaged Users by District", icon: Users, href: "/engaged-users" },
+  { label: "Engaged Users\nby District", icon: Users, href: "/engaged-users" },
   { label: "Account Intelligence", icon: Sparkles, href: "/ai-opportunity-feed" },
   { label: "Persona Insights", icon: UserCircle, href: "/persona-insights" },
   { label: "Geo Insights", icon: MapPin, href: "/geo-insights" },
@@ -82,7 +82,7 @@ export default function Sidebar() {
                 size={16}
                 className={isActive ? "text-indigo-600" : "text-gray-400"}
               />
-              {item.label}
+              <span style={{ whiteSpace: "pre-line" }}>{item.label}</span>
             </Link>
           );
         })}

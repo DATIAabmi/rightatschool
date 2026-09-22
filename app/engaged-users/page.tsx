@@ -243,11 +243,11 @@ function DataTable({
               const display = cell === null || cell === undefined ? "" : String(cell);
               return (
                 <span key={j} className={`px-2 py-1.5 tabular-nums ${trend ? "" : "text-gray-800"}`}
-                      style={{ textAlign: cd.align, color: trend?.text, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                      style={{ textAlign: cd.align, color: trend?.text, overflow: "hidden", whiteSpace: j === 0 ? "normal" : "nowrap", textOverflow: j === 0 ? "unset" : "ellipsis" }}>
                   {j === 0 ? (
                     <button onClick={() => onDistrictClick(display)}
-                      className="block w-full text-left hover:underline font-medium overflow-hidden"
-                      style={{ color: trend?.text ?? "#2563eb", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>
+                      className="block w-full text-left hover:underline font-medium"
+                      style={{ color: trend?.text ?? "#2563eb" }}>
                       {display}
                     </button>
                   ) : display}

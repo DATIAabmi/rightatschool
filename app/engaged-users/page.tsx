@@ -194,7 +194,7 @@ function trendColor(row: Row): TrendColor | null {
 // Column definitions — shared between sticky header div and data rows
 const EU_COLS = [
   { label: "#",                  width: 32,  align: "center" as const, colIdx: -1 },
-  { label: "District",           width: 200, align: "left"   as const, colIdx: 0  },
+  { label: "District",           width: 280, align: "left"   as const, colIdx: 0  },
   { label: "Domain",             width: 160, align: "left"   as const, colIdx: 1  },
   { label: "State",              width: 48,  align: "center" as const, colIdx: 2  },
   { label: "Campaign",           width: 80,  align: "center" as const, colIdx: 3  },

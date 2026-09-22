@@ -59,7 +59,7 @@ export default function Sidebar() {
           height={40}
           priority
         />
-        <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase mt-2">
+        <p className="text-[9px] font-semibold tracking-wide text-gray-400 uppercase mt-2">
           Intelligence Dashboard
         </p>
       </div>

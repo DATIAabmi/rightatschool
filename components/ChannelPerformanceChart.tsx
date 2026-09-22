@@ -127,15 +127,6 @@ export default function ChannelPerformanceChart({ filterChannel, onChannelsLoade
 
   return (
     <div ref={cardRef} className="p-4">
-      <div className="flex justify-end mb-1">
-        <button
-          onClick={() => cardRef.current && exportDivToPng(cardRef.current, "engagements-by-channel")}
-          className="text-gray-300 hover:text-gray-500 transition-colors"
-          title="Export as PNG"
-        >
-          <Download size={14} />
-        </button>
-      </div>
       <DonutChart rows={visibleRows} />
     </div>
   );

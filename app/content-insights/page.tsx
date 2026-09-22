@@ -173,15 +173,8 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
 
   return (
     <div ref={cardRef}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2">
         <span className="font-bold text-sm tracking-wide uppercase text-gray-700">Channel Performance</span>
-        <button
-          onClick={() => cardRef.current && exportDivToPng(cardRef.current, `channel-performance-${mode.toLowerCase()}`)}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
-          title="Export as PNG"
-        >
-          <Download size={14} />
-        </button>
       </div>
       <div>
       <div className="flex items-center gap-1 mb-3 p-1 bg-gray-100 rounded-lg w-fit">

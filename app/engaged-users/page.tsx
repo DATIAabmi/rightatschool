@@ -194,19 +194,19 @@ function trendColor(row: Row): TrendColor | null {
 
 // Column definitions — shared between sticky header div and data rows
 const EU_COLS = [
-  { label: "#",                  width: 32,  align: "center" as const, colIdx: -1 },
+  { label: "#",                  width: 36,  align: "center" as const, colIdx: -1 },
   { label: "District",           width: 380, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",             width: 160, align: "left"   as const, colIdx: 1  },
-  { label: "State",              width: 48,  align: "center" as const, colIdx: 2  },
-  { label: "Campaign",           width: 80,  align: "center" as const, colIdx: 3  },
-  { label: "Intel",              width: 52,  align: "center" as const, colIdx: 4  },
-  { label: "Topic",              width: 52,  align: "center" as const, colIdx: 5  },
-  { label: "Engagements",        width: 90,  align: "center" as const, colIdx: 6  },
-  { label: "Engaged Users",      width: 80,  align: "center" as const, colIdx: 7  },
-  { label: "Leads",              width: 60,  align: "center" as const, colIdx: 8  },
-  { label: "Total Downloads",    width: 100, align: "center" as const, colIdx: 9  },
-  { label: "Intent Score",       width: 80,  align: "center" as const, colIdx: 10 },
-  { label: "Intent Score Trend", width: 100, align: "center" as const, colIdx: 11 },
+  { label: "Domain",             width: 180, align: "left"   as const, colIdx: 1  },
+  { label: "State",              width: 65,  align: "center" as const, colIdx: 2  },
+  { label: "Campaign",           width: 95,  align: "center" as const, colIdx: 3  },
+  { label: "Intel",              width: 65,  align: "center" as const, colIdx: 4  },
+  { label: "Topic",              width: 65,  align: "center" as const, colIdx: 5  },
+  { label: "Engagements",        width: 120, align: "center" as const, colIdx: 6  },
+  { label: "Engaged Users",      width: 125, align: "center" as const, colIdx: 7  },
+  { label: "Leads",              width: 75,  align: "center" as const, colIdx: 8  },
+  { label: "Total Downloads",    width: 140, align: "center" as const, colIdx: 9  },
+  { label: "Intent Score",       width: 115, align: "center" as const, colIdx: 10 },
+  { label: "Intent Score Trend", width: 145, align: "center" as const, colIdx: 11 },
 ];
 const EU_GRID = EU_COLS.map(c => `${c.width}px`).join(" ");
 
@@ -350,7 +350,7 @@ function EngagedUsersContent() {
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }} className="eu-scroll">
         <style>{`.eu-scroll::-webkit-scrollbar{width:10px}.eu-scroll::-webkit-scrollbar-track{background:#e5e7eb;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb{background:#6b7280;border-radius:5px}.eu-scroll::-webkit-scrollbar-thumb:hover{background:#374151}`}</style>
-        <div style={{ minWidth: 1300, width: "100%" }}>
+        <div style={{ minWidth: 1606, width: "100%" }}>
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="font-bold text-sm tracking-wide uppercase">Engaged Users By District</span>
@@ -377,7 +377,7 @@ function EngagedUsersContent() {
                  style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
               {EU_COLS.map((cd, i) => (
                 <span key={i}
-                  className={`px-3 py-3 inline-flex items-center gap-0.5 select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
+                  className={`px-3 py-3 inline-flex items-center gap-0.5 select-none whitespace-nowrap ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
                   onClick={cd.colIdx >= 0 ? () => setSort({ col: cd.colIdx, dir: sort.col === cd.colIdx && sort.dir === "desc" ? "asc" : "desc" }) : undefined}>
                   {cd.label}
                   {cd.colIdx >= 0 && (sort.col === cd.colIdx

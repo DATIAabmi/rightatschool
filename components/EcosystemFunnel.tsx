@@ -175,13 +175,13 @@ export default function EcosystemFunnel() {
                 </h3>
                 <p
                   title={stage.description}
-                  className="text-gray-500 mt-0.5"
-                  style={{ fontSize: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
+                  className="text-gray-500 mt-0.5 text-xs"
+                  style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
                 >
                   {stage.description}
                 </p>
                 {stage.goal && (
-                  <p className="font-semibold text-green-600 mt-0.5" style={{ fontSize: 10 }}>
+                  <p className="font-semibold text-green-600 mt-0.5 text-xs">
                     {stage.goal}
                   </p>
                 )}

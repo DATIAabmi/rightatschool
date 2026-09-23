@@ -235,9 +235,9 @@ function DataTable({
       {sorted.map((row, i) => {
         const trend = trendColor(row);
         return (
-          <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors text-sm"
-               style={{ display: "grid", gridTemplateColumns: EU_GRID, backgroundColor: trend?.bg }}>
-            <span className="px-3 py-3 text-center text-gray-400 text-xs font-medium">{i + 1}</span>
+          <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+               style={{ display: "grid", gridTemplateColumns: EU_GRID, backgroundColor: trend?.bg, fontSize: 12 }}>
+            <span className="px-3 py-3 text-center text-gray-400 font-medium" style={{ fontSize: 11 }}>{i + 1}</span>
             {EU_COLS.slice(1).map((cd) => {
               const j = cd.colIdx;
               const cell = row[j];
@@ -373,8 +373,8 @@ function EngagedUsersContent() {
         {!loading && !error && (
           <>
             {/* Sticky column headers — outside overflow:clip so sticky works in Safari */}
-            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 text-xs font-semibold text-gray-700"
-                 style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 font-semibold text-gray-700"
+                 style={{ fontSize: 10, top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
               {EU_COLS.map((cd, i) => (
                 <span key={i}
                   className={`px-3 py-3 inline-flex items-center gap-0.5 select-none whitespace-nowrap ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}

@@ -235,15 +235,15 @@ function DataTable({
       {sorted.map((row, i) => {
         const trend = trendColor(row);
         return (
-          <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors text-sm"
-               style={{ display: "grid", gridTemplateColumns: EU_GRID, backgroundColor: trend?.bg }}>
-            <span className="px-3 py-3 text-center text-gray-400 text-xs font-medium">{i + 1}</span>
+          <div key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+               style={{ display: "grid", gridTemplateColumns: EU_GRID, backgroundColor: trend?.bg, fontSize: 12 }}>
+            <span className="px-3 py-3 text-center text-gray-400 font-medium" style={{ fontSize: 11 }}>{i + 1}</span>
             {EU_COLS.slice(1).map((cd) => {
               const j = cd.colIdx;
               const cell = row[j];
               const display = cell === null || cell === undefined ? "" : String(cell);
               return (
-                <span key={j} className={`px-3 py-3 tabular-nums ${trend ? "" : "text-gray-800"}`}
+                <span key={j} className={`px-3 py-2.5 tabular-nums ${trend ? "" : "text-gray-800"}`}
                       style={{ textAlign: cd.align, color: trend?.text, overflow: "hidden", whiteSpace: j === 0 ? "normal" : "nowrap", textOverflow: j === 0 ? "unset" : "ellipsis" }}>
                   {j === 0 ? (
                     <button onClick={() => onDistrictClick(display)}

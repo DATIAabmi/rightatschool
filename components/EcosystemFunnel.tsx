@@ -169,19 +169,15 @@ export default function EcosystemFunnel() {
               >
                 <h3
                   className="font-black text-gray-900 leading-none"
-                  style={{ fontSize: 16, letterSpacing: "-0.01em" }}
+                  style={{ fontSize: 19, letterSpacing: "-0.01em" }}
                 >
                   {stage.label}
                 </h3>
-                <p
-                  title={stage.description}
-                  className="text-gray-500 mt-0.5 text-xs"
-                  style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-                >
+                <p className="text-gray-500 mt-0.5 leading-snug" style={{ fontSize: 12 }}>
                   {stage.description}
                 </p>
                 {stage.goal && (
-                  <p className="font-semibold text-green-600 mt-0.5 text-xs">
+                  <p className="font-semibold text-green-600 mt-0.5" style={{ fontSize: 12 }}>
                     {stage.goal}
                   </p>
                 )}
@@ -201,13 +197,13 @@ export default function EcosystemFunnel() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span
                     className="block uppercase tracking-widest text-gray-400 font-semibold"
-                    style={{ fontSize: 11, marginBottom: 2 }}
+                    style={{ fontSize: 13, marginBottom: 2 }}
                   >
                     {stage.cardLabel ?? stage.label}
                   </span>
                   <span
                     className="block font-black text-white tabular-nums"
-                    style={{ fontSize: 20, lineHeight: 1.1, letterSpacing: "-0.02em" }}
+                    style={{ fontSize: 24, lineHeight: 1.1, letterSpacing: "-0.02em" }}
                   >
                     {stage.value}
                   </span>
@@ -221,13 +217,13 @@ export default function EcosystemFunnel() {
                   >
                     <span
                       className="block uppercase tracking-widest text-gray-400 font-semibold"
-                      style={{ fontSize: 9, marginBottom: 2 }}
+                      style={{ fontSize: 11, marginBottom: 2 }}
                     >
                       % OF GOAL
                     </span>
                     <span
                       className="block font-black text-white tabular-nums"
-                      style={{ fontSize: 16, lineHeight: 1.1 }}
+                      style={{ fontSize: 19, lineHeight: 1.1 }}
                     >
                       {stage.goalValue}
                     </span>

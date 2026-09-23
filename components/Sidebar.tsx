@@ -43,7 +43,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-56 bg-white border-r border-gray-100 flex flex-col z-10">
+    <aside className="fixed left-0 top-0 h-screen w-48 bg-white border-r border-gray-100 flex flex-col z-10">
       {/* Branding */}
       <div className="px-4 py-4 border-b border-gray-100">
         {lastUpdated && (
@@ -72,7 +72,7 @@ export default function Sidebar() {
             <Link
               key={item.label}
               href={item.href}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[0.84rem] font-medium transition-colors text-left ${
                 isActive
                   ? "bg-indigo-50 text-indigo-700"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"

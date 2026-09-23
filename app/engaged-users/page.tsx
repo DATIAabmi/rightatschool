@@ -373,7 +373,7 @@ function EngagedUsersContent() {
         {!loading && !error && (
           <>
             {/* Sticky column headers — outside overflow:clip so sticky works in Safari */}
-            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 font-semibold text-gray-700" style={{ fontSize: 11 }}
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 font-semibold text-gray-700" style={{ fontSize: 10 }}
                  style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
               {EU_COLS.map((cd, i) => (
                 <span key={i}

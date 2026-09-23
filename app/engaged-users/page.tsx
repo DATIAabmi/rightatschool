@@ -342,9 +342,7 @@ function EngagedUsersContent() {
             <Info size={13} />
             Dashboard Guide
           </button>
-          <div className="ml-auto">
-            <SortDropdown sort={sort} onSort={setSort} />
-          </div>
+          <SortDropdown sort={sort} onSort={setSort} />
         </div>
 
         {showDefs && <DefinitionsModal onClose={() => setShowDefs(false)} />}

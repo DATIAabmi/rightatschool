@@ -330,18 +330,20 @@ function EngagedUsersContent() {
         <DashboardHeader />
 
         {/* Filter + sort row */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <MultiSelectDropdown label="District"         value={district} onChange={setDistrict} search={fetchFieldOptions("district")} />
-          <MultiSelectDropdown label="Domain" value={domain}   onChange={setDomain}   search={fetchFieldOptions("domain")} />
-          <MultiSelectDropdown label="State"            value={state}    onChange={setState}    search={fetchFieldOptions("state")} minWidth={110} />
-          <button
-            type="button"
-            onClick={() => setShowDefs(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
-          >
-            <Info size={13} />
-            Dashboard Guide
-          </button>
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <MultiSelectDropdown label="District"         value={district} onChange={setDistrict} search={fetchFieldOptions("district")} />
+            <MultiSelectDropdown label="Domain" value={domain}   onChange={setDomain}   search={fetchFieldOptions("domain")} />
+            <MultiSelectDropdown label="State"            value={state}    onChange={setState}    search={fetchFieldOptions("state")} minWidth={110} />
+            <button
+              type="button"
+              onClick={() => setShowDefs(true)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
+            >
+              <Info size={13} />
+              Dashboard Guide
+            </button>
+          </div>
           <SortDropdown sort={sort} onSort={setSort} />
         </div>
 

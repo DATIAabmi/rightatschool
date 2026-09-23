@@ -373,8 +373,8 @@ function EngagedUsersContent() {
         {!loading && !error && (
           <>
             {/* Sticky column headers — outside overflow:clip so sticky works in Safari */}
-            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 font-semibold text-gray-700" style={{ fontSize: 10 }}
-                 style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 font-semibold text-gray-700"
+                 style={{ fontSize: 10, top: titleBarHeight, display: "grid", gridTemplateColumns: EU_GRID }}>
               {EU_COLS.map((cd, i) => (
                 <span key={i}
                   className={`px-3 py-3 inline-flex items-center gap-0.5 select-none whitespace-nowrap ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}

@@ -317,7 +317,7 @@ export default function AIOpportunityFeed() {
                       </div>
 
                       {/* Source */}
-                      <div className="text-xs text-gray-600 leading-snug pt-0.5" style={{ overflowWrap: "anywhere" }}>
+                      <div className="text-xs text-gray-600 leading-snug pt-0.5" style={{ overflowWrap: "anywhere", minWidth: 0 }}>
                         {(row["Source"] as string) || "—"}
                       </div>
 

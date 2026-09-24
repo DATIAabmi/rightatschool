@@ -370,6 +370,12 @@ export default function Page() {
     setActiveChannel(null);
   }, [resetSignal]);
 
+  // Clicking a chart segment syncs both the highlight AND the Gated Content filter
+  const handleChannelClick = useCallback((ch: string | null) => {
+    setActiveChannel(ch);
+    setFilterChannel(ch ? [ch] : []);
+  }, []);
+
   // Derive available channels from loaded data
   const availableChannels = data?.channelBreakdown.map((r) => String(r[0])) ?? [];
 
@@ -402,7 +408,7 @@ export default function Page() {
           <MultiSelectDropdown
             label="Channel"
             value={filterChannel}
-            onChange={setFilterChannel}
+            onChange={(v) => { setFilterChannel(v); setActiveChannel(v.length === 1 ? v[0] : null); }}
             options={availableChannels}
             minWidth={160}
           />
@@ -425,8 +431,8 @@ export default function Page() {
 
             {/* Channel charts */}
             <div className="grid grid-cols-2 gap-4 mb-4">
-              <ChannelBreakdownTable rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
-              <ClicksDonutChart rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={setActiveChannel} />
+              <ChannelBreakdownTable rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={handleChannelClick} />
+              <ClicksDonutChart rows={filteredBreakdown} activeChannel={activeChannel} onChannelClick={handleChannelClick} />
             </div>
 
             {/* Gated Content table */}

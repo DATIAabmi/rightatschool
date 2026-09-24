@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useLayoutEffect, useState, useCallback, useMemo } from "react";
 import { ChevronDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
@@ -20,6 +20,7 @@ interface SortState { col: number; dir: SortDir }
 
 const SORT_COLUMNS = [
   { label: "District",        index: 0 },
+  { label: "Domain",          index: 1 },
   { label: "Campaign",        index: 2 },
   { label: "State",           index: 3 },
   { label: "Job Function",    index: 4 },
@@ -42,9 +43,9 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
   return (
     <div ref={ref} className="relative shrink-0">
       <button onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm hover:border-blue-400 transition-colors">
+        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-blue-400 transition-colors">
         <ArrowUpDown size={13} className="text-gray-400" />
-        <span className="text-gray-400 text-xs font-semibold uppercase tracking-wider">Sort by:</span>
+        <span className="text-gray-400 text-[13px] font-bold uppercase tracking-wider">Sort by:</span>
         <span className="text-blue-600 font-medium">{current?.label ?? "Total Downloads"}</span>
         <span className="text-gray-400 text-xs">{sort.dir === "asc" ? "↑" : "↓"}</span>
         <ChevronDown size={13} className="text-gray-400 shrink-0" />
@@ -75,11 +76,11 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 // Raw: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=Intel
 const LI_COLS = [
   { label: "#",               width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",        width: 150, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",          width: 110, align: "left"   as const, colIdx: 1  },
+  { label: "District",        width: 230, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",          width: 190, align: "left"   as const, colIdx: 1  },
   { label: "State",           width: 48,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },
-  { label: "Job Function",    width: 200, align: "left"   as const, colIdx: 4  },
+  { label: "Job Function",    width: 260, align: "left"   as const, colIdx: 4  },
   { label: "Total Downloads", width: 110, align: "center" as const, colIdx: 5  },
 ];
 const LI_GRID = LI_COLS.map(c => `${c.width}px`).join(" ");
@@ -113,7 +114,7 @@ function DataTable({ cols, rows, sort, onSort }: {
             const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
             return (
               <span key={j} className={`px-4 py-1.5 text-gray-800 ${isNum ? "tabular-nums" : ""}`}
-                    style={{ textAlign: cd.align }}>
+                    style={{ textAlign: cd.align, overflowWrap: "anywhere" }}>
                 {cell === null || cell === undefined ? "" : String(cell)}
               </span>
             );
@@ -127,11 +128,21 @@ function DataTable({ cols, rows, sort, onSort }: {
 function LeadsInsightsContent() {
   const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
+  const [filterDomain, setFilterDomain] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterJobFunction, setFilterJobFunction] = useState<string[]>([]);
   const [filterContentName, setFilterContentName] = useState<string[]>([]);
   const [cols, setCols] = useState<Col[]>([]);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [allRows, setAllRows] = useState<Row[]>([]);
+  const rows = useMemo(
+    () => (filterDomain.length ? allRows.filter((r) => filterDomain.includes(String(r[1] ?? ""))) : allRows),
+    [allRows, filterDomain],
+  );
+  const searchDomains = (query: string): Promise<string[]> => {
+    const ql = query.trim().toLowerCase();
+    const opts = [...new Set(allRows.map((r) => String(r[1] ?? "")).filter(Boolean))].sort();
+    return Promise.resolve((ql ? opts.filter((o) => o.toLowerCase().includes(ql)) : opts).slice(0, 200));
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 5, dir: "desc" });
@@ -171,7 +182,7 @@ function LeadsInsightsContent() {
       .then((d: { cols?: unknown[]; rows?: unknown[]; error?: string }) => {
         if (d.error) throw new Error(d.error);
         setCols((d.cols ?? []) as Col[]);
-        setRows((d.rows ?? []) as Row[]);
+        setAllRows((d.rows ?? []) as Row[]);
         setLoading(false);
       })
       .catch((err: Error) => { setError(err.message ?? "Failed to load"); setLoading(false); });
@@ -182,6 +193,7 @@ function LeadsInsightsContent() {
   useEffect(() => {
     if (resetSignal === 0) return;
     setFilterDistrict([]);
+    setFilterDomain([]);
     setFilterState([]);
     setFilterJobFunction([]);
     setFilterContentName([]);
@@ -194,11 +206,12 @@ function LeadsInsightsContent() {
         <DashboardHeader />
 
         {/* Filter + sort row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    search={fetchFieldOptions("district")} />
+            <MultiSelectDropdown label="Domain"       value={filterDomain}      onChange={setFilterDomain}      search={searchDomains} />
+            <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} minWidth={110} />
             <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
-            <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
             <MultiSelectDropdown label="Content"      value={filterContentName} onChange={setFilterContentName} search={fetchFieldOptions("content_name")} />
           </div>
           <SortDropdown sort={sort} onSort={setSort} />

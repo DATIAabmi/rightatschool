@@ -215,7 +215,7 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 const TI_COLS = [
   { label: "#",           width: 32,  align: "center" as const, colIdx: -1 },
   { label: "District",    width: 240, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",      width: 210, align: "left"   as const, colIdx: 1  },
+  { label: "Domain",      width: 230, align: "left"   as const, colIdx: 1  },
   { label: "State",       width: 52,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",    width: 90,  align: "center" as const, colIdx: 2  },
   { label: "Date",        width: 90,  align: "center" as const, colIdx: 6  },
@@ -253,7 +253,9 @@ function DataTable({ rows, sort, onSort }: {
             const text = cell === null || cell === undefined ? "" : String(cell);
             return (
               <span key={j} className="px-2 py-1.5 text-gray-800"
-                    style={{ textAlign: cd.align, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
+                    style={cd.label === "Domain"
+                      ? { textAlign: cd.align, overflowWrap: "anywhere" }
+                      : { textAlign: cd.align, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
                     title={text}>
                 {text}
               </span>
@@ -396,7 +398,7 @@ function TopicInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 1060, width: "100%" }}>
+        <div style={{ minWidth: 1080, width: "100%" }}>
 
         {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>

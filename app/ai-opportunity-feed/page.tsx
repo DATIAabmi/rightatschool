@@ -24,8 +24,8 @@ const COLS = [
   { key: "District",        width: 240, sort: true,  flex: false },
   { key: "Domain",          width: 130, sort: true,  flex: false },
   { key: "State",           width: 50,  sort: true,  flex: false },
-  { key: "Campaign",        width: 90,  sort: true,  flex: false },
-  { key: "Keywords",        width: 180, sort: true,  flex: false },
+  { key: "Campaign",        width: 100, sort: true,  flex: false },
+  { key: "Keywords",        width: 190, sort: true,  flex: false },
   { key: "Source Link",     width: 100, sort: false, flex: false },
   { key: "Date",            width: 80,  sort: true,  flex: false },
   { key: "Category",        width: 130, sort: true,  flex: false },
@@ -39,8 +39,8 @@ const SORT_OPTIONS = COLS.filter((c) => c.sort);
 
 // Signal Analysis expands to fill extra horizontal space; all others are fixed
 const GRID = COLS.map((c) => c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`).join(" ");
-const GAP  = "0 14px";
-const MIN_W = COLS.reduce((s, c) => s + c.width, 0) + (COLS.length - 1) * 14 + 40;
+const GAP  = "0 20px";
+const MIN_W = COLS.reduce((s, c) => s + c.width, 0) + (COLS.length - 1) * 20 + 40;
 
 // ── Sort dropdown ─────────────────────────────────────────────────────────────
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {

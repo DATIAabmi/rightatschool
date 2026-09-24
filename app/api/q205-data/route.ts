@@ -20,15 +20,20 @@ function sqlInList(values: string[]): string {
   return `(${values.map(sqlStr).join(", ")})`;
 }
 
-// Returns true when the URL resolves (2xx or 3xx before following). Uses a
-// 5-second timeout so broken/unreachable links don't stall the whole response.
+// In-memory cache so we only check each URL once per server instance lifetime.
+const reachabilityCache = new Map<string, boolean>();
+
 async function linkReachable(url: string): Promise<boolean> {
+  if (reachabilityCache.has(url)) return reachabilityCache.get(url)!;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
     const r = await fetch(url, { method: "HEAD", redirect: "manual", signal: controller.signal });
-    return r.ok || (r.status >= 300 && r.status < 400);
+    const ok = r.ok || (r.status >= 300 && r.status < 400);
+    reachabilityCache.set(url, ok);
+    return ok;
   } catch {
+    reachabilityCache.set(url, false);
     return false;
   } finally {
     clearTimeout(timer);

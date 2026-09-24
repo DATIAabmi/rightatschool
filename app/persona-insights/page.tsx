@@ -129,16 +129,16 @@ type Col = { display_name: string; base_type: string };
 type Row = (string | number | null)[];
 
 // Raw: 0=District 1=Domain 2=State 3=Job Function 4=Campaign 5=Engagements 6=Leads
-// Visual: # | District | Domain | State | Campaign | Job Function | Leads | Engagements
+// Visual: # | District | Domain | State | Campaign | Job Function | Engagements | Leads
 const PI_COLS = [
   { label: "#",            width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",     width: 160, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",       width: 120, align: "left"   as const, colIdx: 1  },
+  { label: "District",     width: 200, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",       width: 170, align: "left"   as const, colIdx: 1  },
   { label: "State",        width: 48,  align: "center" as const, colIdx: 2  },
   { label: "Campaign",     width: 80,  align: "center" as const, colIdx: 4  },
-  { label: "Job Function", width: 200, align: "left"   as const, colIdx: 3  },
-  { label: "Leads",        width: 70,  align: "center" as const, colIdx: 6  },
+  { label: "Job Function", width: 240, align: "left"   as const, colIdx: 3  },
   { label: "Engagements",  width: 88,  align: "center" as const, colIdx: 5  },
+  { label: "Leads",        width: 70,  align: "center" as const, colIdx: 6  },
 ];
 const PI_GRID = PI_COLS.map(c => `${c.width}px`).join(" ");
 
@@ -187,6 +187,7 @@ function PersonaInsightsContent() {
   const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
+  const [filterDomain, setFilterDomain] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterJobFunction, setFilterJobFunction] = useState<string[]>([]);
 
@@ -244,17 +245,21 @@ function PersonaInsightsContent() {
     if (filterDistrict.length > 0) {
       filtered = filtered.filter((row) => filterDistrict.includes(String(row[0] ?? "")));
     }
+    if (filterDomain.length > 0) {
+      filtered = filtered.filter((row) => filterDomain.includes(String(row[1] ?? "")));
+    }
     if (filterJobFunction.length > 0) {
       filtered = filtered.filter((row) => filterJobFunction.includes(normalizeJobTitle(String(row[3] ?? ""))));
     }
     setRows(filtered);
-  }, [campaign, allRows, filterDistrict, filterJobFunction]);
+  }, [campaign, allRows, filterDistrict, filterDomain, filterJobFunction]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     if (resetSignal === 0) return;
     setFilterDistrict([]);
+    setFilterDomain([]);
     setFilterState([]);
     setFilterJobFunction([]);
   }, [resetSignal]);
@@ -262,6 +267,11 @@ function PersonaInsightsContent() {
   // Derive district options from loaded data so the dropdown only shows
   // districts that actually appear in the persona insights results.
   const districtOptions = [...new Set(allRows.map((r) => String(r[0] ?? "")).filter(Boolean))].sort();
+  const searchDomains = (query: string): Promise<string[]> => {
+    const ql = query.trim().toLowerCase();
+    const opts = [...new Set(allRows.map((r) => String(r[1] ?? "")).filter(Boolean))].sort();
+    return Promise.resolve((ql ? opts.filter((o) => o.toLowerCase().includes(ql)) : opts).slice(0, 200));
+  };
 
   return (
     <div style={{ position: "fixed", top: 0, left: "12rem", right: 0, bottom: 0,
@@ -270,18 +280,19 @@ function PersonaInsightsContent() {
         <DashboardHeader />
 
         {/* Filter + sort row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <MultiSelectDropdown label="District"     value={filterDistrict}    onChange={setFilterDistrict}    options={districtOptions} />
-            <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
+            <MultiSelectDropdown label="Domain"       value={filterDomain}      onChange={setFilterDomain}      search={searchDomains} />
             <MultiSelectDropdown label="State"        value={filterState}       onChange={setFilterState}       search={fetchFieldOptions("state")} />
+            <MultiSelectDropdown label="Job Function" value={filterJobFunction} onChange={setFilterJobFunction} search={fetchFieldOptions("job_function")} />
             <button
               type="button"
               onClick={() => setShowDefs(true)}
               className="flex items-center gap-1.5 px-3 py-2 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded-lg bg-white transition-colors shrink-0"
             >
               <Info size={13} />
-              Metric Descriptions
+              Dashboard Guide
             </button>
           </div>
           <SortDropdown sort={sort} onSort={setSort} />
@@ -291,7 +302,7 @@ function PersonaInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 802, width: "100%" }}>
+        <div style={{ minWidth: 932, width: "100%" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">

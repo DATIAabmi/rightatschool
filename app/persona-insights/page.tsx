@@ -133,7 +133,7 @@ type Row = (string | number | null)[];
 const PI_COLS = [
   { label: "#",            width: 36,  align: "center" as const, colIdx: -1 },
   { label: "District",     width: 200, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",       width: 170, align: "left"   as const, colIdx: 1  },
+  { label: "Domain",       width: 230, align: "left"   as const, colIdx: 1  },
   { label: "State",        width: 48,  align: "center" as const, colIdx: 2  },
   { label: "Campaign",     width: 80,  align: "center" as const, colIdx: 4  },
   { label: "Job Function", width: 240, align: "left"   as const, colIdx: 3  },
@@ -302,7 +302,7 @@ function PersonaInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 932, width: "100%" }}>
+        <div style={{ minWidth: 992, width: "100%" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">

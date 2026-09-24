@@ -132,7 +132,7 @@ type Row = (string | number | null)[];
 // Visual: # | District | Domain | State | Campaign | Job Function | Engagements | Leads
 const PI_COLS = [
   { label: "#",            width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",     width: 200, align: "left"   as const, colIdx: 0  },
+  { label: "District",     width: 360, align: "left"   as const, colIdx: 0  },
   { label: "Domain",       width: 230, align: "left"   as const, colIdx: 1  },
   { label: "State",        width: 48,  align: "center" as const, colIdx: 2  },
   { label: "Campaign",     width: 80,  align: "center" as const, colIdx: 4  },

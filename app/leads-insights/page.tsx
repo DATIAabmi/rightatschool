@@ -121,7 +121,7 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 // Raw: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=Intel
 const LI_COLS = [
   { label: "#",               width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",        width: 300, align: "left"   as const, colIdx: 0  },
+  { label: "District",        width: 360, align: "left"   as const, colIdx: 0  },
   { label: "Domain",          width: 220, align: "left"   as const, colIdx: 1  },
   { label: "State",           width: 48,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },

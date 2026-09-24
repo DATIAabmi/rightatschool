@@ -21,26 +21,26 @@ function extractDomain(url: string | null | undefined): string {
 // # | District | Domain | State | Campaign | Keywords | Source Link | Date | Category | Source | Signal Analysis | Strength | Source Text
 const COLS = [
   { key: "#",               width: 30,  sort: false, flex: false },
-  { key: "District",        width: 120, sort: true,  flex: false },
-  { key: "Domain",          width: 120, sort: true,  flex: false },
-  { key: "State",           width: 40,  sort: true,  flex: false },
-  { key: "Campaign",        width: 65,  sort: true,  flex: false },
-  { key: "Keywords",        width: 160, sort: true,  flex: false },
-  { key: "Source Link",     width: 90,  sort: false, flex: false },
-  { key: "Date",            width: 75,  sort: true,  flex: false },
-  { key: "Category",        width: 115, sort: true,  flex: false },
-  { key: "Source",          width: 90,  sort: true,  flex: false },
-  { key: "Signal Analysis", width: 220, sort: true,  flex: true  },
-  { key: "Strength",        width: 70,  sort: true,  flex: false },
-  { key: "Source Text",     width: 260, sort: false, flex: true  },
+  { key: "District",        width: 140, sort: true,  flex: false },
+  { key: "Domain",          width: 130, sort: true,  flex: false },
+  { key: "State",           width: 50,  sort: true,  flex: false },
+  { key: "Campaign",        width: 90,  sort: true,  flex: false },
+  { key: "Keywords",        width: 180, sort: true,  flex: false },
+  { key: "Source Link",     width: 100, sort: false, flex: false },
+  { key: "Date",            width: 80,  sort: true,  flex: false },
+  { key: "Category",        width: 130, sort: true,  flex: false },
+  { key: "Source",          width: 110, sort: true,  flex: false },
+  { key: "Signal Analysis", width: 240, sort: true,  flex: true  },
+  { key: "Strength",        width: 80,  sort: true,  flex: false },
+  { key: "Source Text",     width: 280, sort: false, flex: true  },
 ];
 
 const SORT_OPTIONS = COLS.filter((c) => c.sort);
 
 // Signal Analysis expands to fill extra horizontal space; all others are fixed
 const GRID = COLS.map((c) => c.flex ? `minmax(${c.width}px, 1fr)` : `${c.width}px`).join(" ");
-const GAP  = "0 8px";
-const MIN_W = COLS.reduce((s, c) => s + c.width, 0) + (COLS.length - 1) * 8 + 40;
+const GAP  = "0 14px";
+const MIN_W = COLS.reduce((s, c) => s + c.width, 0) + (COLS.length - 1) * 14 + 40;
 
 // ── Sort dropdown ─────────────────────────────────────────────────────────────
 function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState) => void }) {

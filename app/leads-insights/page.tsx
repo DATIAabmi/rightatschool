@@ -123,7 +123,7 @@ const LI_COLS = [
   { label: "#",               width: 36,  align: "center" as const, colIdx: -1 },
   { label: "District",        width: 360, align: "left"   as const, colIdx: 0  },
   { label: "Domain",          width: 220, align: "left"   as const, colIdx: 1  },
-  { label: "State",           width: 48,  align: "center" as const, colIdx: 3  },
+  { label: "State",           width: 70,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },
   { label: "Job Function",    width: 300, align: "left"   as const, colIdx: 4  },
   { label: "Total Downloads", width: 110, align: "center" as const, colIdx: 5  },

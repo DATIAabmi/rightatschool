@@ -230,27 +230,27 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
             )}
           </svg>
         </div>
-        <div className="flex flex-col gap-3 flex-1 min-w-0">
+        <div className="flex flex-col gap-3.5 flex-1 min-w-0">
           {segments.map((seg, i) => {
             const isActive = activeIdx === i;
             const dimmed = activeChannel !== null && !isActive;
             return (
-              <div key={i} className="flex items-center gap-3 cursor-pointer rounded-lg px-2 py-1 -mx-2 transition-colors"
-                   style={{ backgroundColor: isActive ? seg.color + "18" : "transparent" }}
+              <div key={i} className="flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1 -mx-2 transition-colors"
+                   style={{ backgroundColor: isActive ? seg.color + "18" : "transparent", opacity: dimmed ? 0.4 : 1 }}
                    onClick={() => onChannelClick(activeChannel === seg.label ? null : seg.label)}>
-                <div className="w-3 h-3 rounded-full shrink-0 transition-transform"
-                     style={{ backgroundColor: seg.color, transform: isActive ? "scale(1.4)" : "scale(1)", opacity: dimmed ? 0.35 : 1 }} />
-                <div className="flex-1 min-w-0" style={{ opacity: dimmed ? 0.35 : 1 }}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-sm truncate ${isActive ? "font-bold" : "font-medium text-gray-800"}`}
-                          style={{ color: isActive ? seg.color : undefined }}>{seg.label}</span>
-                    <span className="text-sm tabular-nums font-semibold shrink-0"
-                          style={{ color: isActive ? seg.color : "#1f2937" }}>{(seg.pct * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="mt-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
-                  </div>
-                  <div className="text-xs text-gray-400 mt-0.5">{legendSub(seg)}</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform"
+                       style={{ backgroundColor: seg.color, transform: isActive ? "scale(1.35)" : "scale(1)" }} />
+                  <span className="text-sm font-medium text-gray-700 shrink-0"
+                        style={{ minWidth: 68, color: isActive ? seg.color : undefined, fontWeight: isActive ? 700 : 500 }}>{seg.label}</span>
+                  <span className="text-gray-300 shrink-0 select-none">|</span>
+                  <span className="text-sm font-bold tabular-nums shrink-0"
+                        style={{ minWidth: 42, color: isActive ? seg.color : "#111827" }}>{(seg.pct * 100).toFixed(1)}%</span>
+                  <span className="text-gray-300 shrink-0 select-none">|</span>
+                  <span className="text-sm text-gray-400 tabular-nums">{legendSub(seg)}</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden" style={{ marginLeft: 18 }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
                 </div>
               </div>
             );

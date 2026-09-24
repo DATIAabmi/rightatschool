@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useLayoutEffect, useState, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Loader2, ArrowUp, ArrowDown, ArrowUpDown, Download, Info, X } from "lucide-react";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -161,7 +161,10 @@ interface SortState { col: number; dir: SortDir }
 
 const SORT_COLUMNS = [
   { label: "District", index: 0 },
+  { label: "Domain", index: 1 },
   { label: "State", index: 3 },
+  { label: "Campaign", index: 2 },
+  { label: "Date", index: 6 },
   { label: "Topic", index: 4 },
   { label: "Topic Score", index: 5 },
 ];
@@ -214,12 +217,12 @@ function SortDropdown({ sort, onSort }: { sort: SortState; onSort: (s: SortState
 // Visual: # | District | Domain | State | Campaign | Date | Topic | Topic Score
 const TI_COLS = [
   { label: "#",           width: 32,  align: "center" as const, colIdx: -1 },
-  { label: "District",    width: 240, align: "left"   as const, colIdx: 0  },
+  { label: "District",    width: 380, align: "left"   as const, colIdx: 0  },
   { label: "Domain",      width: 230, align: "left"   as const, colIdx: 1  },
   { label: "State",       width: 52,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",    width: 90,  align: "center" as const, colIdx: 2  },
   { label: "Date",        width: 90,  align: "center" as const, colIdx: 6  },
-  { label: "Topic",       width: 260, align: "left"   as const, colIdx: 4  },
+  { label: "Topic",       width: 260, align: "center" as const, colIdx: 4  },
   { label: "Topic Score", width: 90,  align: "center" as const, colIdx: 5  },
 ];
 const TI_GRID = TI_COLS.map(c => `${c.width}px`).join(" ");
@@ -316,11 +319,29 @@ function TopicInsightsContent() {
   const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
+  const [filterDomain, setFilterDomain] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
   const [filterTopic, setFilterTopic] = useState<string[]>([]);
+  const [filterCampaign, setFilterCampaign] = useState<string[]>([]);
+  const [filterDate, setFilterDate] = useState<string[]>([]);
 
   const [cols, setCols] = useState<Col[]>([]);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [allRows, setAllRows] = useState<Row[]>([]);
+  const rows = useMemo(() => allRows.filter((r) => {
+    if (filterDomain.length   && !filterDomain.includes(String(r[1] ?? "")))   return false;
+    if (filterCampaign.length && !filterCampaign.includes(String(r[2] ?? ""))) return false;
+    if (filterDate.length     && !filterDate.includes(String(r[6] ?? "")))     return false;
+    return true;
+  }), [allRows, filterDomain, filterCampaign, filterDate]);
+
+  const makeSearch = (colIdx: number) => (query: string): Promise<string[]> => {
+    const ql = query.trim().toLowerCase();
+    const opts = [...new Set(allRows.map((r) => String(r[colIdx] ?? "")).filter(Boolean))].sort();
+    return Promise.resolve((ql ? opts.filter((o) => o.toLowerCase().includes(ql)) : opts).slice(0, 200));
+  };
+  const searchDomains   = makeSearch(1);
+  const searchCampaigns = makeSearch(2);
+  const searchDates     = makeSearch(6);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sort, setSort] = useState<SortState>({ col: 5, dir: "desc" });
@@ -355,7 +376,7 @@ function TopicInsightsContent() {
       .then((d) => {
         if (d.error) throw new Error(d.error);
         setCols(d.cols);
-        setRows(d.rows);
+        setAllRows(d.rows);
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
@@ -366,8 +387,11 @@ function TopicInsightsContent() {
   useEffect(() => {
     if (resetSignal === 0) return;
     setFilterDistrict([]);
+    setFilterDomain([]);
     setFilterState([]);
     setFilterTopic([]);
+    setFilterCampaign([]);
+    setFilterDate([]);
   }, [resetSignal]);
 
   return (
@@ -377,10 +401,13 @@ function TopicInsightsContent() {
         <DashboardHeader />
 
         {/* Filter + sort row */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} search={fetchFieldOptions("district")} />
+            <MultiSelectDropdown label="Domain"   value={filterDomain}   onChange={setFilterDomain}   search={searchDomains} />
             <MultiSelectDropdown label="State"    value={filterState}    onChange={setFilterState}    search={fetchFieldOptions("state")} />
+            <MultiSelectDropdown label="Campaign" value={filterCampaign} onChange={setFilterCampaign} search={searchCampaigns} />
+            <MultiSelectDropdown label="Date"     value={filterDate}     onChange={setFilterDate}     search={searchDates} />
             <MultiSelectDropdown label="Topic"    value={filterTopic}    onChange={setFilterTopic}    options={TOPICS} />
             <button
               type="button"
@@ -398,7 +425,7 @@ function TopicInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 1080, width: "100%" }}>
+        <div style={{ minWidth: 1220, width: "100%" }}>
 
         {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>

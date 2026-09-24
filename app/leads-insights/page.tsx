@@ -76,11 +76,11 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 // Raw: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=Intel
 const LI_COLS = [
   { label: "#",               width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",        width: 230, align: "left"   as const, colIdx: 0  },
-  { label: "Domain",          width: 190, align: "left"   as const, colIdx: 1  },
+  { label: "District",        width: 300, align: "left"   as const, colIdx: 0  },
+  { label: "Domain",          width: 220, align: "left"   as const, colIdx: 1  },
   { label: "State",           width: 48,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },
-  { label: "Job Function",    width: 260, align: "left"   as const, colIdx: 4  },
+  { label: "Job Function",    width: 300, align: "left"   as const, colIdx: 4  },
   { label: "Total Downloads", width: 110, align: "center" as const, colIdx: 5  },
 ];
 const LI_GRID = LI_COLS.map(c => `${c.width}px`).join(" ");
@@ -219,7 +219,7 @@ function LeadsInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 1100, width: "100%" }}>
+        <div style={{ minWidth: 1130, width: "100%" }}>
         <LeadsSummaryPanel districts={filterDistrict} states={filterState} />
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -253,8 +253,8 @@ function LeadsInsightsContent() {
         )}
         {!loading && !error && (
           <>
-            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 text-[11px] font-semibold text-gray-700"
-                 style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: LI_GRID }}>
+            <div className="sticky z-10 bg-white border-b border-l border-r border-gray-200 font-semibold text-gray-700"
+                 style={{ fontSize: 10, top: titleBarHeight, display: "grid", gridTemplateColumns: LI_GRID }}>
               {LI_COLS.map((cd, i) => (
                 <span key={i}
                   className={`px-3 py-2 inline-flex items-center gap-0.5 select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}

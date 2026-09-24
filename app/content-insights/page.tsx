@@ -7,6 +7,7 @@ import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportDivToPng } from "@/lib/exportChartToPng";
 import { channelColor as getChannelColor } from "@/lib/channelColors";
+import DonutBreakdown from "@/components/DonutBreakdown";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -125,9 +126,6 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
 }) {
   const [mode, setMode] = useState<DonutMode>("Clicks");
   const cardRef = useRef<HTMLDivElement>(null);
-  const R = 70, SW = 32, CX = 100, CY = 100;
-  const circumference = 2 * Math.PI * R;
-
   const getValue = (row: ChannelBreakdownRow): number => {
     if (mode === "Impressions") return Number(row[1]) || 0;
     if (mode === "Clicks")      return Number(row[2]) || 0;
@@ -141,18 +139,6 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
   const totalClk = rows.reduce((s, r) => s + (Number(r[2]) || 0), 0);
   const avgCtr   = totalImp > 0 ? (totalClk / totalImp) * 100 : 0;
 
-  let cumPct = 0;
-  const segments = rows.map((row, i) => {
-    const value = getValue(row);
-    const pct = total > 0 ? value / total : 0;
-    const arcStart = cumPct * circumference;
-    cumPct += pct;
-    return { label: String(row[0]), value, pct, arcStart, color: getChannelColor(String(row[0]), i) };
-  });
-
-  const activeIdx = activeChannel !== null ? segments.findIndex((s) => s.label === activeChannel) : -1;
-  const activeSeg = activeIdx >= 0 ? segments[activeIdx] : null;
-
   const fmtValue = (v: number) =>
     mode === "CTR" ? v.toFixed(2) + "%" : Math.round(v).toLocaleString();
 
@@ -161,15 +147,17 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
     ? avgCtr.toFixed(2) + "%"
     : Math.round(total).toLocaleString();
 
-  const legendSub = (seg: (typeof segments)[number]) =>
-    mode === "CTR"
-      ? seg.value.toFixed(2) + "% CTR"
-      : fmtValue(seg.value) + " " + mode.toLowerCase();
-
-  const activeSubLabel = (seg: (typeof segments)[number]) =>
-    mode === "CTR"
-      ? seg.value.toFixed(2) + "% CTR"
-      : fmtValue(seg.value) + " " + mode.toLowerCase();
+  const segments = rows.map((row, i) => {
+    const value = getValue(row);
+    const pct = total > 0 ? value / total : 0;
+    return {
+      label: String(row[0]),
+      pct,
+      color: getChannelColor(String(row[0]), i),
+      valueText: `${(pct * 100).toFixed(1)}%`,
+      subText: mode === "CTR" ? `${value.toFixed(2)}% CTR` : `${fmtValue(value)} ${mode.toLowerCase()}`,
+    };
+  });
 
   return (
     <div ref={cardRef}>
@@ -190,73 +178,13 @@ function ClicksDonutChart({ rows, activeChannel, onChannelClick }: {
           </button>
         ))}
       </div>
-      <div className="flex items-center gap-8 w-full">
-        <div className="shrink-0">
-          <svg viewBox="0 0 200 200" width={180} height={180} style={{ cursor: "pointer" }}>
-            <g transform={`rotate(-90 ${CX} ${CY})`}>
-              {segments.map((seg, i) => {
-                const isActive = activeIdx === i;
-                const dimmed = activeChannel !== null && !isActive;
-                return (
-                  <circle key={i} cx={CX} cy={CY} r={R} fill="none"
-                    stroke={seg.color}
-                    strokeWidth={isActive ? SW + 6 : SW}
-                    strokeLinecap="butt"
-                    strokeDasharray={`${seg.pct * circumference + 0.5} ${circumference}`}
-                    strokeDashoffset={-seg.arcStart}
-                    opacity={dimmed ? 0.25 : 1}
-                    style={{ transition: "opacity 0.15s, stroke-width 0.15s", cursor: "pointer" }}
-                    onClick={() => onChannelClick(activeChannel === seg.label ? null : seg.label)} />
-                );
-              })}
-            </g>
-            {activeSeg ? (
-              <>
-                <text x={CX} y={CY - 10} textAnchor="middle" fontSize={10} fill="#6b7280" fontFamily="inherit">{activeSeg.label}</text>
-                <text x={CX} y={CY + 8} textAnchor="middle" fontSize={15} fontWeight="700" fill={activeSeg.color} fontFamily="inherit">
-                  {(activeSeg.pct * 100).toFixed(1)}%
-                </text>
-                <text x={CX} y={CY + 22} textAnchor="middle" fontSize={10} fill="#9ca3af" fontFamily="inherit">
-                  {activeSubLabel(activeSeg)}
-                </text>
-              </>
-            ) : (
-              <>
-                <text x={CX} y={CY - 8} textAnchor="middle" fontSize={11} fill="#6b7280" fontFamily="inherit">{centerLabel}</text>
-                <text x={CX} y={CY + 10} textAnchor="middle" fontSize={14} fontWeight="700" fill="#111827" fontFamily="inherit">
-                  {centerValue}
-                </text>
-              </>
-            )}
-          </svg>
-        </div>
-        <div className="flex flex-col gap-3.5 flex-1 min-w-0">
-          {segments.map((seg, i) => {
-            const isActive = activeIdx === i;
-            const dimmed = activeChannel !== null && !isActive;
-            return (
-              <div key={i} className="flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1 -mx-2 transition-colors"
-                   style={{ backgroundColor: isActive ? seg.color + "18" : "transparent", opacity: dimmed ? 0.4 : 1 }}
-                   onClick={() => onChannelClick(activeChannel === seg.label ? null : seg.label)}>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform"
-                       style={{ backgroundColor: seg.color, transform: isActive ? "scale(1.35)" : "scale(1)" }} />
-                  <span className="text-sm font-medium text-gray-700 shrink-0"
-                        style={{ minWidth: 68, color: isActive ? seg.color : undefined, fontWeight: isActive ? 700 : 500 }}>{seg.label}</span>
-                  <span className="text-gray-300 shrink-0 select-none">|</span>
-                  <span className="text-sm font-bold tabular-nums shrink-0"
-                        style={{ minWidth: 42, color: isActive ? seg.color : "#111827" }}>{(seg.pct * 100).toFixed(1)}%</span>
-                  <span className="text-gray-300 shrink-0 select-none">|</span>
-                  <span className="text-sm text-gray-400 tabular-nums">{legendSub(seg)}</span>
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden" style={{ marginLeft: 18 }}>
-                  <div className="h-full rounded-full transition-all" style={{ width: `${seg.pct * 100}%`, backgroundColor: seg.color }} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <DonutBreakdown
+        segments={segments}
+        centerLabel={centerLabel}
+        centerValue={centerValue}
+        selected={activeChannel}
+        onSelect={(label) => onChannelClick(activeChannel === label ? null : label)}
+      />
       </div>
     </div>
   );

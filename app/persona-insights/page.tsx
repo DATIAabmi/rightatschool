@@ -323,7 +323,7 @@ function PersonaInsightsContent() {
               }}
               className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
             >
-              <Download size={13} /> Export CSV
+              <Download size={13} /> Export
             </button>
           )}
         </div>

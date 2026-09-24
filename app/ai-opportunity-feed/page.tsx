@@ -29,7 +29,7 @@ const COLS = [
   { key: "Source Link",     width: 100, sort: false, flex: false },
   { key: "Date",            width: 80,  sort: true,  flex: false },
   { key: "Category",        width: 130, sort: true,  flex: false },
-  { key: "Source",          width: 110, sort: true,  flex: false },
+  { key: "Source",          width: 85,  sort: true,  flex: false },
   { key: "Signal Analysis", width: 240, sort: true,  flex: true  },
   { key: "Strength",        width: 80,  sort: true,  flex: false },
   { key: "Source Text",     width: 280, sort: false, flex: true  },

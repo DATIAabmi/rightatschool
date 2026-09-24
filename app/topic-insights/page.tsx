@@ -223,7 +223,7 @@ const TI_COLS = [
   { label: "Campaign",    width: 90,  align: "center" as const, colIdx: 2  },
   { label: "Date",        width: 90,  align: "center" as const, colIdx: 6  },
   { label: "Topic",       width: 260, align: "center" as const, colIdx: 4  },
-  { label: "Topic Score", width: 90,  align: "center" as const, colIdx: 5  },
+  { label: "Topic Score", width: 110,  align: "center" as const, colIdx: 5  },
 ];
 const TI_GRID = TI_COLS.map(c => `${c.width}px`).join(" ");
 
@@ -425,7 +425,7 @@ function TopicInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 1220, width: "100%" }}>
+        <div style={{ minWidth: 1240, width: "100%" }}>
 
         {/* AVG Topic Score chart — driven by the same filtered rows as the table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden" style={{ height: 340 }}>
@@ -476,7 +476,7 @@ function TopicInsightsContent() {
                  style={{ top: titleBarHeight, display: "grid", gridTemplateColumns: TI_GRID }}>
               {TI_COLS.map((cd, i) => (
                 <span key={i}
-                  className={`px-2 py-2 inline-flex items-center gap-0.5 select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
+                  className={`px-2 py-2 inline-flex items-center gap-0.5 whitespace-nowrap select-none ${cd.colIdx >= 0 ? "cursor-pointer hover:opacity-70" : ""} ${cd.align === "center" ? "justify-center" : "justify-start"}`}
                   onClick={cd.colIdx >= 0 ? () => setSort({ col: cd.colIdx, dir: sort.col === cd.colIdx && sort.dir === "desc" ? "asc" : "desc" }) : undefined}>
                   {cd.label}
                   {cd.colIdx >= 0 && (sort.col === cd.colIdx

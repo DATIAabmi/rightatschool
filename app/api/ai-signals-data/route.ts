@@ -10,7 +10,7 @@ const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 const DB_ID    = 67;
 const TABLE_ID = 390;
 
-interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; customerIdCol?: string | null; totalBeforeFilter?: number; }
+interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; idCol?: string | null; totalBeforeFilter?: number; }
 let memCache: SignalCache | null = null;
 let memCacheAt = 0;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -35,30 +35,33 @@ async function fetchSignals(): Promise<SignalCache> {
   const cols: string[] = (data.data?.cols ?? []).map((c: { display_name: string }) => c.display_name);
   const rawRows: unknown[][] = data.data?.rows ?? [];
 
-  // Find the customer_id column — handles "Customer ID" and legacy variants
+  // Find the client/customer ID column — prefers client_id variants, falls back to customer_id
+  const CLIENT_ID_KEYWORDS   = ["client_id", "clientid", "internal_client_id"];
   const CUSTOMER_ID_KEYWORDS = ["customer_id", "customerid", "internal_customer_id"];
-  const customerIdCol = cols.find((c: string) =>
-    CUSTOMER_ID_KEYWORDS.some((k) => c.toLowerCase().replace(/[\s-]/g, "_") === k)
-  ) ?? null;
+  const normalize = (s: string) => s.toLowerCase().replace(/[\s-]/g, "_");
+  const customerIdCol =
+    cols.find((c: string) => CLIENT_ID_KEYWORDS.includes(normalize(c))) ??
+    cols.find((c: string) => CUSTOMER_ID_KEYWORDS.includes(normalize(c))) ??
+    null;
 
   const allRows: Record<string, unknown>[] = rawRows.map((row) =>
     Object.fromEntries(cols.map((col, i) => [col, row[i]]))
   );
 
-  // Filter to Right at School — Internal Customer ID = 11564
+  // Filter to Right at School — Client/Customer ID = 11564
   const rows = customerIdCol
     ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "11564")
     : allRows;
 
-  memCache = { rows, columns: cols, customerIdCol, totalBeforeFilter: allRows.length };
+  memCache = { rows, columns: cols, idCol: customerIdCol, totalBeforeFilter: allRows.length };
   memCacheAt = Date.now();
   return memCache;
 }
 
 export async function GET() {
   try {
-    const { rows, columns, customerIdCol, totalBeforeFilter } = await fetchSignals();
-    return NextResponse.json({ rows, columns, _debug: { customerIdCol, totalBeforeFilter } }, {
+    const { rows, columns, idCol, totalBeforeFilter } = await fetchSignals();
+    return NextResponse.json({ rows, columns, _debug: { idCol, totalBeforeFilter } }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {

@@ -69,8 +69,7 @@ export default function Home() {
     ];
 
     const stamp = new Date().toISOString().slice(0, 10);
-    const client = campaign.length === 1 ? campaign[0].replace(/[^a-z0-9]/gi, "-") : "all-campaigns";
-    downloadCsv(`datia-ecosystem-${client}-${stamp}.csv`, rows);
+    downloadCsv(`DATIA ABMxi-Ecosystem-Insights-${stamp}.csv`, rows);
   }
 
   return (

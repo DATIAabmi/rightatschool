@@ -8,7 +8,7 @@ import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
-export default function DashboardHeader({ legend }: { legend?: string }) {
+export default function DashboardHeader({ legend, onExport }: { legend?: string; onExport?: () => Promise<void> }) {
   const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd, resetAll } = useFilter();
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
@@ -22,6 +22,10 @@ export default function DashboardHeader({ legend }: { legend?: string }) {
   async function handleExport() {
     setExporting(true);
     try {
+      if (onExport) {
+        await onExport();
+        return;
+      }
       const params = new URLSearchParams();
       if (campaign.length) params.set("campaign", campaign.join(","));
       if (dateStart) params.set("dateStart", dateStart);

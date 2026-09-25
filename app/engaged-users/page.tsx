@@ -18,10 +18,18 @@ function fetchFieldOptions(field: "district" | "domain" | "state") {
 // ─── Definitions modal ────────────────────────────────────────────────────────
 
 const DEFINITIONS = [
-  { term: "Intel", def: "Account Intelligence signals including School Board Minutes, RFPs/Bids, Grants/Bonds, Strategic Initiatives, Leadership Changes, and District News. See the Account Intelligence dashboard for details." },
-  { term: "Topic", def: "Intent signals based on content consumption. See Topic Insights dashboard." },
-  { term: "Engagements", def: "The number of clicks on your ads, email opens and lead downloads." },
-  { term: "Intent Score", def: "A numerical value that indicates a district's likelihood to be in market derived from district data and total engagement" },
+  { term: "Filtering",          def: "Use the filters at the top of the page to filter by Campaign, Date Range, District, Domain, or State." },
+  { term: "Reset",              def: "To reset filters, click the Reset Filters button at the top right of the page." },
+  { term: "Sorting",            def: "Sort the table by clicking any column header or using the Sort By menu at the top right of the page." },
+  { term: "Export",             def: "Use Export All at the top of the page to export data from all dashboard views. Use Export within an individual dashboard view to export data from that view only." },
+  { term: "Intel",              def: "Account Intelligence signals including School Board Minutes, RFPs/Bids, Grants/Bonds, Strategic Initiatives, Leadership Changes, and District News. See the Account Intelligence dashboard for details." },
+  { term: "Topic",              def: "Reading Behavior signals indicating above-baseline content consumption on relevant topics. See the Topic Insights dashboard for details." },
+  { term: "Engagements",        def: "Total engagement activity, including ad clicks, email opens, and asset downloads." },
+  { term: "Engaged Users",      def: "Unique users who engaged with your content or campaign." },
+  { term: "Leads",              def: "Unique content downloads by target personas." },
+  { term: "Total Downloads",    def: "Total content assets downloaded by contacts." },
+  { term: "Intent Score",       def: "A numerical score reflecting a district's overall level of buying activity based on Account Intelligence, Reading Behavior, and engagement signals." },
+  { term: "Intent Score Trend", def: "Change in Intent Score compared with the prior campaign, indicating whether account activity has increased or decreased." },
 ];
 
 function DefinitionsModal({ onClose }: { onClose: () => void }) {

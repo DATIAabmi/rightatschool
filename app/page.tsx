@@ -51,7 +51,13 @@ export default function Home() {
       { label: "Leads",               value: funnelRes.leads,        goal: goals.leads,       hasGoal: true  },
     ];
 
+    const campaignLabel = campaign.length ? campaign.join(", ") : "All Campaigns";
+    const dateLabel = dateStart && dateEnd ? `${dateStart} – ${dateEnd}` : "All Dates";
+
     const rows: (string | number | null)[][] = [
+      ["Campaign", campaignLabel],
+      ["Date Range", dateLabel],
+      [],
       ["ECOSYSTEM FUNNEL"],
       ["Metric", "Value", "Goal", "% of Goal"],
       ...stages.map((s) => [

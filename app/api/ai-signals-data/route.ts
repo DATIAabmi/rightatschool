@@ -6,11 +6,13 @@ export const maxDuration = 60;
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
-// ai_signals table in "My First Project" database — has District, Domain, State, Campaign
+// ai_signals table in BigQuery (analytics dataset) — shared across clients,
+// scoped per-client via Client ID. 11564 = Right at School.
 const DB_ID    = 67;
 const TABLE_ID = 390;
+const CLIENT_ID = 11564;
 
-interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; idCol?: string | null; totalBeforeFilter?: number; }
+interface SignalCache { rows: Record<string, unknown>[]; columns: string[]; }
 let memCache: SignalCache | null = null;
 let memCacheAt = 0;
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -24,7 +26,10 @@ async function fetchSignals(): Promise<SignalCache> {
     body: JSON.stringify({
       database: DB_ID,
       type: "query",
-      query: { "source-table": TABLE_ID },
+      query: {
+        "source-table": TABLE_ID,
+        filter: ["=", ["field", "Client ID", { "base-type": "type/Integer" }], CLIENT_ID],
+      },
     }),
     cache: "no-store",
   });
@@ -34,34 +39,19 @@ async function fetchSignals(): Promise<SignalCache> {
 
   const cols: string[] = (data.data?.cols ?? []).map((c: { display_name: string }) => c.display_name);
   const rawRows: unknown[][] = data.data?.rows ?? [];
-
-  // Find the client/customer ID column — prefers client_id variants, falls back to customer_id
-  const CLIENT_ID_KEYWORDS   = ["client_id", "clientid", "internal_client_id"];
-  const CUSTOMER_ID_KEYWORDS = ["customer_id", "customerid", "internal_customer_id"];
-  const normalize = (s: string) => s.toLowerCase().replace(/[\s-]/g, "_");
-  const customerIdCol =
-    cols.find((c: string) => CLIENT_ID_KEYWORDS.includes(normalize(c))) ??
-    cols.find((c: string) => CUSTOMER_ID_KEYWORDS.includes(normalize(c))) ??
-    null;
-
-  const allRows: Record<string, unknown>[] = rawRows.map((row) =>
+  const rows: Record<string, unknown>[] = rawRows.map((row) =>
     Object.fromEntries(cols.map((col, i) => [col, row[i]]))
   );
 
-  // Filter to Right at School — Client/Customer ID = 11564
-  const rows = customerIdCol
-    ? allRows.filter((r) => String(r[customerIdCol] ?? "").trim() === "11564")
-    : allRows;
-
-  memCache = { rows, columns: cols, idCol: customerIdCol, totalBeforeFilter: allRows.length };
+  memCache = { rows, columns: cols };
   memCacheAt = Date.now();
   return memCache;
 }
 
 export async function GET() {
   try {
-    const { rows, columns, idCol, totalBeforeFilter } = await fetchSignals();
-    return NextResponse.json({ rows, columns, _debug: { idCol, totalBeforeFilter } }, {
+    const { rows, columns } = await fetchSignals();
+    return NextResponse.json({ rows, columns }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {

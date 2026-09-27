@@ -46,7 +46,7 @@ function DefinitionsModal({ onClose }: { onClose: () => void }) {
     >
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)" }} onMouseDown={onClose} />
       <div
-        style={{ position: "relative", background: "#fff", borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", border: "1px solid #f0f0f0", padding: 24, maxWidth: 440, width: "calc(100% - 32px)" }}
+        style={{ position: "relative", background: "#fff", borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.18)", border: "1px solid #f0f0f0", padding: 24, maxWidth: 520, width: "calc(100% - 32px)" }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
@@ -58,7 +58,7 @@ function DefinitionsModal({ onClose }: { onClose: () => void }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {DEFINITIONS.map(({ term, def }) => (
             <div key={term} style={{ display: "flex", gap: 12 }}>
-              <span style={{ fontWeight: 700, fontSize: 12, color: "#111", flexShrink: 0, minWidth: 80, paddingTop: 1 }}>{term}</span>
+              <span style={{ fontWeight: 700, fontSize: 12, color: "#111", flexShrink: 0, minWidth: 140, paddingTop: 1 }}>{term}</span>
               <span style={{ fontSize: 12, color: "#4b5563", lineHeight: 1.6 }}>{def}</span>
             </div>
           ))}
@@ -76,9 +76,10 @@ interface SortState { col: number; dir: SortDir }
 
 const SORT_COLUMNS = [
   { label: "District", index: 0 },
+  { label: "Domain", index: 1 },
   { label: "State", index: 2 },
-  { label: "Job Function", index: 3 },
   { label: "Campaign", index: 4 },
+  { label: "Job Function", index: 3 },
   { label: "Engagements", index: 5 },
   { label: "Leads", index: 6 },
 ];

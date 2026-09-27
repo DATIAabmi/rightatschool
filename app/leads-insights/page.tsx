@@ -129,7 +129,7 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 // Raw: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=Intel
 const LI_COLS = [
   { label: "#",               width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",        width: 360, align: "left"   as const, colIdx: 0  },
+  { label: "District",        width: 380, align: "left"   as const, colIdx: 0  },
   { label: "Domain",          width: 220, align: "left"   as const, colIdx: 1  },
   { label: "State",           width: 70,  align: "center" as const, colIdx: 3  },
   { label: "Campaign",        width: 80,  align: "center" as const, colIdx: 2  },
@@ -283,7 +283,7 @@ function LeadsInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 1130, width: "100%" }}>
+        <div style={{ minWidth: 1150, width: "100%" }}>
         <LeadsSummaryPanel districts={filterDistrict} states={filterState} />
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -295,11 +295,11 @@ function LeadsInsightsContent() {
           {rows.length > 0 && (
             <button onClick={() => {
                 // Raw order: 0=District 1=Domain 2=Campaign 3=State 4=Job Function 5=Total Downloads 6=SBM
-                // Desired: District, Domain, State, Campaign, SBM, Job Function, Total Downloads
-                const ORDER = [0, 1, 3, 2, 6, 4, 5];
+                // Desired: District, Domain, State, Campaign, Job Function, Total Downloads (Intel excluded)
+                const ORDER = [0, 1, 3, 2, 4, 5];
                 const exportCols = ORDER.map((i) => cols[i]).filter(Boolean);
                 const exportRows = rows.map((r) => ORDER.map((i) => r[i]));
-                exportToCsv("leads-insights", exportCols, exportRows);
+                exportToCsv("DATIA ABMxi-Leads-Insights", exportCols, exportRows);
               }}
               className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors">
               <Download size={13} /> Export

@@ -140,7 +140,7 @@ type Row = (string | number | null)[];
 // Visual: # | District | Domain | State | Campaign | Job Function | Engagements | Leads
 const PI_COLS = [
   { label: "#",            width: 36,  align: "center" as const, colIdx: -1 },
-  { label: "District",     width: 360, align: "left"   as const, colIdx: 0  },
+  { label: "District",     width: 380, align: "left"   as const, colIdx: 0  },
   { label: "Domain",       width: 230, align: "left"   as const, colIdx: 1  },
   { label: "State",        width: 48,  align: "center" as const, colIdx: 2  },
   { label: "Campaign",     width: 80,  align: "center" as const, colIdx: 4  },
@@ -310,7 +310,7 @@ function PersonaInsightsContent() {
       </div>
 
       <div style={{ flex: 1, minHeight: 0, overflow: "auto", WebkitOverflowScrolling: "touch", padding: "0 24px 24px" }}>
-        <div style={{ minWidth: 992, width: "100%" }}>
+        <div style={{ minWidth: 1012, width: "100%" }}>
         {/* Section title */}
         <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -327,7 +327,7 @@ function PersonaInsightsContent() {
                 const ORDER = [0, 1, 2, 4, 3, 5, 6];
                 const exportCols = ORDER.map((i) => cols[i]).filter(Boolean);
                 const exportRows = rows.map((r) => ORDER.map((i) => r[i]));
-                exportToCsv("persona-insights", exportCols, exportRows);
+                exportToCsv("DATIA ABMxi-Persona-Insights", exportCols, exportRows);
               }}
               className="flex items-center gap-1.5 text-xs text-gray-300 hover:text-white transition-colors"
             >

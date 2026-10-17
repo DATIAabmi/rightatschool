@@ -15,11 +15,13 @@ import {
   ScrollText,
   Sparkles,
   MapPin,
+  Target,
 } from "lucide-react";
 
 const navItems = [
   { label: "Ecosystem Insights", icon: Globe, href: "/" },
   { label: "Engaged Users\nby District", icon: Users, href: "/engaged-users" },
+  { label: "Intent Report", icon: Target, href: "/intent-report" },
   { label: "Account Intelligence", icon: Sparkles, href: "/ai-opportunity-feed" },
   { label: "Persona Insights", icon: UserCircle, href: "/persona-insights" },
   { label: "Geo Insights", icon: MapPin, href: "/geo-insights" },

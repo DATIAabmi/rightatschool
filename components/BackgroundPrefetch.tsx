@@ -20,6 +20,8 @@ const PREFETCH_ROUTES = [
   `/api/content-data?campaign=${c}`,
   `/api/q168-data?campaign=${c}`,
   `/api/q169-data?campaign=${c}`,
+  // Same URL the Intent Report page requests, so the CDN cache entry is shared.
+  `/api/intent-report-data?campaign=${DEFAULT_CAMPAIGN.split(":")[0]}`,
 ];
 
 export default function BackgroundPrefetch() {

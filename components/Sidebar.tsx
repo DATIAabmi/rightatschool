@@ -15,6 +15,7 @@ import {
   ScrollText,
   Sparkles,
   MapPin,
+  Target,
 } from "lucide-react";
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
   { label: "Topic Insights", icon: BookOpen, href: "/topic-insights" },
   { label: "Content Insights", icon: FileText, href: "/content-insights" },
   { label: "Campaign Creative", icon: MonitorPlay, href: "/ad-samples" },
+  { label: "Intent Report", icon: Target, href: "/intent-report" },
   // { label: "School Board Minutes", icon: ScrollText, href: "/school-board-minutes" }, // hidden — re-enable when ready
 ];
 

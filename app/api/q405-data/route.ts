@@ -30,39 +30,40 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
 const memCache = new Map<string, { data: { cols: unknown[]; rows: unknown[][] }; ts: number }>();
 const inflight = new Map<string, Promise<{ cols: unknown[]; rows: unknown[][] }>>();
 
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 async function fetchData(
   campaigns: string[],
   districts: string[],
   domains: string[],
   states: string[],
+  dateStart: string,
+  dateEnd: string,
 ): Promise<{ cols: unknown[]; rows: unknown[][] }> {
   const where: string[] = [
     "topic_district IS NOT NULL",
     "topic_district != ''",
   ];
 
-  // Campaign filter applied BEFORE GROUP BY so Score Trend aggregates correctly.
-  // Matches card 405 pattern: LOWER(abm_campaign) LIKE '%c7%'
-  if (campaigns.length) {
-    const likeExprs = campaigns.map(
-      (c) => `LOWER(abm_campaign) LIKE LOWER('%${c.replace(/'/g, "''")}%')`,
-    );
-    where.push(`(${likeExprs.join(" OR ")})`);
-  }
+  // Page sends short codes ("C7"); abm_campaign stores short codes
+  if (campaigns.length) where.push(`abm_campaign IN (${campaigns.map(sqlStr).join(", ")})`);
   if (districts.length) where.push(`topic_district IN (${districts.map(sqlStr).join(", ")})`);
   if (domains.length)   where.push(`email_domain IN (${domains.map(sqlStr).join(", ")})`);
   if (states.length)    where.push(`state IN (${states.map(sqlStr).join(", ")})`);
+  if (dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd)) {
+    where.push(`DATE(date_max_for_intent_scoring) BETWEEN '${dateStart}' AND '${dateEnd}'`);
+  }
 
   const sql = `
 SELECT
   topic_district AS District,
   ANY_VALUE(email_domain) AS Domain,
   ANY_VALUE(state) AS ST,
-  ANY_VALUE(abm_campaign) AS Camp,
+  ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Camp,
   IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Intel,
   IF(MAX(CASE WHEN topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
   SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
-  COUNT(user_engagement_score_trend) AS EngagedUser,
+  COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS EngagedUser,
   COUNT(NULLIF(CAST(leads AS STRING), '')) AS UniqueLeads,
   SUM(IFNULL(SAFE_CAST(downloads AS FLOAT64), 0)) AS Down,
   SUM(IFNULL(SAFE_CAST(cumulative_score AS FLOAT64), 0)) AS \`Intent Score\`,
@@ -118,15 +119,17 @@ export async function GET(req: NextRequest) {
     const districts = parseList(searchParams.get("district"));
     const domains   = parseList(searchParams.get("domain"));
     const states    = parseList(searchParams.get("state"));
+    const dateStart = searchParams.get("dateStart") ?? "";
+    const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
-    const cacheKey = JSON.stringify({ campaigns, districts, domains, states });
+    const cacheKey = JSON.stringify({ campaigns, districts, domains, states, dateStart, dateEnd });
     const cached = memCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
       return cachedJson(cached.data);
     }
 
     if (!inflight.has(cacheKey)) {
-      const p = fetchData(campaigns, districts, domains, states)
+      const p = fetchData(campaigns, districts, domains, states, dateStart, dateEnd)
         .then((result) => {
           memCache.set(cacheKey, { data: result, ts: Date.now() });
           inflight.delete(cacheKey);

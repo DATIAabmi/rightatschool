@@ -7,7 +7,7 @@ import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
-export default function DashboardHeader({ legend, onExport }: { legend?: string; onExport?: () => Promise<void> }) {
+export default function DashboardHeader({ legend, onExport, exportLabel, hideDateRange }: { legend?: string; onExport?: () => Promise<void>; exportLabel?: string; hideDateRange?: boolean }) {
   const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd, resetAll } = useFilter();
   const [exporting, setExporting] = useState(false);
 
@@ -89,9 +89,33 @@ export default function DashboardHeader({ legend, onExport }: { legend?: string;
           options={[...CAMPAIGNS]}
           minWidth={220}
         />
-        <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
+        {!hideDateRange && <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
           <CalendarSearch size={14} className="text-orange-400 shrink-0" />
           <span className="text-gray-700 text-xs font-bold uppercase shrink-0">Date Range:</span>
+          <select
+            value={
+              dateStart === "2026-09-01" && dateEnd === "2026-09-30" ? "sep-2026" :
+              dateStart === "2026-08-01" && dateEnd === "2026-08-31" ? "aug-2026" :
+              dateStart === "2026-07-01" && dateEnd === "2026-07-31" ? "jul-2026" :
+              "custom"
+            }
+            onChange={(e) => {
+              const presets: Record<string, [string, string]> = {
+                "sep-2026": ["2026-09-01", "2026-09-30"],
+                "aug-2026": ["2026-08-01", "2026-08-31"],
+                "jul-2026": ["2026-07-01", "2026-07-31"],
+              };
+              const p = presets[e.target.value];
+              if (p) { setDateStart(p[0]); setDateEnd(p[1]); }
+            }}
+            className="text-xs text-gray-600 bg-transparent border-none outline-none cursor-pointer"
+          >
+            <option value="custom">{dateStart || dateEnd ? "Custom" : "Select month…"}</option>
+            <option value="sep-2026">Sep 2026</option>
+            <option value="aug-2026">Aug 2026</option>
+            <option value="jul-2026">Jul 2026</option>
+          </select>
+          <div className="w-px h-3 bg-gray-200 shrink-0" />
           <div className="relative flex items-center">
             {!dateStart && <span className="absolute left-0 text-xs text-gray-400 pointer-events-none select-none">Start</span>}
             <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)}
@@ -108,7 +132,7 @@ export default function DashboardHeader({ legend, onExport }: { legend?: string;
               <X size={12} />
             </button>
           )}
-        </div>
+        </div>}
         <button
           type="button"
           onClick={resetAll}
@@ -118,16 +142,20 @@ export default function DashboardHeader({ legend, onExport }: { legend?: string;
           <RotateCcw size={13} />
           Reset Filters
         </button>
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-300 hover:border-emerald-500 rounded-lg bg-white transition-colors shrink-0 disabled:opacity-60 disabled:cursor-wait"
-          title="Export all table data to Excel"
-        >
-          {exporting ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />}
-          {exporting ? "Exporting…" : "Export"}
-        </button>
+        <div className="relative group shrink-0">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs text-emerald-700 hover:text-emerald-900 border border-emerald-300 hover:border-emerald-500 rounded-lg bg-white transition-colors disabled:opacity-60 disabled:cursor-wait"
+          >
+            {exporting ? <Loader2 size={13} className="animate-spin" /> : <FileSpreadsheet size={13} />}
+            {exporting ? "Exporting…" : (exportLabel ?? "Export All")}
+          </button>
+          <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-800 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+            Export to Excel
+          </div>
+        </div>
         <button
           type="button"
           onClick={handleSignOut}

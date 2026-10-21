@@ -58,7 +58,7 @@ export default function Home() {
       ["Campaign", campaignLabel],
       ["Date Range", dateLabel],
       [],
-      ["ECOSYSTEM FUNNEL"],
+      ["PROGRAM METRICS SUMMARY"],
       ["Metric", "Value", "Goal", "% of Goal"],
       ...stages.map((s) => [
         s.label,
@@ -67,7 +67,7 @@ export default function Home() {
         s.hasGoal && s.goal ? (Math.round((Number(s.value) / s.goal) * 100) + "%") : "",
       ]),
       [],
-      ["CHANNEL PERFORMANCE BY CLICKS"],
+      ["ENGAGEMENTS BY CHANNEL"],
       ["Channel", "Clicks", "% of Total"],
       ...(channelRes.rows ?? []).map((r: [string, number, number]) => [
         r[0], fmtNum(r[1]), Math.round(r[2] * 100) + "%",
@@ -80,7 +80,7 @@ export default function Home() {
 
   return (
     <>
-      <DashboardHeader onExport={handleEcosystemExport} />
+      <DashboardHeader onExport={handleEcosystemExport} exportLabel="Export" />
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <MultiSelectDropdown
           label="Channel"

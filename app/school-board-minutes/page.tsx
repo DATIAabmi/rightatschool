@@ -247,6 +247,7 @@ function SchoolBoardContent() {
   const [filterDistrict, setFilterDistrict] = useState<string[]>(urlDistrict ? [urlDistrict] : []);
   const [filterDomain, setFilterDomain] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
+
   const [filterKeyword, setFilterKeyword] = useState<string[]>([]);
   const [sort, setSort] = useState<SortState>({ col: 4, dir: "desc" }); // default: SBM Date desc
 
@@ -303,6 +304,14 @@ function SchoolBoardContent() {
     setFilterKeyword([]);
   }, [resetSignal]);
 
+  const searchDistricts = useCallback((q: string): Promise<string[]> => {
+    const params = new URLSearchParams({ field: "district", q });
+    if (filterState.length) params.set("state", filterState.join(","));
+    return fetch(`/api/filter-search?${params}`)
+      .then((r) => r.json())
+      .then((d) => d.values ?? []);
+  }, [filterState]);
+
   // Client-side filter: 0=District 1=Campaign 2=District Domain 3=ST 4=SBM Date 5=Keyword 6=SBM Context 7=SBM Link
   const filteredRows = allRows.filter((row) => {
     if (filterDomain.length  && !filterDomain.map((v) => v.toLowerCase()).includes(String(row[2] ?? "").toLowerCase()))  return false;
@@ -321,7 +330,7 @@ function SchoolBoardContent() {
           {/* Filter + sort bar */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} search={fetchFieldOptions("district")} />
+              <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} search={searchDistricts} />
               <MultiSelectDropdown label="Domain"   value={filterDomain}   onChange={setFilterDomain}   search={fetchFieldOptions("domain")} />
               <MultiSelectDropdown label="State"    value={filterState}    onChange={setFilterState}    search={fetchFieldOptions("state")} />
               <MultiSelectDropdown label="Keyword"  value={filterKeyword}  onChange={setFilterKeyword}  options={KEYWORDS} />

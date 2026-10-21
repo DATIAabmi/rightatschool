@@ -8,12 +8,15 @@ interface BaseProps {
   value: string[];
   onChange: (values: string[]) => void;
   minWidth?: number;
+  hideSelectAll?: boolean;
 }
 
 interface StaticProps extends BaseProps {
   /** Fixed, fully-known option list (e.g. campaigns). */
   options: string[];
   search?: undefined;
+  /** Show a search box that filters options client-side. */
+  searchable?: boolean;
 }
 
 interface SearchProps extends BaseProps {
@@ -31,7 +34,8 @@ function summarize(value: string[]): string {
 }
 
 export default function MultiSelectDropdown(props: Props) {
-  const { label, value, onChange, minWidth = 180 } = props;
+  const { label, value, onChange, minWidth = 180, hideSelectAll = false } = props;
+  const searchable = "searchable" in props ? props.searchable : false;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<string[]>(props.options ?? []);
@@ -57,6 +61,16 @@ export default function MultiSelectDropdown(props: Props) {
     props.search(q).then((vals) => { setOptions(vals); setLoading(false); }).catch(() => setLoading(false));
   }, [props.search]);
 
+  // When the search function changes (e.g. a state filter was selected), clear
+  // stale options so the dropdown never shows results from the previous context.
+  // If the panel is already open, re-fetch immediately with the updated function.
+  useEffect(() => {
+    if (!props.search) return;
+    setOptions([]);
+    if (open) runSearch(query);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runSearch]); // runSearch is recreated only when props.search changes
+
   function handleOpen() {
     const next = !open;
     setOpen(next);
@@ -64,6 +78,8 @@ export default function MultiSelectDropdown(props: Props) {
     if (next && props.search) {
       setTimeout(() => { inputRef.current?.focus(); }, 50);
       runSearch("");
+    } else if (next && searchable) {
+      setTimeout(() => { inputRef.current?.focus(); }, 50);
     }
   }
 
@@ -78,7 +94,10 @@ export default function MultiSelectDropdown(props: Props) {
     else onChange([...value, opt]);
   }
 
-  const displayOptions = props.options ?? options;
+  const baseOptions = props.options ?? options;
+  const displayOptions = (searchable && props.options && query)
+    ? props.options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
+    : baseOptions;
   const allShownSelected = displayOptions.length > 0 && displayOptions.every((opt) => value.includes(opt));
   const active = value.length > 0;
 
@@ -101,9 +120,11 @@ export default function MultiSelectDropdown(props: Props) {
         } ${open ? "ring-2 ring-blue-100 border-blue-300" : ""}`}
         style={{ minWidth }}
       >
-        <span className={`text-[13px] font-bold uppercase tracking-wider shrink-0 ${active ? "text-blue-400" : "text-gray-400"}`}>
-          {label.toUpperCase().replace("XI", "xi")}
-        </span>
+        {!active && (
+          <span className="text-[13px] font-bold uppercase tracking-wider shrink-0 text-gray-400">
+            {label.toUpperCase().replace("XI", "xi")}
+          </span>
+        )}
         <span className="flex-1 text-left truncate text-xs">
           {active
             ? <span className="text-blue-700 font-semibold">{summarize(value)}</span>
@@ -124,14 +145,14 @@ export default function MultiSelectDropdown(props: Props) {
 
       {open && (
         <div className="absolute top-full left-0 z-50 mt-1.5 w-72 bg-white border border-gray-100 rounded-2xl shadow-xl shadow-gray-200/60 overflow-hidden">
-          {props.search && (
+          {(props.search || searchable) && (
             <div className="p-2.5 border-b border-gray-100">
               <input
                 ref={inputRef}
                 type="text"
                 placeholder={`Search ${label.toLowerCase()}…`}
                 value={query}
-                onChange={(e) => handleSearchInput(e.target.value)}
+                onChange={(e) => props.search ? handleSearchInput(e.target.value) : setQuery(e.target.value)}
                 className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-shadow"
               />
             </div>
@@ -161,10 +182,10 @@ export default function MultiSelectDropdown(props: Props) {
             {!loading && displayOptions.length === 0 && query && (
               <p className="px-4 py-3 text-xs text-gray-400 text-center">No results for &quot;{query}&quot;</p>
             )}
-            {!loading && displayOptions.length === 0 && !query && props.search && (
+            {!loading && displayOptions.length === 0 && !query && props.search && !searchable && (
               <p className="px-4 py-3 text-xs text-gray-400 text-center">Type to search</p>
             )}
-            {!loading && displayOptions.length > 0 && (props.search ? query : true) && (
+            {!hideSelectAll && !loading && displayOptions.length > 0 && (props.search ? query : true) && (
               <button
                 onClick={toggleSelectAllShown}
                 className="w-full text-left px-4 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 mb-1 border-b border-gray-100"
@@ -178,7 +199,7 @@ export default function MultiSelectDropdown(props: Props) {
                 <button
                   key={opt}
                   onClick={() => toggle(opt)}
-                  className={`w-full flex items-center gap-2.5 text-left px-4 py-2 mx-1 rounded-lg text-sm truncate transition-colors ${checked ? "text-blue-700 font-semibold bg-blue-50" : "text-gray-700 hover:bg-gray-50"}`}
+                  className={`w-full flex items-center gap-2 text-left px-3 py-1.5 mx-1 rounded-lg text-[10px] truncate transition-colors ${checked ? "text-blue-700 font-semibold bg-blue-50" : "text-gray-700 hover:bg-gray-50"}`}
                   style={{ width: "calc(100% - 8px)" }}
                 >
                   <span className={`flex items-center justify-center w-4 h-4 rounded-md border shrink-0 transition-colors ${checked ? "bg-blue-600 border-blue-600" : "border-gray-300"}`}>

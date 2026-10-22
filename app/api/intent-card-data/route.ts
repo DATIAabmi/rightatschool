@@ -93,6 +93,7 @@ SELECT
   e.SBM_Link AS Link
 FROM ${TABLE}, UNNEST(engagement) AS e
 WHERE topic_district = ${districtVal}
+  AND UPPER(TRIM(e.SBM_district)) = UPPER(TRIM(topic_district))
   AND e.SBM_Date IS NOT NULL
   AND e.SBM_Link IS NOT NULL
 ORDER BY e.SBM_Date DESC

@@ -542,9 +542,11 @@ function writeSheet(
   });
 }
 
-// ── Master sheet column formatting ───────────────────────────────────────────
+// ── Sheet column formatting ──────────────────────────────────────────────────
 
-const MASTER_COLS: { w: number; h: "left" | "center"; numFmt?: string }[] = [
+type ColFmt = { w: number; h: "left" | "center"; numFmt?: string };
+
+const MASTER_COLS: ColFmt[] = [
   { w: 50, h: "left"   },                        // A  District
   { w: 30, h: "left"   },                        // B  Domain
   { w: 10, h: "center" },                        // C  State
@@ -576,10 +578,77 @@ const MASTER_COLS: { w: number; h: "left" | "center"; numFmt?: string }[] = [
   { w: 16, h: "center" },                        // AC
 ];
 
-function formatMasterSheet(ws: ExcelJS.Worksheet) {
-  ws.getRow(1).height = 30;
+const EU_COLS: ColFmt[] = [
+  { w: 50, h: "left"   },                        // A  District
+  { w: 30, h: "left"   },                        // B  Domain
+  { w: 10, h: "center" },                        // C  State
+  { w: 10, h: "center" },                        // D  Campaign
+  { w: 10, h: "center" },                        // E  Intel
+  { w: 10, h: "center" },                        // F  Topic
+  { w: 10, h: "center" },                        // G  Engagements
+  { w: 10, h: "center" },                        // H  Engaged Users
+  { w: 10, h: "center" },                        // I  Leads
+  { w: 10, h: "center" },                        // J  Total Downloads
+  { w: 10, h: "center" },                        // K  Intent Score
+  { w: 12, h: "center" },                        // L  Intent Score Trend
+];
 
-  MASTER_COLS.forEach((fmt, i) => {
+const AI_COLS: ColFmt[] = [
+  { w: 50, h: "left"   },                        // A  Organization
+  { w: 30, h: "left"   },                        // B  Domain
+  { w: 10, h: "center" },                        // C  State
+  { w: 10, h: "center" },                        // D  Campaign
+  { w: 25, h: "left"   },                        // E  Keywords
+  { w: 25, h: "left"   },                        // F  Category
+  { w: 15, h: "left",   numFmt: "mm-dd-yy" },    // G  Date
+  { w: 20, h: "left"   },                        // H  Source
+  { w: 20, h: "left"   },                        // I  Link
+  { w:  8, h: "center" },                        // J  Strength
+  { w: 40, h: "left"   },                        // K  Signal Analysis
+  { w: 40, h: "left"   },                        // L  Source Text
+  { w: 10, h: "left"   },                        // M  Market
+];
+
+const PERSONA_COLS: ColFmt[] = [
+  { w: 50, h: "left"   },                        // A  District
+  { w: 30, h: "left"   },                        // B  Domain
+  { w: 10, h: "center" },                        // C  State
+  { w: 10, h: "center" },                        // D  Campaign
+  { w: 40, h: "left"   },                        // E  Job Function
+  { w: 10, h: "center" },                        // F  Engagements
+  { w: 10, h: "center" },                        // G  Leads
+];
+
+const TOPIC_COLS: ColFmt[] = [
+  { w: 50, h: "left"   },                        // A  District
+  { w: 30, h: "left"   },                        // B  Domain
+  { w: 10, h: "center" },                        // C  Campaign
+  { w: 10, h: "center" },                        // D  State
+  { w: 15, h: "left",   numFmt: "mm-dd-yy" },    // E  Date
+  { w: 40, h: "left"   },                        // F  Topic
+  { w: 10, h: "center" },                        // G  Topic Score
+];
+
+const LEADS_COLS: ColFmt[] = [
+  { w: 50, h: "left"   },                        // A  District
+  { w: 30, h: "left"   },                        // B  Domain
+  { w: 10, h: "center" },                        // C  State
+  { w: 10, h: "center" },                        // D  Campaign
+  { w: 40, h: "left"   },                        // E  Job Function
+  { w: 16, h: "center" },                        // F  Total Downloads
+];
+
+const GEO_COLS: ColFmt[] = [
+  { w: 15, h: "center" },                        // A  State
+  { w: 15, h: "center" },                        // B  Engagements
+  { w: 15, h: "center" },                        // C  Engaged Users
+  { w: 15, h: "center" },                        // D  Leads
+];
+
+function formatSheet(ws: ExcelJS.Worksheet, cols: ColFmt[], headerHeight?: number) {
+  if (headerHeight) ws.getRow(1).height = headerHeight;
+
+  cols.forEach((fmt, i) => {
     const col = ws.getColumn(i + 1);
     col.width = fmt.w;
     col.eachCell((cell) => {
@@ -600,6 +669,33 @@ function aiToRows(rows: Record<string, unknown>[]): { cols: string[]; rows: unkn
   const cols = AI_ORDERED_KEYS.map((k) => (k === "Source Link" ? "Link" : k));
   const out = rows.map((r) => AI_ORDERED_KEYS.map((k) => r[k] ?? null));
   return { cols, rows: out };
+}
+
+// Reorder columns by header name (matches each page's CSV export order)
+function pickCols(data: { cols: string[]; rows: unknown[][] }, headers: string[]): { cols: string[]; rows: unknown[][] } {
+  if (!data.cols.length) return data;
+  const idx = headers.map((h) => data.cols.findIndex((c) => c.toLowerCase() === h.toLowerCase()));
+  return {
+    cols: headers,
+    rows: data.rows.map((r) => idx.map((i) => (i >= 0 ? r[i] ?? null : null))),
+  };
+}
+
+// Card 174 returns raw column names and no Campaign column — mirror q174-data,
+// which renames them and echoes the requested campaign on every row.
+const LEADS_DISPLAY_NAMES: Record<string, string> = {
+  Job_Function:    "Job Function",
+  Total_Downloads: "Total Downloads",
+  ST:              "State",
+};
+
+function normalizeLeads(data: { cols: string[]; rows: unknown[][] }, campaignCodes: string[]): { cols: string[]; rows: unknown[][] } {
+  if (!data.cols.length) return data;
+  const campaignVal = campaignCodes.filter(Boolean).join(", ") || "All";
+  return {
+    cols: [...data.cols.map((c) => LEADS_DISPLAY_NAMES[c] ?? c), "Campaign"],
+    rows: data.rows.map((r) => [...r, campaignVal]),
+  };
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────────
@@ -627,7 +723,7 @@ export async function GET(req: NextRequest) {
     const ai      = filterObjByCampaign(aiRaw, campaignCodes);
     const persona = personaRaw;
     const topic   = topicRaw;
-    const leads   = filterByCampaign(leadsRaw, campaignCodes);
+    const leads   = normalizeLeads(filterByCampaign(leadsRaw, campaignCodes), campaignCodes);
     const geo     = geoRaw;
 
     // AI as flat array rows for the individual sheet
@@ -643,33 +739,42 @@ export async function GET(req: NextRequest) {
 
     // Master sheet (identifier columns use light gray, field columns use source-section tint)
     writeSheet(wb, "Master", "FFE5E7EB", master.columns, master.rows);
-    formatMasterSheet(wb.getWorksheet("Master")!);
+    formatSheet(wb.getWorksheet("Master")!, MASTER_COLS, 30);
 
-    // Individual sheets
+    // Individual sheets — Persona/Leads reordered to District, Domain, State, Campaign, …
+    const personaOut = pickCols(persona, ["District", "Domain", "State", "Campaign", "Job Function", "Engagements", "Leads"]);
+    const leadsOut   = pickCols(leads,   ["District", "Domain", "State", "Campaign", "Job Function", "Total Downloads"]);
+
     writeSheet(wb, SECTIONS[0].title, SECTIONS[0].fill,
       eu.cols.map((h) => ({ header: h, kind: ["Engagements","Engaged Users","Leads","Total Downloads","Intent Score","Intent Score Trend"].includes(h) ? "number" as const : undefined })),
       eu.rows, SECTIONS[0].tabColor,
     );
+    formatSheet(wb.getWorksheet(SECTIONS[0].title)!, EU_COLS, 30);
     writeSheet(wb, SECTIONS[1].title, SECTIONS[1].fill,
       aiFlat.cols.map((h) => ({ header: h, kind: h === "Date" ? "date" as const : h === "Strength" ? "number" as const : h === "Link" ? "url" as const : undefined })),
       aiFlat.rows, SECTIONS[1].tabColor,
     );
+    formatSheet(wb.getWorksheet(SECTIONS[1].title)!, AI_COLS, 30);
     writeSheet(wb, SECTIONS[2].title, SECTIONS[2].fill,
-      persona.cols.map((h) => ({ header: h, kind: ["Engagements","Leads"].includes(h) ? "number" as const : undefined })),
-      persona.rows, SECTIONS[2].tabColor,
+      personaOut.cols.map((h) => ({ header: h, kind: ["Engagements","Leads"].includes(h) ? "number" as const : undefined })),
+      personaOut.rows, SECTIONS[2].tabColor,
     );
+    formatSheet(wb.getWorksheet(SECTIONS[2].title)!, PERSONA_COLS, 30);
     writeSheet(wb, SECTIONS[3].title, SECTIONS[3].fill,
       topic.cols.map((h) => ({ header: h, kind: h === "Topic Score" ? "number" as const : h === "Date" ? "date" as const : undefined })),
       topic.rows, SECTIONS[3].tabColor,
     );
+    formatSheet(wb.getWorksheet(SECTIONS[3].title)!, TOPIC_COLS, 30);
     writeSheet(wb, SECTIONS[4].title, SECTIONS[4].fill,
-      leads.cols.map((h) => ({ header: h, kind: ["Total Downloads","Downloads"].includes(h) ? "number" as const : undefined })),
-      leads.rows, SECTIONS[4].tabColor,
+      leadsOut.cols.map((h) => ({ header: h, kind: ["Total Downloads","Downloads"].includes(h) ? "number" as const : undefined })),
+      leadsOut.rows, SECTIONS[4].tabColor,
     );
+    formatSheet(wb.getWorksheet(SECTIONS[4].title)!, LEADS_COLS, 30);
     writeSheet(wb, SECTIONS[5].title, SECTIONS[5].fill,
       geo.cols.map((h) => ({ header: h, kind: ["Engagements","Engaged Users","Leads"].includes(h) ? "number" as const : undefined })),
       geo.rows, SECTIONS[5].tabColor,
     );
+    formatSheet(wb.getWorksheet(SECTIONS[5].title)!, GEO_COLS);
 
     const buf = await wb.xlsx.writeBuffer();
 

@@ -646,12 +646,18 @@ const GEO_COLS: ColFmt[] = [
   { w: 15, h: "center" },                        // D  Leads
 ];
 
+// Excel stores column width with 5px of cell padding (Calibri 11 = 7px per
+// character). Without it, a width of 50 shows as 49.29 in Excel's Column Width.
+function excelWidth(chars: number): number {
+  return Math.trunc(((chars * 7 + 5) / 7) * 256) / 256;
+}
+
 function formatSheet(ws: ExcelJS.Worksheet, cols: ColFmt[], headerHeight?: number) {
   if (headerHeight) ws.getRow(1).height = headerHeight;
 
   cols.forEach((fmt, i) => {
     const col = ws.getColumn(i + 1);
-    col.width = fmt.w;
+    col.width = excelWidth(fmt.w);
     col.eachCell((cell) => {
       cell.alignment = { horizontal: fmt.h, vertical: "top", wrapText: true };
       if (fmt.numFmt) cell.numFmt = fmt.numFmt;

@@ -30,7 +30,7 @@ interface SectionSpec {
 }
 
 const SECTIONS: SectionSpec[] = [
-  { title: "Engaged Users by District", fill: "FFDA9694", tabColor: "FFC0504D" },
+  { title: "Engaged Users by Organization", fill: "FFDA9694", tabColor: "FFC0504D" },
   { title: "Account Intelligence",      fill: "FFB1A0C7", tabColor: "FF8064A2" },
   { title: "Persona Insights",          fill: "FFC4D79B", tabColor: "FF9BBB59" },
   { title: "Topic Insights",            fill: "FF92CDDC", tabColor: "FF4BACC6" },
@@ -445,18 +445,11 @@ function buildMaster(
 
   const allFields = [...EU_FIELDS, ...AI_FIELDS, ...PE_FIELDS, ...TI_FIELDS, ...LD_FIELDS];
 
-  // Date fields in Master are stored as pre-formatted text (MM-DD-YY) so the
-  // format is display-safe regardless of Excel numFmt inheritance behaviour.
-  function fmtMasterDate(v: unknown): string | null {
-    const s = String(v ?? "").trim();
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    return m ? `${m[2]}-${m[3]}-${m[1].slice(2)}` : s || null;
-  }
-
+  // Date fields are written as real Excel dates (same as the Account
+  // Intelligence and Topic Insights sheets) so Excel doesn't flag them as text.
   const columns: MasterColumn[] = [
     { header: "District" }, { header: "Domain" }, { header: "State" }, { header: "Campaign" },
-    // Date fields stored as text strings — strip kind so writeSheet doesn't re-parse them
-    ...allFields.map((f) => ({ header: f.outHeader, kind: f.kind === "date" ? undefined : f.kind, fill: f.fill })),
+    ...allFields.map((f) => ({ header: f.outHeader, kind: f.kind, fill: f.fill })),
   ];
 
   const rows: unknown[][] = [...records.values()]
@@ -466,7 +459,6 @@ function buildMaster(
       const rest = allFields.map((f) => {
         const v = rec.values.get(f.outHeader);
         if (v instanceof Set) return [...v].filter(Boolean).sort().join("; ") || null;
-        if (f.kind === "date") return fmtMasterDate(v);
         return v ?? null;
       });
       return [...base, ...rest];

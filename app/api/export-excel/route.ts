@@ -418,7 +418,7 @@ function buildMaster(
     const dist = String(row["Organization"] ?? "").trim();
     const dom  = String(row["Domain"] ?? "").trim();
     if (!dist && !dom) continue;
-    const rec = getOrCreate(dist, dom, String(row["State"] ?? ""), String(row["Campaign"] ?? ""));
+    const rec = getOrCreate(dist, dom, String(row["State"] ?? ""), String(row["Campaign #"] ?? ""));
     for (const f of AI_FIELDS) mergeField(rec, f, row[f.sourceIdx as string]);
   }
 
@@ -520,7 +520,8 @@ function writeSheet(
   const headerRow = ws.getRow(1);
   columns.forEach((col, j) => {
     const cell = headerRow.getCell(j + 1);
-    cell.value = col.header;
+    // Market-neutral label so the same export works beyond K12 districts
+    cell.value = col.header === "District" ? "Organization" : col.header;
     const argb = col.fill ?? fill;
     if (argb) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb } };
     cell.border = { bottom: { style: "thin", color: { argb: "FF9CA3AF" } } };
@@ -661,12 +662,14 @@ function formatSheet(ws: ExcelJS.Worksheet, cols: ColFmt[], headerHeight?: numbe
 // ── AI signals column normalisation ──────────────────────────────────────────
 
 const AI_ORDERED_KEYS = [
-  "Organization", "Domain", "State", "Campaign", "Keywords",
+  "Organization", "Domain", "State", "Campaign #", "Keywords",
   "Category", "Date", "Source", "Source Link", "Strength", "Signal Analysis", "Source Text", "Market",
 ];
 
+const AI_HEADER_NAMES: Record<string, string> = { "Source Link": "Link", "Campaign #": "Campaign" };
+
 function aiToRows(rows: Record<string, unknown>[]): { cols: string[]; rows: unknown[][] } {
-  const cols = AI_ORDERED_KEYS.map((k) => (k === "Source Link" ? "Link" : k));
+  const cols = AI_ORDERED_KEYS.map((k) => AI_HEADER_NAMES[k] ?? k);
   const out = rows.map((r) => AI_ORDERED_KEYS.map((k) => r[k] ?? null));
   return { cols, rows: out };
 }

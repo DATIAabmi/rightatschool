@@ -559,7 +559,7 @@ const MASTER_COLS: ColFmt[] = [
   { w: 10, h: "center" },                        // I
   { w: 10, h: "center" },                        // J
   { w: 10, h: "center" },                        // K
-  { w: 10, h: "center" },                        // L
+  { w: 12, h: "center" },                        // L  Intent Score Trend
   { w: 25, h: "left"   },                        // M
   { w: 25, h: "left"   },                        // N
   { w: 15, h: "left",   numFmt: "mm-dd-yy" },    // O  date

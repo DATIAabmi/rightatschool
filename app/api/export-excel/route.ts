@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { campaignGoals } from "@/lib/campaigns";
 
 export const maxDuration = 300;
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY      = process.env.METABASE_ADMIN_API_KEY!;
 const DB_ID = 34;
+const AD_TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_ad_performance`";
 const AI_DB_ID    = 67;
 const AI_TABLE_ID = 390;
 const AI_CLIENT_ID = 11564;
@@ -31,11 +33,13 @@ interface SectionSpec {
 
 const SECTIONS: SectionSpec[] = [
   { title: "Engaged Users by Organization", fill: "FFDA9694", tabColor: "FFC0504D" },
-  { title: "Account Intelligence",      fill: "FFB1A0C7", tabColor: "FF8064A2" },
-  { title: "Persona Insights",          fill: "FFC4D79B", tabColor: "FF9BBB59" },
-  { title: "Topic Insights",            fill: "FF92CDDC", tabColor: "FF4BACC6" },
-  { title: "Leads Insights",            fill: "FFFABF8F", tabColor: "FFF79646" },
-  { title: "Geo Insights",              fill: "FFD1FAE5", tabColor: "FF10B981" },
+  { title: "Account Intelligence",          fill: "FFB1A0C7", tabColor: "FF8064A2" },
+  { title: "Persona Insights",              fill: "FFC4D79B", tabColor: "FF9BBB59" },
+  { title: "Topic Insights",                fill: "FF92CDDC", tabColor: "FF4BACC6" },
+  { title: "Leads Insights",                fill: "FFFABF8F", tabColor: "FFF79646" },
+  { title: "Geo Insights",                  fill: "FFD1FAE5", tabColor: "FF10B981" },
+  { title: "Ecosystem Insights",            fill: "FFD0E4F7", tabColor: "FF4472C4" },
+  { title: "Content Insights",              fill: "FFEAF4FF", tabColor: "FF70AD47" },
 ];
 
 // ── Metabase helpers ──────────────────────────────────────────────────────────
@@ -236,6 +240,106 @@ WHERE ${where.join(" AND ")}
 GROUP BY item.SBM_district, sc.email_domain, sc.abm_campaign_num, item.SBM_state, item.topics
 ORDER BY \`Topic Score\` DESC`;
 
+  return queryNative(sql);
+}
+
+// ── Ecosystem Insights loader ─────────────────────────────────────────────────
+
+async function fetchCard363Once(campaign: string, dateStart: string, dateEnd: string): Promise<[string, number][]> {
+  const params: object[] = [];
+  if (campaign) params.push({
+    id: "f80b70c2-fef2-490d-b023-e072e5610b21",
+    type: "string/=", value: campaign,
+    target: ["variable", ["template-tag", "Abmi_Campaign"]],
+  });
+  if (dateStart && dateEnd) params.push({
+    id: "f3ba60a6-034c-4711-95fb-60c59a2e13dd",
+    type: "date/range", value: `${dateStart}~${dateEnd}`,
+    target: ["dimension", ["template-tag", "Date"]],
+  });
+  const { rows } = await queryCard(363, params);
+  return rows.map((r) => [String(r[0] ?? ""), Number(r[1]) || 0]);
+}
+
+interface EcosystemData {
+  impressions: number | null;
+  engagements: number | null;
+  ctr: string | null;
+  engagedUsers: number | null;
+  leads: number | null;
+  channelRows: [string, number, string][];
+}
+
+async function loadEcosystemData(campaigns: string[], dateStart: string, dateEnd: string): Promise<EcosystemData> {
+  const adWhere: string[] = ["1=1"];
+  const scWhere: string[] = ["engaged_user IS NOT NULL"];
+  const ldWhere: string[] = ["leads IS NOT NULL", "leads != ''"];
+  if (campaigns.length) {
+    const inList = `(${campaigns.map(sqlStr).join(", ")})`;
+    adWhere.push(`Abmi_Campaign IN ${inList}`);
+    scWhere.push(`Abmi_Campaign IN ${inList}`);
+    ldWhere.push(`Abmi_Campaign IN ${inList}`);
+  }
+  if (dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd)) {
+    adWhere.push(`DATE(date) BETWEEN ${sqlStr(dateStart)} AND ${sqlStr(dateEnd)}`);
+  }
+
+  const channelSets = await Promise.all(
+    campaigns.length > 0
+      ? campaigns.map((c) => fetchCard363Once(c, dateStart, dateEnd))
+      : [fetchCard363Once("", dateStart, dateEnd)]
+  );
+  const channelTotals = new Map<string, number>();
+  for (const rows of channelSets) {
+    for (const [label, count] of rows) {
+      channelTotals.set(label, (channelTotals.get(label) ?? 0) + count);
+    }
+  }
+  const totalClicks = [...channelTotals.values()].reduce((a, b) => a + b, 0);
+  const channelRows: [string, number, string][] = [...channelTotals.entries()]
+    .map(([label, count]): [string, number, string] => [
+      label, count, totalClicks > 0 ? Math.round((count / totalClicks) * 100) + "%" : "0%",
+    ])
+    .sort((a, b) => b[1] - a[1]);
+
+  const [adRes, euRes, ldRes] = await Promise.all([
+    queryNative(`SELECT SUM(impressions), COALESCE(SUM(clicks), 0), CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE ${adWhere.join(" AND ")}`),
+    queryNative(`SELECT COUNT(DISTINCT engaged_user) FROM ${EU_TABLE} WHERE ${scWhere.join(" AND ")}`),
+    queryNative(`SELECT COUNT(DISTINCT leads) FROM ${EU_TABLE} WHERE ${ldWhere.join(" AND ")}`),
+  ]);
+
+  const adRow = adRes.rows[0] ?? [];
+  return {
+    impressions:  adRow[0] != null ? Number(adRow[0]) : null,
+    engagements:  adRow[1] != null ? Number(adRow[1]) : null,
+    ctr:          adRow[2] != null ? String(adRow[2])  : null,
+    engagedUsers: euRes.rows[0]?.[0] != null ? Number(euRes.rows[0][0]) : null,
+    leads:        ldRes.rows[0]?.[0] != null ? Number(ldRes.rows[0][0]) : null,
+    channelRows,
+  };
+}
+
+// ── Content Insights loader ───────────────────────────────────────────────────
+
+async function loadContentInsights(campaigns: string[], dateStart: string, dateEnd: string): Promise<{ cols: string[]; rows: unknown[][] }> {
+  const where: string[] = ["1=1"];
+  if (campaigns.length) where.push(`Abmi_Campaign IN (${campaigns.map(sqlStr).join(", ")})`);
+  if (dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd)) {
+    where.push(`DATE(date) BETWEEN ${sqlStr(dateStart)} AND ${sqlStr(dateEnd)}`);
+  }
+  const sql = `
+SELECT
+  asset_name      AS \`Asset Name\`,
+  URL             AS \`Asset Link\`,
+  STRING_AGG(DISTINCT Abmi_Campaign ORDER BY Abmi_Campaign) AS Campaign,
+  STRING_AGG(DISTINCT Channel       ORDER BY Channel)       AS Channel,
+  SUM(impressions) AS Impressions,
+  SUM(clicks)      AS Clicks,
+  CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') AS CTR
+FROM ${AD_TABLE}
+WHERE ${where.join(" AND ")}
+GROUP BY asset_name, URL
+ORDER BY Impressions DESC`;
   return queryNative(sql);
 }
 
@@ -638,6 +742,23 @@ const GEO_COLS: ColFmt[] = [
   { w: 15, h: "center" },                        // D  Leads
 ];
 
+const ECOSYSTEM_COLS: ColFmt[] = [
+  { w: 30, h: "left"   },                        // A  Metric / Channel label
+  { w: 10, h: "center" },                        // B  Value / Clicks
+  { w: 10, h: "center" },                        // C  Goal / % of Total
+  { w: 10, h: "center" },                        // D  % of Goal
+];
+
+const CONTENT_COLS: ColFmt[] = [
+  { w: 60, h: "left"   },                        // A  Asset Name
+  { w: 40, h: "left"   },                        // B  Asset Link
+  { w: 40, h: "left"   },                        // C  Campaign
+  { w: 40, h: "left"   },                        // D  Channel
+  { w: 10, h: "center" },                        // E  Impressions
+  { w: 10, h: "center" },                        // F  Clicks
+  { w: 10, h: "center" },                        // G  CTR
+];
+
 // Excel stores column width with 5px of cell padding (Calibri 11 = 7px per
 // character). Without it, a width of 50 shows as 49.29 in Excel's Column Width.
 function excelWidth(chars: number): number {
@@ -655,6 +776,69 @@ function formatSheet(ws: ExcelJS.Worksheet, cols: ColFmt[], headerHeight?: numbe
       if (fmt.numFmt) cell.numFmt = fmt.numFmt;
     });
   });
+}
+
+// ── Ecosystem Insights sheet writer ──────────────────────────────────────────
+
+const ECO_BOLD_LABELS = new Set(["PROGRAM METRICS SUMMARY", "Metric", "ENGAGEMENTS BY CHANNEL", "Channel"]);
+
+function addEcosystemSheet(
+  wb: ExcelJS.Workbook,
+  campaigns: string[],
+  dateStart: string,
+  dateEnd: string,
+  data: EcosystemData,
+) {
+  const ws = wb.addWorksheet(SECTIONS[6].title);
+  ws.properties.tabColor = { argb: SECTIONS[6].tabColor };
+
+  const goals = campaignGoals(campaigns);
+  const campaignLabel = campaigns.length ? campaigns.join(", ") : "All Campaigns";
+  const dateLabel = dateStart && dateEnd ? `${dateStart} – ${dateEnd}` : "All Dates";
+
+  function fmtN(v: unknown): string {
+    if (v === null || v === undefined) return "—";
+    const n = Number(v);
+    if (isNaN(n)) return String(v);
+    return Math.round(n).toLocaleString();
+  }
+
+  const stages: { label: string; value: unknown; goal: number | null; hasGoal: boolean }[] = [
+    { label: "Impressions",           value: data.impressions,  goal: goals.impressions, hasGoal: true  },
+    { label: "Engagements",           value: data.engagements,  goal: null,              hasGoal: false },
+    { label: "Click-Through Rate",    value: data.ctr,          goal: null,              hasGoal: false },
+    { label: "Unique Engaged Users",  value: data.engagedUsers, goal: null,              hasGoal: false },
+    { label: "Leads",                 value: data.leads,        goal: goals.leads,       hasGoal: true  },
+  ];
+
+  const gridRows: (string | number | null)[][] = [
+    ["Campaign", campaignLabel],
+    ["Date Range", dateLabel],
+    [],
+    ["PROGRAM METRICS SUMMARY"],
+    ["Metric", "Value", "Goal", "% of Goal"],
+    ...stages.map((s) => [
+      s.label,
+      fmtN(s.value),
+      s.hasGoal && s.goal ? fmtN(s.goal) : "",
+      s.hasGoal && s.goal && s.value != null ? Math.round((Number(s.value) / (s.goal as number)) * 100) + "%" : "",
+    ]),
+    [],
+    ["ENGAGEMENTS BY CHANNEL"],
+    ["Channel", "Clicks", "% of Total"],
+    ...data.channelRows.map((r) => [r[0], r[1], r[2]] as (string | number | null)[]),
+  ];
+
+  for (const gridRow of gridRows) {
+    const wsRow = ws.addRow(gridRow.map((v) => (v === null || v === undefined) ? null : v));
+    const label = String(gridRow[0] ?? "");
+    if (ECO_BOLD_LABELS.has(label)) {
+      wsRow.font = { bold: true };
+      wsRow.eachCell({ includeEmpty: false }, (cell) => {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: SECTIONS[6].fill } };
+      });
+    }
+  }
 }
 
 // ── AI signals column normalisation ──────────────────────────────────────────
@@ -711,13 +895,15 @@ export async function GET(req: NextRequest) {
     const campaignCodes = campaigns.map((c) => c.split(":")[0].trim());
     const leadsParams  = campaignAndDate(campaignCodes, dateStart, dateEnd);
 
-    const [euRaw, aiRaw, personaRaw, topicRaw, leadsRaw, geoRaw] = await Promise.all([
+    const [euRaw, aiRaw, personaRaw, topicRaw, leadsRaw, geoRaw, ecoRaw, contentRaw] = await Promise.all([
       loadEngagedUsers(campaigns),
       loadAISignals(),
       loadPersona(campaigns, dateStart, dateEnd),
       loadTopicInsights(campaignCodes, dateStart, dateEnd),
       queryCard(174, leadsParams),
       loadGeoInsights(campaigns, dateStart, dateEnd),
+      loadEcosystemData(campaigns, dateStart, dateEnd),
+      loadContentInsights(campaigns, dateStart, dateEnd),
     ]);
 
     const eu      = euRaw;
@@ -776,6 +962,20 @@ export async function GET(req: NextRequest) {
       geo.rows, SECTIONS[5].tabColor,
     );
     formatSheet(wb.getWorksheet(SECTIONS[5].title)!, GEO_COLS);
+
+    // Ecosystem Insights
+    addEcosystemSheet(wb, campaigns, dateStart, dateEnd, ecoRaw);
+    formatSheet(wb.getWorksheet(SECTIONS[6].title)!, ECOSYSTEM_COLS, 30);
+
+    // Content Insights
+    writeSheet(wb, SECTIONS[7].title, SECTIONS[7].fill,
+      contentRaw.cols.map((h) => ({
+        header: h,
+        kind: h === "Asset Link" ? "url" as const : ["Impressions","Clicks"].includes(h) ? "number" as const : undefined,
+      })),
+      contentRaw.rows, SECTIONS[7].tabColor,
+    );
+    formatSheet(wb.getWorksheet(SECTIONS[7].title)!, CONTENT_COLS, 30);
 
     const buf = await wb.xlsx.writeBuffer();
 

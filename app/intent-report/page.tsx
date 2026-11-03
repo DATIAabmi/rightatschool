@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Download, Loader2, Printer, X } from "lucide-react";
+import { Download, ExternalLink, Filter, Landmark, Loader2, MousePointerClick, Printer, Target, Users, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useFilter } from "@/components/FilterContext";
 import { fmtDate } from "@/lib/fmtDate";
 import { exportToCsv } from "@/lib/exportCsv";
@@ -29,16 +30,27 @@ interface PersonaRow {
   Leads: number;
 }
 
-interface BoardMinuteRow {
-  SBMDate: string;
-  Keyword: string;
-  Context: string;
+interface SignalRow {
+  Date: string;
+  Category: string;
+  Keywords: string;
+  Source: string;
   Link: string;
+  Analysis: string;
+  SourceText: string;
+  Strength: number;
+}
+
+interface TopicRow {
+  Topic: string;
+  Score: number;
+  Date: string;
 }
 
 interface CardData {
   persona: PersonaRow[];
-  boardMinutes: BoardMinuteRow[];
+  signals: SignalRow[];
+  topics: TopicRow[];
 }
 
 type SortKey = keyof DistrictRow;
@@ -276,54 +288,88 @@ function StatePopover({
 
 // ─── Expanded row card ────────────────────────────────────────────────────────
 
-function ExpandedCard({ district, row }: { district: string; row: DistrictRow }) {
+const STATE_NAMES: Record<string, string> = {
+  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",
+  FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",
+  LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",
+  MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",
+  ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",
+  SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",
+  WI:"Wisconsin",WY:"Wyoming",DC:"District of Columbia",
+};
+
+const SMALL_WORDS = new Set(["of","the","and","for","at","in","on","to","by","a","an"]);
+function titleCaseName(raw: string): string {
+  const cleaned = raw.replace(/,\s*[A-Z]{2}\s*$/i, "");
+  return cleaned
+    .toLowerCase()
+    .split(/(\s+|-)/)
+    .map((part, i) => {
+      if (/^\s+$/.test(part) || part === "-") return part;
+      if (i !== 0 && SMALL_WORDS.has(part)) return part;
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join("");
+}
+
+function pluralLabel(n: number, singular: string, plural: string): string {
+  return n === 1 ? singular : plural;
+}
+
+function StatTile({ icon: Icon, value, label }: { icon: LucideIcon; value: number | string; label: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", border: "1px solid var(--line)", borderRadius: 10, background: "var(--surface)", minWidth: 0 }}>
+      <Icon size={22} style={{ color: "var(--accent)", flexShrink: 0 }} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontFamily: "var(--f-display)", fontSize: 26, fontWeight: 800, lineHeight: 1, color: "var(--accent)" }}>{value}</div>
+        <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4, fontFamily: "var(--f-body)" }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function ExpandedCard({ district, row, campaigns }: { district: string; row: DistrictRow; campaigns: string[] }) {
   const [data, setData] = useState<CardData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const loaded = useRef(false);
 
   useEffect(() => {
-    if (loaded.current) return;
-    loaded.current = true;
     setLoading(true);
-    fetch(`/api/intent-card-data?district=${encodeURIComponent(district)}`)
+    const params = new URLSearchParams({ district });
+    if (campaigns.length) params.set("campaign", campaigns.join(","));
+    fetch(`/api/intent-card-data?${params}`)
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch((e) => { setError(String(e)); setLoading(false); });
-  }, [district]);
+  }, [district, campaigns]);
+
+  const titleName = titleCaseName(row.District);
+  const stateFull = STATE_NAMES[row.State] ?? row.State;
+  const title = stateFull ? `${titleName}, ${stateFull}` : titleName;
 
   return (
     <div style={{ padding: 20, background: "var(--bg)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)", display: "grid", gap: 16 }}>
       {/* Header */}
-      <div>
-        <h3 style={{ margin: 0, fontFamily: "var(--f-display)", fontSize: 22, fontWeight: 800, color: "var(--accent)" }}>
-          {row.District}
-        </h3>
-        <span style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, display: "flex", gap: 10, flexWrap: "wrap", fontFamily: "var(--f-body)" }}>
-          {row.Domain && <span>{row.Domain}</span>}
-          {row.State && <span>{row.State}</span>}
-          {row.Campaign && <span>{row.Campaign}</span>}
-          {row.Intel === "Y" && (
-            <span style={{ background: "var(--accent-soft)", color: "var(--accent)", fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100 }}>
-              Board minutes tracked
-            </span>
-          )}
-        </span>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <Landmark size={28} style={{ color: "var(--accent)", flexShrink: 0, marginTop: 2 }} />
+        <div>
+          <h3 style={{ margin: 0, fontFamily: "var(--f-display)", fontSize: 24, fontWeight: 800, color: "var(--ink)", lineHeight: 1.1 }}>
+            {title}
+          </h3>
+          <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4, display: "flex", gap: 8, flexWrap: "wrap", fontFamily: "var(--f-body)", alignItems: "center" }}>
+            {row.Domain && <span>{row.Domain}</span>}
+            {row.State && <><span style={{ color: "var(--low)" }}>|</span><span>{row.State}</span></>}
+            {row.Campaign && <><span style={{ color: "var(--low)" }}>|</span><span>{row.Campaign}</span></>}
+          </div>
+        </div>
       </div>
 
-      {/* 4-stat grid — border-left pattern */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", border: "1px solid var(--line)", borderRadius: 8, background: "var(--surface)" }}>
-        {[
-          { k: "Intent score", v: fmt(row.IntentScore) },
-          { k: "Engagements",  v: fmt(row.Engagements) },
-          { k: "Engaged users",v: fmt(row.EngagedUsers) },
-          { k: "Leads",        v: String(row.Leads) },
-        ].map(({ k, v }, i) => (
-          <div key={k} style={{ padding: 12, textAlign: "center", borderLeft: i === 0 ? "none" : "1px solid var(--line)" }}>
-            <strong style={{ display: "block", fontFamily: "var(--f-display)", fontSize: 24, color: "var(--accent)" }}>{v}</strong>
-            <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: "var(--f-body)" }}>{k}</span>
-          </div>
-        ))}
+      {/* 4-stat grid — icon + value + label */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 12 }}>
+        <StatTile icon={Target}             value={fmt(row.IntentScore)}  label="Intent Score" />
+        <StatTile icon={MousePointerClick}  value={fmt(row.Engagements)}  label={pluralLabel(row.Engagements, "Engagement", "Engagements")} />
+        <StatTile icon={Users}              value={fmt(row.EngagedUsers)} label={pluralLabel(row.EngagedUsers, "Engaged User", "Engaged Users")} />
+        <StatTile icon={Filter}             value={String(row.Leads)}     label="Leads" />
       </div>
 
       {loading && (
@@ -335,26 +381,100 @@ function ExpandedCard({ district, row }: { district: string; row: DistrictRow })
 
       {data && !loading && (
         <>
+          {/* Account intelligence — left date/category panel + right field table */}
+          {data.signals.length > 0 && (
+            <div style={{ display: "grid", gap: 12 }}>
+              {data.signals.length > 1 && (
+                <h4 style={{ margin: 0, fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)" }}>Account Intelligence · {data.signals.length}</h4>
+              )}
+              {data.signals.map((s, i) => (
+                <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, display: "grid", gridTemplateColumns: "190px minmax(0,1fr)", overflow: "hidden" }}>
+                  {/* Left panel: date + category */}
+                  <div style={{ background: "var(--sunk)", padding: "18px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, borderRight: "1px solid var(--line)" }}>
+                    {s.Date && (
+                      <div style={{ fontFamily: "var(--f-display)", fontSize: 18, fontWeight: 700, color: "var(--ink)" }}>{fmtDate(s.Date)}</div>
+                    )}
+                    {s.Category && (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        <div style={{ fontSize: 11, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)", fontWeight: 600 }}>Category</div>
+                        <span style={{ background: "var(--accent-soft)", color: "var(--accent)", padding: "4px 12px", borderRadius: 100, fontWeight: 600, fontSize: 13, fontFamily: "var(--f-body)" }}>{s.Category}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Right panel: labeled fields */}
+                  <div style={{ padding: "16px 20px", display: "grid", gap: 10, minWidth: 0, fontFamily: "var(--f-body)", fontSize: 13.5, lineHeight: 1.5 }}>
+                    {s.Keywords && (
+                      <div style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: 10, alignItems: "baseline" }}>
+                        <strong style={{ color: "var(--muted)", fontWeight: 700 }}>Keywords:</strong>
+                        <span style={{ color: "var(--ink)" }}>{s.Keywords}</span>
+                      </div>
+                    )}
+                    {s.Analysis && (
+                      <div style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: 10, alignItems: "baseline" }}>
+                        <strong style={{ color: "var(--muted)", fontWeight: 700 }}>Signal Analysis:</strong>
+                        <span style={{ color: "var(--ink)" }}>{s.Analysis}</span>
+                      </div>
+                    )}
+                    {s.SourceText && (
+                      <div style={{ display: "grid", gridTemplateColumns: "max-content 1fr", gap: 10, alignItems: "baseline" }}>
+                        <strong style={{ color: "var(--muted)", fontWeight: 700 }}>Source Text:</strong>
+                        <span style={{ color: "var(--ink)" }}>{s.SourceText}</span>
+                      </div>
+                    )}
+                    {(s.Strength > 0 || s.Link || s.Source) && (
+                      <div style={{ display: "flex", gap: 24, alignItems: "center", borderTop: "1px solid var(--line)", paddingTop: 10, marginTop: 2, flexWrap: "wrap" }}>
+                        {s.Strength > 0 && (
+                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <strong style={{ color: "var(--muted)", fontWeight: 700 }}>Strength:</strong>
+                            <span style={{ color: "var(--ink)", fontWeight: 700 }}>{s.Strength}</span>
+                          </div>
+                        )}
+                        {(s.Link || s.Source) && (
+                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <strong style={{ color: "var(--muted)", fontWeight: 700 }}>Source:</strong>
+                            {s.Link ? (
+                              <a href={s.Link} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                {s.Source || "Website"}
+                                <ExternalLink size={13} />
+                              </a>
+                            ) : (
+                              <span style={{ color: "var(--ink)" }}>{s.Source}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Two-column: persona + leads */}
           <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 16 }}>
             {/* Persona activity */}
-            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px", minWidth: 0 }}>
-              <h4 style={{ margin: "0 0 8px", fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)" }}>Persona activity</h4>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 18px", minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12 }}>
+                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--f-body)" }}>Persona Activity</h4>
+                {data.persona.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "50px 90px 50px", gap: 0, fontSize: 11, color: "var(--muted)", fontWeight: 600, textAlign: "center", fontFamily: "var(--f-body)" }}>
+                    <span>Users</span>
+                    <span>Engagements</span>
+                    <span>Leads</span>
+                  </div>
+                )}
+              </div>
               {data.persona.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>No persona engagement recorded.</p>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>No persona engagement recorded.</p>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "4px 14px", fontSize: 13, fontFamily: "var(--f-body)" }}>
-                  <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>Job function</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textAlign: "right" }}>Users</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textAlign: "right" }}>Eng.</span>
-                  <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textAlign: "right" }}>Leads</span>
+                <div style={{ display: "grid", gap: 6 }}>
                   {data.persona.map((p, i) => (
-                    <React.Fragment key={i}>
-                      <span style={{ color: "var(--ink)" }}>{p.JobFunction}</span>
-                      <span style={{ textAlign: "right", color: "var(--muted)" }}>{p.Users}</span>
-                      <span style={{ textAlign: "right", color: "var(--muted)" }}>{fmt(p.Engagements)}</span>
-                      <span style={{ textAlign: "right" }}>{p.Leads}</span>
-                    </React.Fragment>
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 50px 90px 50px", gap: 0, alignItems: "center", fontSize: 13.5, fontFamily: "var(--f-body)" }}>
+                      <span style={{ color: "var(--ink)", fontWeight: 600 }}>{p.JobFunction}</span>
+                      <span style={{ textAlign: "center", color: "var(--ink)", fontWeight: 700 }}>{p.Users}</span>
+                      <span style={{ textAlign: "center", color: "var(--ink)", fontWeight: 700 }}>{fmt(p.Engagements)}</span>
+                      <span style={{ textAlign: "center", color: "var(--ink)", fontWeight: 700 }}>{p.Leads}</span>
+                    </div>
                   ))}
                 </div>
               )}
@@ -364,18 +484,16 @@ function ExpandedCard({ district, row }: { district: string; row: DistrictRow })
             {(() => {
               const leadsPersona = data.persona.filter(p => p.Leads > 0);
               return (
-                <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px", minWidth: 0 }}>
-                  <h4 style={{ margin: "0 0 8px", fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)" }}>Leads by job function</h4>
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 18px", minWidth: 0 }}>
+                  <h4 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--f-body)" }}>Leads by Job Function</h4>
                   {leadsPersona.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>No leads yet.</p>
+                    <p style={{ margin: 0, fontSize: 13, color: "var(--muted)" }}>No leads yet.</p>
                   ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 14px", fontSize: 13, fontFamily: "var(--f-body)" }}>
-                      <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>Job function</span>
-                      <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, textAlign: "right" }}>Leads</span>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "6px 14px", fontSize: 13.5, fontFamily: "var(--f-body)" }}>
                       {leadsPersona.map((p, i) => (
                         <React.Fragment key={i}>
-                          <span style={{ color: "var(--ink)" }}>{p.JobFunction}</span>
-                          <span style={{ textAlign: "right" }}>{p.Leads}</span>
+                          <span style={{ color: "var(--ink)", fontWeight: 600 }}>{p.JobFunction}</span>
+                          <span style={{ textAlign: "right", fontWeight: 700, color: "var(--ink)" }}>{p.Leads}</span>
                         </React.Fragment>
                       ))}
                     </div>
@@ -385,26 +503,33 @@ function ExpandedCard({ district, row }: { district: string; row: DistrictRow })
             })()}
           </div>
 
-          {/* Board minutes — full width */}
-          <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 8, padding: "14px 16px" }}>
-            <h4 style={{ margin: "0 0 8px", fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)" }}>School board minutes</h4>
-            {data.boardMinutes.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>No board-minute highlights.</p>
-            ) : (
+          {/* Topic insights — Bombora composite scores */}
+          {data.topics.length > 0 && (
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 18px" }}>
+              <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--f-body)" }}>Topic Insights ({data.topics.length})</h4>
               <div style={{ display: "grid", gap: 8 }}>
-                {data.boardMinutes.map((m, i) => (
-                  <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "10px 12px", background: "var(--surface)" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--muted)", display: "flex", gap: 10, flexWrap: "wrap", fontFamily: "var(--f-body)" }}>
-                      {m.SBMDate && <span>Meeting {fmtDate(m.SBMDate)}</span>}
-                      {m.Keyword && <span>Keyword: {m.Keyword}</span>}
+                {data.topics.map((t, i) => {
+                  const pct = Math.min(100, Math.max(0, t.Score));
+                  const color = pct >= 66 ? "var(--hot)" : pct >= 36 ? "var(--warm)" : "var(--act)";
+                  return (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(140px, 1fr) 40px", gap: 14, alignItems: "center", fontSize: 13.5, fontFamily: "var(--f-body)" }}>
+                      <span style={{ color: "var(--ink)" }}>{t.Topic}</span>
+                      <div style={{ height: 7, background: "var(--sunk)", borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: color }} />
+                      </div>
+                      <span style={{ textAlign: "right", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{t.Score}</span>
                     </div>
-                    {m.Context && <p style={{ margin: "4px 0 0", fontSize: 13, fontFamily: "var(--f-body)", color: "var(--ink)" }}>{m.Context}</p>}
-                    {m.Link && <a href={m.Link} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontWeight: 600, fontSize: 12, textDecoration: "none" }}>Open source document ↗</a>}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {data.signals.length === 0 && data.topics.length === 0 && data.persona.length === 0 && (
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 18px", fontSize: 13, color: "var(--muted)" }}>
+              No account intelligence, topics, or persona activity recorded for this district.
+            </div>
+          )}
         </>
       )}
     </div>
@@ -1074,7 +1199,7 @@ export default function IntentReportPage() {
                           {expanded && (
                             <tr>
                               <td colSpan={hideTrend ? 7 : 8} style={{ padding: 0 }}>
-                                <ExpandedCard district={row.District} row={row} />
+                                <ExpandedCard district={row.District} row={row} campaigns={campFilter} />
                               </td>
                             </tr>
                           )}

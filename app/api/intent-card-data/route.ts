@@ -74,16 +74,15 @@ export async function GET(req: NextRequest) {
 
     const sqlPersona = `
 SELECT
-  job_title AS JobFunction,
-  COUNT(DISTINCT engaged_user) AS Users,
-  SUM(SAFE_CAST(engagements AS FLOAT64)) AS Engagements,
-  COUNT(DISTINCT leads) AS Leads
+  COALESCE(NULLIF(job_title, ''), 'Unknown') AS JobFunction,
+  COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 END) AS Users,
+  SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
+  COUNT(NULLIF(CAST(leads AS STRING), '')) AS Leads
 FROM ${TABLE}
 WHERE topic_district = ${districtVal}
-  AND job_title IS NOT NULL AND job_title != ''
-  AND SAFE_CAST(engagements AS FLOAT64) > 0
-GROUP BY job_title
-ORDER BY Engagements DESC`;
+GROUP BY JobFunction
+HAVING Users > 0 OR Engagements > 0 OR Leads > 0
+ORDER BY Engagements DESC, Leads DESC`;
 
     const sqlBoard = `
 SELECT

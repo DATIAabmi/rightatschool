@@ -21,7 +21,7 @@ import {
 const navItems = [
   { label: "Ecosystem Insights", icon: Globe, href: "/" },
   { label: "Engaged Users\nby District", icon: Users, href: "/engaged-users" },
-  { label: "Account Intelligence", icon: Sparkles, href: "/ai-opportunity-feed" },
+  { label: "Account Intel", icon: Sparkles, href: "/ai-opportunity-feed" },
   { label: "Persona Insights", icon: UserCircle, href: "/persona-insights" },
   { label: "Geo Insights", icon: MapPin, href: "/geo-insights" },
   { label: "Leads Insights", icon: TrendingUp, href: "/leads-insights" },

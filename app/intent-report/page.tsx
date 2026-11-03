@@ -537,6 +537,9 @@ export default function IntentReportPage() {
 
   const visibleRows = printAll ? sortedRows : sortedRows.slice(0, visibleCount);
 
+  // Hide Trend column entirely when every row in the current view has a 0 trend
+  const hideTrend = filteredRows.length > 0 && filteredRows.every((r) => r.Trend === 0);
+
   // KPIs
   const kpiDistricts    = filteredRows.length;
   const kpiEngagements  = filteredRows.reduce((s, r) => s + r.Engagements, 0);
@@ -605,7 +608,7 @@ export default function IntentReportPage() {
     { label: "District",        key: "District" },
     { label: "State",           key: "State" },
     { label: "Intent Score",    key: "IntentScore",  align: "right" },
-    { label: "Trend",           key: "Trend",        align: "right" },
+    ...(hideTrend ? [] : [{ label: "Trend", key: "Trend" as SortKey, align: "right" as const }]),
     { label: "Engagements",     key: "Engagements",  align: "right" },
     { label: "Engaged Users",   key: "EngagedUsers", align: "right" },
     { label: "Leads",           key: "Leads",        align: "right" },
@@ -988,8 +991,8 @@ export default function IntentReportPage() {
               </div>
 
               {/* ── Main table ── */}
-              <div className="ir-table-box" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", marginBottom: 40 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--f-body)" }}>
+              <div className="ir-table-box" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, overflowX: "auto", overflowY: "hidden", marginBottom: 40, WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", minWidth: 960, borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--f-body)" }}>
                   <thead>
                     <tr style={{ background: "var(--surface)" }}>
                       {COL_HEADERS.map(({ label, key, align }) => (
@@ -1049,14 +1052,16 @@ export default function IntentReportPage() {
                               </div>
                             </td>
                             {/* Trend */}
-                            <td style={{ padding: "12px 14px", textAlign: "right", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>
-                              {row.Trend > 0
-                                ? <span style={{ color: "var(--up)", fontWeight: 600 }}>▲ {fmt(row.Trend)}</span>
-                                : row.Trend < 0
-                                ? <span style={{ color: "var(--down)", fontWeight: 600 }}>▼ {fmt(Math.abs(row.Trend))}</span>
-                                : <span style={{ color: "var(--low)" }}>0</span>
-                              }
-                            </td>
+                            {!hideTrend && (
+                              <td style={{ padding: "12px 14px", textAlign: "right", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>
+                                {row.Trend > 0
+                                  ? <span style={{ color: "var(--up)", fontWeight: 600 }}>▲ {fmt(row.Trend)}</span>
+                                  : row.Trend < 0
+                                  ? <span style={{ color: "var(--down)", fontWeight: 600 }}>▼ {fmt(Math.abs(row.Trend))}</span>
+                                  : <span style={{ color: "var(--low)" }}>0</span>
+                                }
+                              </td>
+                            )}
                             {/* Engagements */}
                             <td style={{ padding: "12px 14px", textAlign: "right", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>{fmt(row.Engagements)}</td>
                             {/* Engaged Users */}
@@ -1068,7 +1073,7 @@ export default function IntentReportPage() {
                           </tr>
                           {expanded && (
                             <tr>
-                              <td colSpan={8} style={{ padding: 0 }}>
+                              <td colSpan={hideTrend ? 7 : 8} style={{ padding: 0 }}>
                                 <ExpandedCard district={row.District} row={row} />
                               </td>
                             </tr>

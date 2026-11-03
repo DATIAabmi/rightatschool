@@ -321,7 +321,7 @@ function AIOpportunityFeedContent() {
           {/* Title bar */}
           <div ref={titleBarRef} className="sticky top-0 z-20 bg-gray-900 text-white px-5 py-3 rounded-t-xl flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="font-bold text-sm tracking-wide uppercase">Account Intelligence</span>
+              <span className="font-bold text-sm tracking-wide uppercase">Account Intel</span>
               {!loading && <span className="text-gray-400 text-xs">{sorted.length.toLocaleString()} signals</span>}
             </div>
             {!loading && sorted.length > 0 && (

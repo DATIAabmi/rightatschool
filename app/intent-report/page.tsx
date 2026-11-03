@@ -715,6 +715,20 @@ export default function IntentReportPage() {
             <div className="ir-no-print" style={{ display: "flex", gap: 8, alignItems: "center", paddingTop: 8, flexShrink: 0 }}>
               <button
                 type="button"
+                onClick={resetFilters}
+                disabled={chips.length === 0}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                  fontSize: 13, fontWeight: 600, cursor: chips.length === 0 ? "default" : "pointer",
+                  borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface)",
+                  color: chips.length === 0 ? "var(--low)" : "var(--muted)",
+                  fontFamily: "var(--f-body)", opacity: chips.length === 0 ? 0.5 : 1,
+                }}
+              >
+                <X size={14} /> Reset filters
+              </button>
+              <button
+                type="button"
                 onClick={handleExportCsv}
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
@@ -856,9 +870,6 @@ export default function IntentReportPage() {
                     </button>
                   </span>
                 ))}
-                <button type="button" onClick={resetFilters} style={{ fontSize: 12, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontFamily: "var(--f-body)" }}>
-                  Reset filters
-                </button>
               </div>
             )}
           </div>

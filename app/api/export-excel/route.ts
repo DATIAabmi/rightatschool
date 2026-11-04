@@ -12,6 +12,13 @@ const AI_DB_ID    = 67;
 const AI_TABLE_ID = 390;
 const AI_CLIENT_ID = 11564;
 const EU_TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
+// Signals sheet — the same source the Intent Report expanded card uses. The
+// Intel Y/N flag in the export must match the UI, which means checking the
+// signals sheet by org name OR email domain, not the old scoring-table
+// SBM_Y_N bit.
+const SIGNALS_TABLE = "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_schools_2025`";
+const NORMALIZE_EXPR = (col: string) =>
+  `UPPER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(${col}), r",\\s*[A-Z]{2}\\s*$", ""), r"['‘’\\x60]", ""))`;
 const TI_TABLE = "`df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -134,26 +141,41 @@ function campaignAndDate(codes: string[], dateStart: string, dateEnd: string) {
 // ── Dataset loaders ───────────────────────────────────────────────────────────
 
 async function loadEngagedUsers(campaigns: string[]): Promise<{ cols: string[]; rows: unknown[][] }> {
-  const where: string[] = ["topic_district IS NOT NULL", "topic_district != ''"];
-  if (campaigns.length) where.push(`Abmi_Campaign IN (${campaigns.map(sqlStr).join(", ")})`);
+  const where: string[] = ["sc.topic_district IS NOT NULL", "sc.topic_district != ''"];
+  if (campaigns.length) where.push(`sc.Abmi_Campaign IN (${campaigns.map(sqlStr).join(", ")})`);
 
   const sql = `
+WITH
+district_lookup AS (
+  SELECT DISTINCT topic_district AS district, email_domain AS domain
+  FROM ${EU_TABLE}
+  WHERE topic_district IS NOT NULL AND topic_district != ''
+),
+intel_districts AS (
+  SELECT DISTINCT dl.district
+  FROM district_lookup dl
+  JOIN ${SIGNALS_TABLE} s
+    ON ${NORMALIZE_EXPR("s.organization")} = ${NORMALIZE_EXPR("dl.district")}
+    OR (dl.domain IS NOT NULL AND dl.domain != ''
+        AND LOWER(TRIM(s.domain)) = LOWER(TRIM(dl.domain)))
+)
 SELECT
-  topic_district AS District,
-  ANY_VALUE(email_domain) AS Domain,
-  ANY_VALUE(state) AS State,
-  ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Campaign,
-  IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Intel,
-  IF(MAX(CASE WHEN topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
-  SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
-  COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS \`Engaged Users\`,
-  COUNT(NULLIF(CAST(leads AS STRING), '')) AS Leads,
-  SUM(IFNULL(SAFE_CAST(downloads AS FLOAT64), 0)) AS \`Total Downloads\`,
-  SUM(IFNULL(SAFE_CAST(cumulative_score AS FLOAT64), 0)) AS \`Intent Score\`,
-  SUM(IFNULL(SAFE_CAST(cumulative_score_trend AS FLOAT64), 0)) AS \`Intent Score Trend\`
-FROM ${EU_TABLE}
+  sc.topic_district AS District,
+  ANY_VALUE(sc.email_domain) AS Domain,
+  ANY_VALUE(sc.state) AS State,
+  ANY_VALUE(CONCAT('C', CAST(sc.abm_campaign_num AS STRING))) AS Campaign,
+  IF(MAX(IF(id.district IS NOT NULL, 1, 0)) = 1, 'Y', 'N') AS Intel,
+  IF(MAX(CASE WHEN sc.topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
+  SUM(IFNULL(SAFE_CAST(sc.engagements AS FLOAT64), 0)) AS Engagements,
+  COUNT(CASE WHEN SAFE_CAST(sc.engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS \`Engaged Users\`,
+  COUNT(NULLIF(CAST(sc.leads AS STRING), '')) AS Leads,
+  SUM(IFNULL(SAFE_CAST(sc.downloads AS FLOAT64), 0)) AS \`Total Downloads\`,
+  SUM(IFNULL(SAFE_CAST(sc.cumulative_score AS FLOAT64), 0)) AS \`Intent Score\`,
+  SUM(IFNULL(SAFE_CAST(sc.cumulative_score_trend AS FLOAT64), 0)) AS \`Intent Score Trend\`
+FROM ${EU_TABLE} sc
+LEFT JOIN intel_districts id ON id.district = sc.topic_district
 WHERE ${where.join(" AND ")}
-GROUP BY topic_district
+GROUP BY sc.topic_district
 ORDER BY \`Intent Score\` DESC`;
 
   return queryNative(sql);

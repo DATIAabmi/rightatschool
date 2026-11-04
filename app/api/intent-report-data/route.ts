@@ -7,26 +7,21 @@ const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 const DB_ID = 34;
 const TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
-// Signals sheet — the SAME source the expanded card uses. The Intel Y/N flag
-// should reflect "does this district have any account intel on file" (articles,
-// RFPs, board minutes, etc.), not the old scoring-table SBM_Y_N bit which only
-// tracks board minutes embedded in a user's engagement array.
 const SIGNALS_TABLE = "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_schools_2025`";
-const NORMALIZE_EXPR = (col: string) =>
-  `UPPER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(${col}), r",\\s*[A-Z]{2}\\s*$", ""), r"['‘’\\x60]", ""))`;
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
-// Bump when the SQL template changes so warm-lambda caches don't serve stale
-// pre-deploy results (Vercel can keep a warm instance around through a redeploy).
-const CACHE_VERSION = "intel-v2-2026-11-04";
+// Bump when the SQL template changes so warm-lambda caches drop stale results.
+const CACHE_VERSION = "ri-v3-accountintel-topicinsights";
 
 interface DistrictRow {
   District: string;
   Domain: string;
   State: string;
   Campaign: string;
-  Intel: string;
+  Intel: string;          // legacy SBM_Y_N flag (kept for export + any consumers)
+  AccountIntel: string;   // raw signals sheet match (org name OR shared domain)
+  TopicInsights: string;  // Bombora topic data present in engagement array
   Engagements: number;
   EngagedUsers: number;
   Leads: number;
@@ -63,54 +58,70 @@ async function fetchData(
     where.push(`DATE(date_max_for_intent_scoring) BETWEEN '${dateStart}' AND '${dateEnd}'`);
   }
 
-  // Prefix every scoring-table where clause with the alias used below.
-  const scopedWhere = where.map((w) => w.replace(/\b(topic_district|email_domain|state|abm_campaign|date_max_for_intent_scoring)\b/g, "sc.$1"));
+  // Scope signals the same way the main row is scoped by campaign, so Account
+  // Intel reflects only signals tied to the campaigns currently in view. The
+  // signals sheet's own column is `campaign`.
+  const signalsWhere = campaigns.length
+    ? `WHERE UPPER(TRIM(campaign)) IN (${campaigns.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
+    : "";
 
-  // intel_districts: the set of districts the signals sheet has any row for,
-  // matched by normalized organization name OR shared email domain. Greenfield
-  // Union School District (scoring) matches "Greenfield Union Elementary School
-  // District" / "Greenfield Union" (sheet) via gfusd.net.
+  // Same org-name normalization the per-district card uses: strip trailing
+  // ", XX" state suffix and every apostrophe variant (Sheets autocorrects ' →
+  // '), with plain REPLACE for the apostrophes to avoid regex class edge cases.
+  const normalizeExpr = (col: string) =>
+    `UPPER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REGEXP_REPLACE(IFNULL(${col}, ''), r",\\s*[A-Z]{2}\\s*$", ""), "'", ""), "‘", ""), "’", ""), "\`", "")))`;
+
   const sql = `
-WITH
-district_lookup AS (
-  SELECT DISTINCT topic_district AS district, email_domain AS domain
-  FROM ${TABLE}
-  WHERE topic_district IS NOT NULL AND topic_district != ''
+WITH signals_orgs AS (
+  SELECT DISTINCT ${normalizeExpr("organization")} AS org_up
+  FROM ${SIGNALS_TABLE}
+  ${signalsWhere}
 ),
--- strip common school-district suffix noise so "Greenfield Union School District"
--- normalizes to the same core as "Greenfield Union Elementary School District"
--- or just "Greenfield Union". Applied AFTER the normal UPPER/trim.
-intel_districts AS (
-  SELECT DISTINCT dl.district
-  FROM district_lookup dl
-  JOIN ${SIGNALS_TABLE} s
-    ON (
-      -- exact normalized match
-      ${NORMALIZE_EXPR("s.organization")} = ${NORMALIZE_EXPR("dl.district")}
-      -- OR one contains the other (handles "Greenfield Union" ⊂ "Greenfield Union School District")
-      OR STRPOS(${NORMALIZE_EXPR("s.organization")}, ${NORMALIZE_EXPR("dl.district")}) > 0
-      OR STRPOS(${NORMALIZE_EXPR("dl.district")}, ${NORMALIZE_EXPR("s.organization")}) > 0
-    )
-    OR (dl.domain IS NOT NULL AND dl.domain != ''
-        AND LOWER(TRIM(s.domain)) = LOWER(TRIM(dl.domain)))
+signals_domains AS (
+  SELECT DISTINCT LOWER(TRIM(domain)) AS dom
+  FROM ${SIGNALS_TABLE}
+  ${signalsWhere}${signalsWhere ? " AND " : "WHERE "}domain IS NOT NULL AND domain != ''
+),
+-- Districts whose users have any Bombora topic data in their engagement array
+-- (RAS has no separate Bombora table — topics live inside engagement[]).
+topic_districts AS (
+  SELECT DISTINCT topic_district AS district
+  FROM ${TABLE}, UNNEST(engagement) AS e
+  WHERE topic_district IS NOT NULL AND topic_district != ''
+    AND e.bombora_score IS NOT NULL
+    AND e.topics IS NOT NULL
+    AND LOWER(TRIM(e.topics)) != 'null'
+    AND TRIM(e.topics) != ''
+),
+agg AS (
+  SELECT
+    topic_district AS District,
+    ANY_VALUE(email_domain) AS Domain,
+    ARRAY_AGG(DISTINCT NULLIF(LOWER(TRIM(email_domain)), '') IGNORE NULLS) AS Domains,
+    ANY_VALUE(state) AS State,
+    ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Campaign,
+    IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Intel,
+    SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
+    COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS EngagedUsers,
+    COUNT(NULLIF(CAST(leads AS STRING), '')) AS Leads,
+    SUM(IFNULL(SAFE_CAST(cumulative_score AS FLOAT64), 0)) AS IntentScore,
+    SUM(IFNULL(SAFE_CAST(cumulative_score_trend AS FLOAT64), 0)) AS Trend,
+    FORMAT_DATE('%Y-%m-%d', MAX(DATE(date_max_for_intent_scoring))) AS LastActivity
+  FROM ${TABLE}
+  WHERE ${where.join("\n    AND ")}
+  GROUP BY topic_district
 )
 SELECT
-  sc.topic_district AS District,
-  ANY_VALUE(sc.email_domain) AS Domain,
-  ANY_VALUE(sc.state) AS State,
-  ANY_VALUE(CONCAT('C', CAST(sc.abm_campaign_num AS STRING))) AS Campaign,
-  IF(MAX(IF(id.district IS NOT NULL, 1, 0)) = 1, 'Y', 'N') AS Intel,
-  SUM(IFNULL(SAFE_CAST(sc.engagements AS FLOAT64), 0)) AS Engagements,
-  COUNT(CASE WHEN SAFE_CAST(sc.engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS EngagedUsers,
-  COUNT(NULLIF(CAST(sc.leads AS STRING), '')) AS Leads,
-  SUM(IFNULL(SAFE_CAST(sc.cumulative_score AS FLOAT64), 0)) AS IntentScore,
-  SUM(IFNULL(SAFE_CAST(sc.cumulative_score_trend AS FLOAT64), 0)) AS Trend,
-  FORMAT_DATE('%Y-%m-%d', MAX(DATE(sc.date_max_for_intent_scoring))) AS LastActivity
-FROM ${TABLE} sc
-LEFT JOIN intel_districts id ON id.district = sc.topic_district
-WHERE ${scopedWhere.join("\n  AND ")}
-GROUP BY sc.topic_district
-ORDER BY IntentScore DESC`;
+  a.District, a.Domain, a.State, a.Campaign, a.Intel,
+  IF(
+    EXISTS (SELECT 1 FROM signals_orgs    o WHERE o.org_up = ${normalizeExpr("a.District")})
+    OR EXISTS (SELECT 1 FROM signals_domains d WHERE d.dom IN UNNEST(a.Domains)),
+    'Y', 'N'
+  ) AS AccountIntel,
+  IF(a.District IN (SELECT district FROM topic_districts), 'Y', 'N') AS TopicInsights,
+  a.Engagements, a.EngagedUsers, a.Leads, a.IntentScore, a.Trend, a.LastActivity
+FROM agg a
+ORDER BY a.IntentScore DESC`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55000);
@@ -150,17 +161,19 @@ ORDER BY IntentScore DESC`;
     const obj: Record<string, unknown> = {};
     cols.forEach((col, i) => { obj[col] = r[i]; });
     return {
-      District:     String(obj["District"] ?? ""),
-      Domain:       String(obj["Domain"] ?? ""),
-      State:        String(obj["State"] ?? ""),
-      Campaign:     String(obj["Campaign"] ?? ""),
-      Intel:        String(obj["Intel"] ?? "N"),
-      Engagements:  Number(obj["Engagements"] ?? 0),
-      EngagedUsers: Number(obj["EngagedUsers"] ?? 0),
-      Leads:        Number(obj["Leads"] ?? 0),
-      IntentScore:  Number(obj["IntentScore"] ?? 0),
-      Trend:        Number(obj["Trend"] ?? 0),
-      LastActivity: String(obj["LastActivity"] ?? ""),
+      District:      String(obj["District"] ?? ""),
+      Domain:        String(obj["Domain"] ?? ""),
+      State:         String(obj["State"] ?? ""),
+      Campaign:      String(obj["Campaign"] ?? ""),
+      Intel:         String(obj["Intel"] ?? "N"),
+      AccountIntel:  String(obj["AccountIntel"] ?? "N"),
+      TopicInsights: String(obj["TopicInsights"] ?? "N"),
+      Engagements:   Number(obj["Engagements"] ?? 0),
+      EngagedUsers:  Number(obj["EngagedUsers"] ?? 0),
+      Leads:         Number(obj["Leads"] ?? 0),
+      IntentScore:   Number(obj["IntentScore"] ?? 0),
+      Trend:         Number(obj["Trend"] ?? 0),
+      LastActivity:  String(obj["LastActivity"] ?? ""),
     } satisfies DistrictRow;
   });
 }
@@ -174,7 +187,6 @@ export async function GET(req: NextRequest) {
     const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
     const cacheKey = JSON.stringify({ v: CACHE_VERSION, campaigns, states, dateStart, dateEnd });
-    // Also honour ?nocache=1 for one-off bypass when debugging.
     const nocache = searchParams.get("nocache") === "1";
     if (!nocache) {
       const cached = memCache.get(cacheKey);

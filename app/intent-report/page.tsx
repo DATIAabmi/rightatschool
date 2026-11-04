@@ -15,6 +15,8 @@ interface DistrictRow {
   State: string;
   Campaign: string;
   Intel: string;
+  AccountIntel: string;
+  TopicInsights: string;
   Engagements: number;
   EngagedUsers: number;
   Leads: number;
@@ -721,24 +723,26 @@ export default function IntentReportPage() {
 
   function handleExportCsv() {
     const cols = [
-      "District", "Domain", "State", "Campaign", "Intel",
-      "Engagements", "Engaged Users", "Leads", "Intent Score", "Trend", "Latest Activity",
+      "District", "Domain", "State", "Campaign", "Intent Score", "Account Intel", "Topic Insights",
+      "Engagements", "Engaged Users", "Leads", "Trend", "Latest Activity",
     ].map((k) => ({ display_name: k, base_type: "type/Text" }));
     const rows = sortedRows.map((r) => [
-      r.District, r.Domain, r.State, r.Campaign, r.Intel,
-      r.Engagements, r.EngagedUsers, r.Leads, r.IntentScore, r.Trend, r.LastActivity,
+      r.District, r.Domain, r.State, r.Campaign, r.IntentScore, r.AccountIntel, r.TopicInsights,
+      r.Engagements, r.EngagedUsers, r.Leads, r.Trend, r.LastActivity,
     ]);
     exportToCsv("DATIA-District-Intent-Report", cols as never, rows as never);
   }
 
-  const COL_HEADERS: { label: string; key: SortKey; align?: "right" }[] = [
+  const COL_HEADERS: { label: string; key: SortKey; align?: "right" | "center" }[] = [
     { label: "District",        key: "District" },
     { label: "State",           key: "State" },
-    { label: "Intent Score",    key: "IntentScore",  align: "right" },
+    { label: "Intent Score",    key: "IntentScore",   align: "right" },
+    { label: "Account Intel",   key: "AccountIntel",  align: "center" },
+    { label: "Topic Insights",  key: "TopicInsights", align: "center" },
     ...(hideTrend ? [] : [{ label: "Trend", key: "Trend" as SortKey, align: "right" as const }]),
-    { label: "Engagements",     key: "Engagements",  align: "right" },
-    { label: "Engaged Users",   key: "EngagedUsers", align: "right" },
-    { label: "Leads",           key: "Leads",        align: "right" },
+    { label: "Engagements",     key: "Engagements",   align: "right" },
+    { label: "Engaged Users",   key: "EngagedUsers",  align: "right" },
+    { label: "Leads",           key: "Leads",         align: "right" },
     { label: "Latest Activity", key: "LastActivity" },
   ];
 
@@ -1178,6 +1182,22 @@ export default function IntentReportPage() {
                                 <span style={{ fontFamily:"var(--f-display)", fontWeight:800, fontSize:16, minWidth:30, textAlign:"right", color:"var(--ink)", fontVariantNumeric:"tabular-nums" }}>{row.IntentScore}</span>
                               </div>
                             </td>
+                            {/* Account Intel */}
+                            <td style={{ padding: "12px 14px", textAlign: "center", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>
+                              {row.AccountIntel === "Y" ? (
+                                <span style={{ display: "inline-block", minWidth: 22, padding: "2px 8px", borderRadius: 100, background: "var(--accent-soft)", color: "var(--accent)", fontWeight: 700, fontSize: 12, fontFamily: "var(--f-body)" }}>Y</span>
+                              ) : (
+                                <span style={{ display: "inline-block", minWidth: 22, padding: "2px 8px", borderRadius: 100, background: "var(--sunk)", color: "var(--low)", fontWeight: 700, fontSize: 12, fontFamily: "var(--f-body)" }}>N</span>
+                              )}
+                            </td>
+                            {/* Topic Insights */}
+                            <td style={{ padding: "12px 14px", textAlign: "center", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>
+                              {row.TopicInsights === "Y" ? (
+                                <span style={{ display: "inline-block", minWidth: 22, padding: "2px 8px", borderRadius: 100, background: "var(--accent-soft)", color: "var(--accent)", fontWeight: 700, fontSize: 12, fontFamily: "var(--f-body)" }}>Y</span>
+                              ) : (
+                                <span style={{ display: "inline-block", minWidth: 22, padding: "2px 8px", borderRadius: 100, background: "var(--sunk)", color: "var(--low)", fontWeight: 700, fontSize: 12, fontFamily: "var(--f-body)" }}>N</span>
+                              )}
+                            </td>
                             {/* Trend */}
                             {!hideTrend && (
                               <td style={{ padding: "12px 14px", textAlign: "right", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>
@@ -1200,7 +1220,7 @@ export default function IntentReportPage() {
                           </tr>
                           {expanded && (
                             <tr>
-                              <td colSpan={hideTrend ? 7 : 8} style={{ padding: 0 }}>
+                              <td colSpan={hideTrend ? 9 : 10} style={{ padding: 0 }}>
                                 <ExpandedCard district={row.District} row={row} campaigns={campFilter} />
                               </td>
                             </tr>

@@ -39,6 +39,13 @@ interface TopicRow {
   Date: string;
 }
 
+interface BoardMinuteRow {
+  SBMDate: string;
+  Keyword: string;
+  Context: string;
+  Link: string;
+}
+
 function sqlStr(v: string): string {
   return `'${v.replace(/'/g, "''")}'`;
 }
@@ -125,7 +132,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
     const district = searchParams.get("district") ?? "";
     if (!district) {
-      return NextResponse.json({ persona: [], signals: [], topics: [] });
+      return NextResponse.json({ persona: [], signals: [], topics: [], boardMinutes: [] });
     }
 
     const districtVal = sqlStr(district);
@@ -173,6 +180,24 @@ GROUP BY item.topics
 ORDER BY Score DESC
 LIMIT 15`;
 
+    // School board minutes live inside UNNEST(engagement) with SBM_* fields.
+    // Filter by e.SBM_district = topic_district so we only show board meetings
+    // from THIS district (an engaged user's engagement array can carry SBMs
+    // from other districts and would otherwise leak across).
+    const sqlBoard = `
+SELECT
+  FORMAT_DATE('%Y-%m-%d', DATE(e.SBM_Date)) AS SBMDate,
+  e.curate_topic AS Keyword,
+  e.SBM_Context  AS Context,
+  e.SBM_Link     AS Link
+FROM ${TABLE}, UNNEST(engagement) AS e
+WHERE topic_district = ${districtVal}
+  AND UPPER(TRIM(e.SBM_district)) = UPPER(TRIM(topic_district))
+  AND e.SBM_Date IS NOT NULL
+  AND e.SBM_Link IS NOT NULL
+ORDER BY e.SBM_Date DESC
+LIMIT 20`;
+
     // The district's email_domains, used to match ai_signals rows whose
     // Organization name doesn't line up but whose Domain does.
     const sqlDomains = `
@@ -181,9 +206,10 @@ FROM ${TABLE}
 WHERE topic_district = ${districtVal}
   AND email_domain IS NOT NULL AND email_domain != ''`;
 
-    const [personaResult, topicsResult, domainsResult, aiRows] = await Promise.all([
+    const [personaResult, topicsResult, boardResult, domainsResult, aiRows] = await Promise.all([
       runQuery(sqlPersona),
       runQuery(sqlTopics).catch(() => ({ cols: [], rows: [] })),
+      runQuery(sqlBoard).catch(() => ({ cols: [], rows: [] })),
       runQuery(sqlDomains).catch(() => ({ cols: [], rows: [] })),
       fetchAiSignals().catch(() => [] as Record<string, unknown>[]),
     ]);
@@ -204,6 +230,16 @@ WHERE topic_district = ${districtVal}
         Topic: String(o["Topic"] ?? ""),
         Score: Number(o["Score"] ?? 0),
         Date:  String(o["Date"] ?? ""),
+      };
+    });
+
+    const boardMinutes: BoardMinuteRow[] = boardResult.rows.map((r) => {
+      const o = asObj(boardResult.cols, r);
+      return {
+        SBMDate: String(o["SBMDate"] ?? ""),
+        Keyword: String(o["Keyword"] ?? ""),
+        Context: String(o["Context"] ?? ""),
+        Link:    String(o["Link"] ?? ""),
       };
     });
 
@@ -244,8 +280,8 @@ WHERE topic_district = ${districtVal}
       })
       .slice(0, 25);
 
-    return NextResponse.json({ persona, signals, topics });
+    return NextResponse.json({ persona, signals, topics, boardMinutes });
   } catch (err) {
-    return NextResponse.json({ persona: [], signals: [], topics: [], error: String(err) });
+    return NextResponse.json({ persona: [], signals: [], topics: [], boardMinutes: [], error: String(err) });
   }
 }

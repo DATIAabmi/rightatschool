@@ -1148,16 +1148,17 @@ export default function IntentReportPage() {
                   </thead>
                   <tbody>
                     {visibleRows.map((row) => {
-                      const expanded = expandedRow === row.District;
+                      const rowKey = `${row.District}|${row.Domain}`;
+                      const expanded = expandedRow === rowKey;
                       const band = intentBand(row.IntentScore);
                       const barPct = maxIntentScore > 0 ? Math.min(100, (row.IntentScore / maxIntentScore) * 100) : 0;
                       return (
-                        <React.Fragment key={row.District}>
+                        <React.Fragment key={rowKey}>
                           <tr
                             className="ir-row"
                             tabIndex={0}
-                            onClick={() => setExpandedRow(expanded ? null : row.District)}
-                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedRow(expanded ? null : row.District); } }}
+                            onClick={() => setExpandedRow(expanded ? null : rowKey)}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedRow(expanded ? null : rowKey); } }}
                             style={{ cursor: "pointer", borderBottom: expanded ? "none" : "1px solid var(--line)" }}
                             aria-expanded={expanded}
                           >

@@ -12,7 +12,7 @@ const SIGNALS_TABLE = "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_s
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 // Bump when the SQL template changes so warm-lambda caches drop stale results.
-const CACHE_VERSION = "ri-v3-accountintel-topicinsights";
+const CACHE_VERSION = "ri-v4-split-by-domain";
 
 interface DistrictRow {
   District: string;
@@ -82,10 +82,12 @@ signals_domains AS (
   FROM ${SIGNALS_TABLE}
   ${signalsWhere}${signalsWhere ? " AND " : "WHERE "}domain IS NOT NULL AND domain != ''
 ),
--- Districts whose users have any Bombora topic data in their engagement array
--- (RAS has no separate Bombora table — topics live inside engagement[]).
-topic_districts AS (
-  SELECT DISTINCT topic_district AS district
+-- (district, domain) cohorts that have any Bombora topic data in their
+-- engagement[] array — RAS has no separate Bombora table, so topics live
+-- inside UNNEST(engagement).
+topic_cohorts AS (
+  SELECT DISTINCT topic_district AS district,
+                  IFNULL(LOWER(TRIM(email_domain)), '') AS dom
   FROM ${TABLE}, UNNEST(engagement) AS e
   WHERE topic_district IS NOT NULL AND topic_district != ''
     AND e.bombora_score IS NOT NULL
@@ -96,8 +98,7 @@ topic_districts AS (
 agg AS (
   SELECT
     topic_district AS District,
-    ANY_VALUE(email_domain) AS Domain,
-    ARRAY_AGG(DISTINCT NULLIF(LOWER(TRIM(email_domain)), '') IGNORE NULLS) AS Domains,
+    IFNULL(email_domain, '') AS Domain,
     ANY_VALUE(state) AS State,
     ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Campaign,
     IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Intel,
@@ -109,16 +110,21 @@ agg AS (
     FORMAT_DATE('%Y-%m-%d', MAX(DATE(date_max_for_intent_scoring))) AS LastActivity
   FROM ${TABLE}
   WHERE ${where.join("\n    AND ")}
-  GROUP BY topic_district
+  GROUP BY topic_district, IFNULL(email_domain, '')
 )
 SELECT
   a.District, a.Domain, a.State, a.Campaign, a.Intel,
   IF(
-    EXISTS (SELECT 1 FROM signals_orgs    o WHERE o.org_up = ${normalizeExpr("a.District")})
-    OR EXISTS (SELECT 1 FROM signals_domains d WHERE d.dom IN UNNEST(a.Domains)),
+    EXISTS (SELECT 1 FROM signals_orgs o WHERE o.org_up = ${normalizeExpr("a.District")})
+    OR (a.Domain != '' AND LOWER(TRIM(a.Domain)) IN (SELECT dom FROM signals_domains)),
     'Y', 'N'
   ) AS AccountIntel,
-  IF(a.District IN (SELECT district FROM topic_districts), 'Y', 'N') AS TopicInsights,
+  IF(
+    EXISTS (SELECT 1 FROM topic_cohorts t
+            WHERE t.district = a.District
+              AND t.dom = IFNULL(LOWER(TRIM(a.Domain)), '')),
+    'Y', 'N'
+  ) AS TopicInsights,
   a.Engagements, a.EngagedUsers, a.Leads, a.IntentScore, a.Trend, a.LastActivity
 FROM agg a
 ORDER BY a.IntentScore DESC`;

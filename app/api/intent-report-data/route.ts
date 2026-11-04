@@ -17,6 +17,9 @@ const NORMALIZE_EXPR = (col: string) =>
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
+// Bump when the SQL template changes so warm-lambda caches don't serve stale
+// pre-deploy results (Vercel can keep a warm instance around through a redeploy).
+const CACHE_VERSION = "intel-v2-2026-11-04";
 
 interface DistrictRow {
   District: string;
@@ -74,11 +77,20 @@ district_lookup AS (
   FROM ${TABLE}
   WHERE topic_district IS NOT NULL AND topic_district != ''
 ),
+-- strip common school-district suffix noise so "Greenfield Union School District"
+-- normalizes to the same core as "Greenfield Union Elementary School District"
+-- or just "Greenfield Union". Applied AFTER the normal UPPER/trim.
 intel_districts AS (
   SELECT DISTINCT dl.district
   FROM district_lookup dl
   JOIN ${SIGNALS_TABLE} s
-    ON ${NORMALIZE_EXPR("s.organization")} = ${NORMALIZE_EXPR("dl.district")}
+    ON (
+      -- exact normalized match
+      ${NORMALIZE_EXPR("s.organization")} = ${NORMALIZE_EXPR("dl.district")}
+      -- OR one contains the other (handles "Greenfield Union" ⊂ "Greenfield Union School District")
+      OR STRPOS(${NORMALIZE_EXPR("s.organization")}, ${NORMALIZE_EXPR("dl.district")}) > 0
+      OR STRPOS(${NORMALIZE_EXPR("dl.district")}, ${NORMALIZE_EXPR("s.organization")}) > 0
+    )
     OR (dl.domain IS NOT NULL AND dl.domain != ''
         AND LOWER(TRIM(s.domain)) = LOWER(TRIM(dl.domain)))
 )
@@ -161,10 +173,14 @@ export async function GET(req: NextRequest) {
     const dateStart = searchParams.get("dateStart") ?? "";
     const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
-    const cacheKey = JSON.stringify({ campaigns, states, dateStart, dateEnd });
-    const cached = memCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-      return cachedJson({ rows: cached.data });
+    const cacheKey = JSON.stringify({ v: CACHE_VERSION, campaigns, states, dateStart, dateEnd });
+    // Also honour ?nocache=1 for one-off bypass when debugging.
+    const nocache = searchParams.get("nocache") === "1";
+    if (!nocache) {
+      const cached = memCache.get(cacheKey);
+      if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+        return cachedJson({ rows: cached.data });
+      }
     }
 
     if (!inflight.has(cacheKey)) {

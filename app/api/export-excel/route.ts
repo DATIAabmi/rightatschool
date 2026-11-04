@@ -155,7 +155,11 @@ intel_districts AS (
   SELECT DISTINCT dl.district
   FROM district_lookup dl
   JOIN ${SIGNALS_TABLE} s
-    ON ${NORMALIZE_EXPR("s.organization")} = ${NORMALIZE_EXPR("dl.district")}
+    ON (
+      ${NORMALIZE_EXPR("s.organization")} = ${NORMALIZE_EXPR("dl.district")}
+      OR STRPOS(${NORMALIZE_EXPR("s.organization")}, ${NORMALIZE_EXPR("dl.district")}) > 0
+      OR STRPOS(${NORMALIZE_EXPR("dl.district")}, ${NORMALIZE_EXPR("s.organization")}) > 0
+    )
     OR (dl.domain IS NOT NULL AND dl.domain != ''
         AND LOWER(TRIM(s.domain)) = LOWER(TRIM(dl.domain)))
 )

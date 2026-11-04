@@ -68,6 +68,22 @@ function intentBand(score: number): { label: string; color: string; soft: string
   return                  { label: "",          color: "var(--low)",  soft: "var(--sunk)"       };
 }
 
+// For SBM rows the signals sheet stores `source = "Minutes"` literally, so the
+// link text would just read "Minutes" for every row — unhelpful. On Extron the
+// source column carries a publication name ("Government Technology"), giving
+// naturally descriptive link text. Here we fall back to the URL hostname for
+// generic source values so each link tells you where it goes.
+function signalLinkLabel(s: { Source: string; Link: string }): string {
+  const src = (s.Source || "").trim();
+  const generic = /^(minutes?|website|link|source|news|article|rfp|bid)$/i.test(src);
+  if (!generic && src) return src;
+  try {
+    const host = new URL(s.Link).hostname.replace(/^www\./, "");
+    if (host) return host;
+  } catch { /* URL parse failed — fall through to source */ }
+  return src || "Website";
+}
+
 function fmt(n: number): string {
   return n.toLocaleString();
 }
@@ -438,7 +454,7 @@ function ExpandedCard({ district, row, campaigns }: { district: string; row: Dis
                             <strong style={{ color: "var(--muted)", fontWeight: 700 }}>Source:</strong>
                             {s.Link ? (
                               <a href={s.Link} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontWeight: 600, textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                {s.Source || "Website"}
+                                {signalLinkLabel(s)}
                                 <ExternalLink size={13} />
                               </a>
                             ) : (

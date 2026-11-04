@@ -170,6 +170,7 @@ SELECT
   source         AS Source,
   source_link    AS Link,
   signal_analysis AS Analysis,
+  source_text    AS SourceText,
   SAFE_CAST(strength AS INT64) AS Strength
 FROM ${SIGNALS_TABLE}
 WHERE (${normalizeExpr("organization")} = ${normalizeExpr(districtVal)}
@@ -178,10 +179,17 @@ WHERE (${normalizeExpr("organization")} = ${normalizeExpr(districtVal)}
 ORDER BY SAFE_CAST(strength AS INT64) DESC, date DESC
 LIMIT 25`;
 
+    // If the sheet is missing `source_text` (newer column than some older
+    // RAS sheet versions), retry the query without it so the rest of the
+    // Account Intelligence card still populates — just with no Source Text.
+    const sqlSignalsFallback = sqlSignals.replace(/\s*source_text\s+AS\s+SourceText,\n/, "");
+
     const [personaResult, topicsResult, signalsResult] = await Promise.all([
       runQuery(sqlPersona),
       runQuery(sqlTopics).catch(() => ({ cols: [], rows: [] })),
-      runQuery(sqlSignals).catch(() => ({ cols: [], rows: [] })),
+      runQuery(sqlSignals).catch(() =>
+        runQuery(sqlSignalsFallback).catch(() => ({ cols: [], rows: [] })),
+      ),
     ]);
 
     const persona: PersonaRow[] = personaResult.rows.map((r) => {
@@ -212,7 +220,7 @@ LIMIT 25`;
         Source:     String(o["Source"] ?? ""),
         Link:       String(o["Link"] ?? ""),
         Analysis:   String(o["Analysis"] ?? ""),
-        SourceText: "",
+        SourceText: String(o["SourceText"] ?? ""),
         Strength:   Number(o["Strength"] ?? 0),
       };
     });

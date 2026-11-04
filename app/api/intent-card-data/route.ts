@@ -103,8 +103,15 @@ export async function GET(req: NextRequest) {
       .split(",")
       .map((c) => c.trim())
       .filter(Boolean);
-    const campaignFilter = campaignCodes.length > 0
+    // Signals sheet uses the `campaign` column.
+    const signalsCampaignFilter = campaignCodes.length > 0
       ? `AND UPPER(TRIM(campaign)) IN (${campaignCodes.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
+      : "";
+    // Scoring table uses `abm_campaign`. The parent Intent Report row filters
+    // on this, so without it here persona/topics double-count users who appear
+    // in multiple campaigns (one scoring row per campaign per user).
+    const scoringCampaignFilter = campaignCodes.length > 0
+      ? `AND abm_campaign IN (${campaignCodes.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
       : "";
 
     // Persona uses the SAME aggregation shape as the parent row (COUNT of
@@ -119,6 +126,7 @@ SELECT
   COUNT(NULLIF(CAST(leads AS STRING), '')) AS Leads
 FROM ${SCORING_TABLE}
 WHERE topic_district = ${districtVal}
+  ${scoringCampaignFilter}
 GROUP BY JobFunction
 HAVING Users > 0 OR Engagements > 0 OR Leads > 0
 ORDER BY Engagements DESC, Leads DESC`;
@@ -131,6 +139,7 @@ SELECT
   FORMAT_DATE('%Y-%m-%d', MAX(DATE(sc.date_max_for_intent_scoring))) AS Date
 FROM ${SCORING_TABLE} AS sc, UNNEST(sc.engagement) AS item
 WHERE sc.topic_district = ${districtVal}
+  ${scoringCampaignFilter.replace(/abm_campaign/g, "sc.abm_campaign")}
   AND item.bombora_score IS NOT NULL
   AND item.topics IS NOT NULL
   AND LOWER(TRIM(item.topics)) != 'null'
@@ -165,7 +174,7 @@ SELECT
 FROM ${SIGNALS_TABLE}
 WHERE (${normalizeExpr("organization")} = ${normalizeExpr(districtVal)}
        OR LOWER(TRIM(domain)) IN (SELECT LOWER(TRIM(d)) FROM doms))
-  ${campaignFilter}
+  ${signalsCampaignFilter}
 ORDER BY SAFE_CAST(strength AS INT64) DESC, date DESC
 LIMIT 25`;
 

@@ -7,13 +7,14 @@ const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 
 // Scoring/engagement table (BigQuery via Metabase native driver, DB 34).
 const DB_ID = 34;
-const TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
+const SCORING_TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
 
-// ai_signals lives in a different Metabase database (analytics, DB 67). We hit
-// it via the structured query API because that's how it's wired in Metabase.
-const AI_DB_ID = 67;
-const AI_TABLE_ID = 390;
-const AI_CLIENT_ID = 11564; // Right at School
+// Signals sheet (raw Google sheet synced into BigQuery). This is the ONE source
+// of truth for Account Intelligence: articles, bids/RFPs, AND school board
+// minutes (source = 'Minutes'). An earlier version pulled signals from the
+// ai_signals Metabase table filtered by Client ID 11564; that table doesn't
+// carry the Minutes-tagged rows, which is why Greenfield's SBMs were missing.
+const SIGNALS_TABLE = "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_schools_2025`";
 
 interface PersonaRow {
   JobFunction: string;
@@ -37,13 +38,6 @@ interface TopicRow {
   Topic: string;
   Score: number;
   Date: string;
-}
-
-interface BoardMinuteRow {
-  SBMDate: string;
-  Keyword: string;
-  Context: string;
-  Link: string;
 }
 
 function sqlStr(v: string): string {
@@ -93,46 +87,12 @@ function asObj(cols: string[], row: unknown[]): Record<string, unknown> {
   return obj;
 }
 
-// ai_signals fetch, cached in-process for 30 min so expanding many rows doesn't
-// hammer Metabase. Same shape ai-opportunity-feed uses.
-interface AiCache { rows: Record<string, unknown>[]; }
-let aiCache: AiCache | null = null;
-let aiCacheAt = 0;
-const AI_CACHE_TTL_MS = 30 * 60 * 1000;
-
-async function fetchAiSignals(): Promise<Record<string, unknown>[]> {
-  if (aiCache && Date.now() - aiCacheAt < AI_CACHE_TTL_MS) return aiCache.rows;
-
-  const res = await fetch(`${METABASE_URL}/api/dataset`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-    body: JSON.stringify({
-      database: AI_DB_ID,
-      type: "query",
-      query: {
-        "source-table": AI_TABLE_ID,
-        filter: ["=", ["field", "Client ID", { "base-type": "type/Integer" }], AI_CLIENT_ID],
-      },
-      constraints: { "max-results": 1000000 },
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  const cols: string[] = (data.data?.cols ?? []).map((c: { display_name: string }) => c.display_name);
-  const rawRows: unknown[][] = data.data?.rows ?? [];
-  const rows = rawRows.map((row) => Object.fromEntries(cols.map((col, i) => [col, (row as unknown[])[i]])));
-  aiCache = { rows };
-  aiCacheAt = Date.now();
-  return rows;
-}
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const district = searchParams.get("district") ?? "";
     if (!district) {
-      return NextResponse.json({ persona: [], signals: [], topics: [], boardMinutes: [] });
+      return NextResponse.json({ persona: [], signals: [], topics: [] });
     }
 
     const districtVal = sqlStr(district);
@@ -142,23 +102,22 @@ export async function GET(req: NextRequest) {
     const campaignCodes = campaignParam
       .split(",")
       .map((c) => c.trim())
-      .filter(Boolean)
-      .map((c) => c.toUpperCase());
-
-    const districtKey = district.trim().toUpperCase();
+      .filter(Boolean);
+    const campaignFilter = campaignCodes.length > 0
+      ? `AND UPPER(TRIM(campaign)) IN (${campaignCodes.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
+      : "";
 
     // Persona uses the SAME aggregation shape as the parent row (COUNT of
     // engaged rows and SUM of engagements), so summing the card reconciles
     // against the KPI strip at the top of the Intent Report. Rows with no
-    // job_title still contribute under the "Unknown" bucket, so a district with
-    // leads but null job titles doesn't come back empty.
+    // job_title still contribute under the "Unknown" bucket.
     const sqlPersona = `
 SELECT
   COALESCE(NULLIF(job_title, ''), 'Unknown') AS JobFunction,
   COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 END) AS Users,
   SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
   COUNT(NULLIF(CAST(leads AS STRING), '')) AS Leads
-FROM ${TABLE}
+FROM ${SCORING_TABLE}
 WHERE topic_district = ${districtVal}
 GROUP BY JobFunction
 HAVING Users > 0 OR Engagements > 0 OR Leads > 0
@@ -170,7 +129,7 @@ SELECT
   item.topics AS Topic,
   MAX(SAFE_CAST(item.bombora_score AS INT64)) AS Score,
   FORMAT_DATE('%Y-%m-%d', MAX(DATE(sc.date_max_for_intent_scoring))) AS Date
-FROM ${TABLE} AS sc, UNNEST(sc.engagement) AS item
+FROM ${SCORING_TABLE} AS sc, UNNEST(sc.engagement) AS item
 WHERE sc.topic_district = ${districtVal}
   AND item.bombora_score IS NOT NULL
   AND item.topics IS NOT NULL
@@ -180,38 +139,40 @@ GROUP BY item.topics
 ORDER BY Score DESC
 LIMIT 15`;
 
-    // School board minutes live inside UNNEST(engagement) with SBM_* fields.
-    // Filter by e.SBM_district = topic_district so we only show board meetings
-    // from THIS district (an engaged user's engagement array can carry SBMs
-    // from other districts and would otherwise leak across).
-    const sqlBoard = `
+    // Account intel from the Right At School signals sheet. Mirrors the Extron
+    // pattern: normalize both sides (strip trailing state suffix + apostrophe
+    // variants), and ALSO match on ANY distinct email_domain the scoring table
+    // has for this district — so "Greenfield Union School District" (scoring)
+    // matches sheet rows whose organization is "Greenfield Union Elementary
+    // School District" or "Greenfield Union" when they share gfusd.net.
+    const normalizeExpr = (col: string) =>
+      `UPPER(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(${col}), r",\\s*[A-Z]{2}\\s*$", ""), r"['‘’\\x60]", ""))`;
+
+    const sqlSignals = `
+WITH doms AS (
+  SELECT DISTINCT email_domain AS d FROM ${SCORING_TABLE}
+  WHERE topic_district = ${districtVal}
+    AND email_domain IS NOT NULL AND email_domain != ''
+)
 SELECT
-  FORMAT_DATE('%Y-%m-%d', DATE(e.SBM_Date)) AS SBMDate,
-  e.curate_topic AS Keyword,
-  e.SBM_Context  AS Context,
-  e.SBM_Link     AS Link
-FROM ${TABLE}, UNNEST(engagement) AS e
-WHERE topic_district = ${districtVal}
-  AND UPPER(TRIM(e.SBM_district)) = UPPER(TRIM(topic_district))
-  AND e.SBM_Date IS NOT NULL
-  AND e.SBM_Link IS NOT NULL
-ORDER BY e.SBM_Date DESC
-LIMIT 20`;
+  date           AS Date,
+  category       AS Category,
+  keywords       AS Keywords,
+  source         AS Source,
+  source_link    AS Link,
+  signal_analysis AS Analysis,
+  SAFE_CAST(strength AS INT64) AS Strength
+FROM ${SIGNALS_TABLE}
+WHERE (${normalizeExpr("organization")} = ${normalizeExpr(districtVal)}
+       OR LOWER(TRIM(domain)) IN (SELECT LOWER(TRIM(d)) FROM doms))
+  ${campaignFilter}
+ORDER BY SAFE_CAST(strength AS INT64) DESC, date DESC
+LIMIT 25`;
 
-    // The district's email_domains, used to match ai_signals rows whose
-    // Organization name doesn't line up but whose Domain does.
-    const sqlDomains = `
-SELECT DISTINCT email_domain AS d
-FROM ${TABLE}
-WHERE topic_district = ${districtVal}
-  AND email_domain IS NOT NULL AND email_domain != ''`;
-
-    const [personaResult, topicsResult, boardResult, domainsResult, aiRows] = await Promise.all([
+    const [personaResult, topicsResult, signalsResult] = await Promise.all([
       runQuery(sqlPersona),
       runQuery(sqlTopics).catch(() => ({ cols: [], rows: [] })),
-      runQuery(sqlBoard).catch(() => ({ cols: [], rows: [] })),
-      runQuery(sqlDomains).catch(() => ({ cols: [], rows: [] })),
-      fetchAiSignals().catch(() => [] as Record<string, unknown>[]),
+      runQuery(sqlSignals).catch(() => ({ cols: [], rows: [] })),
     ]);
 
     const persona: PersonaRow[] = personaResult.rows.map((r) => {
@@ -233,55 +194,22 @@ WHERE topic_district = ${districtVal}
       };
     });
 
-    const boardMinutes: BoardMinuteRow[] = boardResult.rows.map((r) => {
-      const o = asObj(boardResult.cols, r);
+    const signals: SignalRow[] = signalsResult.rows.map((r) => {
+      const o = asObj(signalsResult.cols, r);
       return {
-        SBMDate: String(o["SBMDate"] ?? ""),
-        Keyword: String(o["Keyword"] ?? ""),
-        Context: String(o["Context"] ?? ""),
-        Link:    String(o["Link"] ?? ""),
+        Date:       String(o["Date"] ?? ""),
+        Category:   String(o["Category"] ?? ""),
+        Keywords:   String(o["Keywords"] ?? ""),
+        Source:     String(o["Source"] ?? ""),
+        Link:       String(o["Link"] ?? ""),
+        Analysis:   String(o["Analysis"] ?? ""),
+        SourceText: "",
+        Strength:   Number(o["Strength"] ?? 0),
       };
     });
 
-    const districtDomains = new Set<string>(
-      domainsResult.rows
-        .map((r) => String((r as unknown[])[0] ?? "").trim().toLowerCase())
-        .filter(Boolean),
-    );
-
-    // Filter ai_signals by Organization match OR Domain match, plus optional
-    // campaign filter — matches the ai-opportunity-feed convention.
-    const signals: SignalRow[] = aiRows
-      .filter((r) => {
-        const org = String(r["Organization"] ?? "").trim().toUpperCase();
-        const dom = String(r["Domain"] ?? "").trim().toLowerCase();
-        const orgMatch = !!org && org === districtKey;
-        const domMatch = !!dom && districtDomains.has(dom);
-        if (!orgMatch && !domMatch) return false;
-        if (campaignCodes.length) {
-          const camp = String(r["Campaign #"] ?? "").trim().toUpperCase();
-          if (!campaignCodes.includes(camp)) return false;
-        }
-        return true;
-      })
-      .map((r) => ({
-        Date:       String(r["Date"] ?? ""),
-        Category:   String(r["Category"] ?? ""),
-        Keywords:   String(r["Keywords"] ?? ""),
-        Source:     String(r["Source"] ?? ""),
-        Link:       String(r["Source Link"] ?? ""),
-        Analysis:   String(r["Signal Analysis"] ?? ""),
-        SourceText: String(r["Source Text"] ?? ""),
-        Strength:   Number(r["Strength"] ?? 0),
-      }))
-      .sort((a, b) => {
-        if (b.Strength !== a.Strength) return b.Strength - a.Strength;
-        return b.Date.localeCompare(a.Date);
-      })
-      .slice(0, 25);
-
-    return NextResponse.json({ persona, signals, topics, boardMinutes });
+    return NextResponse.json({ persona, signals, topics });
   } catch (err) {
-    return NextResponse.json({ persona: [], signals: [], topics: [], boardMinutes: [], error: String(err) });
+    return NextResponse.json({ persona: [], signals: [], topics: [], error: String(err) });
   }
 }

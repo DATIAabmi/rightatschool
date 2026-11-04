@@ -47,18 +47,10 @@ interface TopicRow {
   Date: string;
 }
 
-interface BoardMinuteRow {
-  SBMDate: string;
-  Keyword: string;
-  Context: string;
-  Link: string;
-}
-
 interface CardData {
   persona: PersonaRow[];
   signals: SignalRow[];
   topics: TopicRow[];
-  boardMinutes: BoardMinuteRow[];
 }
 
 type SortKey = keyof DistrictRow;
@@ -387,35 +379,17 @@ function ExpandedCard({ district, row, campaigns }: { district: string; row: Dis
       )}
       {error && <div style={{ fontSize: 12, color: "var(--hot)", padding: 8 }}>Error: {error}</div>}
 
-      {(() => {
-        if (!data || loading) return null;
-        // Combine ai_signals + school board minutes into one Account Intelligence
-        // stack so the card layout stays single-sectioned like the reference.
-        // SBMs become cards with category "School Board Minutes", context as
-        // Source Text, SBM link as the Source.
-        const allSignals: SignalRow[] = [
-          ...data.signals,
-          ...data.boardMinutes.map((b) => ({
-            Date:       b.SBMDate,
-            Category:   "School Board Minutes",
-            Keywords:   b.Keyword,
-            Source:     "School Board Minutes",
-            Link:       b.Link,
-            Analysis:   "",
-            SourceText: b.Context,
-            Strength:   0,
-          })),
-        ].sort((a, b) => b.Date.localeCompare(a.Date));
-
-        return (
+      {data && !loading && (
         <>
-          {/* Account intelligence — left date/category panel + right field table */}
-          {allSignals.length > 0 && (
+          {/* Account intelligence — left date/category panel + right field table.
+              Pulled from the signals sheet, which carries articles, bids/RFPs,
+              AND school board minutes (source = "Minutes"). One unified stack. */}
+          {data.signals.length > 0 && (
             <div style={{ display: "grid", gap: 12 }}>
-              {allSignals.length > 1 && (
-                <h4 style={{ margin: 0, fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)" }}>Account Intelligence · {allSignals.length}</h4>
+              {data.signals.length > 1 && (
+                <h4 style={{ margin: 0, fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--muted)", fontFamily: "var(--f-body)" }}>Account Intelligence · {data.signals.length}</h4>
               )}
-              {allSignals.map((s, i) => (
+              {data.signals.map((s, i) => (
                 <div key={i} style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, display: "grid", gridTemplateColumns: "190px minmax(0,1fr)", overflow: "hidden" }}>
                   {/* Left panel: date + category */}
                   <div style={{ background: "var(--sunk)", padding: "18px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, borderRight: "1px solid var(--line)" }}>
@@ -553,14 +527,13 @@ function ExpandedCard({ district, row, campaigns }: { district: string; row: Dis
             </div>
           )}
 
-          {allSignals.length === 0 && data.topics.length === 0 && data.persona.length === 0 && (
+          {data.signals.length === 0 && data.topics.length === 0 && data.persona.length === 0 && (
             <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 18px", fontSize: 13, color: "var(--muted)" }}>
               No account intelligence, topics, or persona activity recorded for this district.
             </div>
           )}
         </>
-        );
-      })()}
+      )}
     </div>
   );
 }

@@ -279,15 +279,29 @@ function AIOpportunityFeedContent() {
     if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (filterMarket.length   && !filterMarket.includes((r["Market"] as string) ?? ""))     return false;
     if (drillInOr && filterDistrict.length && filterDomain.length) {
-      // Drill-down: any signal matching EITHER the district (fuzzy) OR
-      // the scoring-table domain (substring) is a candidate. Signals
-      // sheet often spells districts differently, so matching one side
-      // is enough.
-      const dOk   = filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd));
-      const domL  = domainOf(r).toLowerCase();
-      const fdomL = filterDomain.map((d) => d.toLowerCase());
-      const domOk = fdomL.some((fd) => fd === domL || domL.includes(fd) || fd.includes(domL));
-      if (!dOk && !domOk) return false;
+      // Drill-down: domain is the authoritative identifier. Require
+      // either (a) an exact / either-way substring domain match (keeps
+      // tusd.net ↔ www.tusd.net etc.) OR (b) an exact normalized
+      // district name match (handles signals whose domain is empty but
+      // whose organization string equals the district after stripping
+      // state suffix + punctuation). Fuzzy word-overlap is deliberately
+      // NOT used here — it drags in neighbors like "Jefferson
+      // Elementary School District (Tracy)" when drilling Tracy
+      // Unified, because "tracy" is a shared significant word.
+      const domL  = domainOf(r).toLowerCase().trim();
+      const fdomL = filterDomain.map((d) => d.toLowerCase().trim()).filter(Boolean);
+      const domOk = domL !== "" && fdomL.some((fd) => fd === domL || domL.includes(fd) || fd.includes(domL));
+
+      const normalizeDistrict = (s: string) =>
+        s.toUpperCase().trim()
+          .replace(/,\s*[A-Z]{2}\s*$/, "")
+          .replace(/[^A-Z0-9\s]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      const rowNormalized = normalizeDistrict(districtOf(r));
+      const districtExact = filterDistrict.some((f) => normalizeDistrict(f) === rowNormalized && rowNormalized !== "");
+
+      if (!domOk && !districtExact) return false;
     } else {
       if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd))) return false;
       if (filterDomain.length   && !filterDomain.includes(domainOf(r)))     return false;

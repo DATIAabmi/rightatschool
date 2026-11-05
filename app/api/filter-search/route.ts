@@ -12,11 +12,11 @@ const FIELD_MAP: Record<string, string> = {
   domain: "email_domain",
   state: "state",
   job_function: "job_title",
-  asset_code: "asset_code",
 };
 
 const UNNEST_FIELD_MAP: Record<string, { unnest: string; col: string }> = {
   content_name: { unnest: "sc.engagement", col: "eng.asset_name" },
+  asset_code:   { unnest: "sc.engagement", col: "eng.asset_name" },
 };
 
 export async function GET(req: NextRequest) {

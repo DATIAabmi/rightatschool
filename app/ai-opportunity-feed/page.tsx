@@ -226,14 +226,21 @@ function AIOpportunityFeedContent() {
   const sigWords = (s: string) =>
     s.toLowerCase().split(/[\s,.()\-/]+/).filter((w) => w.length > 3 && !STOP_WORDS.has(w));
 
-  const districtMatch = (org: string, filter: string): boolean => {
+  const districtMatch = (org: string, dom: string, filter: string): boolean => {
     const orgL = org.toLowerCase().trim();
+    const domL = dom.toLowerCase().trim();
     const filterL = filter.toLowerCase().trim();
     if (orgL === filterL) return true;
     if (orgL.includes(filterL) || filterL.includes(orgL)) return true;
     const fw = sigWords(filter);
     const ow = sigWords(org);
-    return fw.length > 0 && fw.some((w) => ow.includes(w));
+    if (fw.length > 0 && fw.some((w) => ow.includes(w))) return true;
+    // Also match on domain substring — Intent Report's Account Intel flag
+    // can be driven purely by a shared email_domain even when the signals
+    // sheet's Organization value doesn't mention the district by name
+    // (e.g. Broward's signals tagged by domain only). Without this check
+    // a district drill-down into the AI Feed returns 0 rows for those.
+    return fw.length > 0 && domL !== "" && fw.some((w) => domL.includes(w));
   };
 
   const searchOptions = (get: (r: Signal) => string) => (query: string): Promise<string[]> => {
@@ -266,7 +273,7 @@ function AIOpportunityFeedContent() {
     }
     if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (filterMarket.length   && !filterMarket.includes((r["Market"] as string) ?? ""))     return false;
-    if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), fd))) return false;
+    if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd))) return false;
     if (filterDomain.length   && !filterDomain.includes(domainOf(r)))     return false;
     if (filterState.length    && !filterState.includes(stateOf(r)))       return false;
     return true;

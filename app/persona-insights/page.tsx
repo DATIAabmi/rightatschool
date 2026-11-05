@@ -187,7 +187,7 @@ function DataTable({ rows, sort, onSort }: {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function PersonaInsightsContent() {
-  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
+  const { campaign, dateStart, dateEnd, asset, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterDomain, setFilterDomain] = useState<string[]>([]);
@@ -223,6 +223,7 @@ function PersonaInsightsContent() {
     setError("");
     const params = new URLSearchParams();
     if (campaign.length) params.set("campaign",  campaign.join(","));
+    if (asset.length)    params.set("asset",     asset.join(","));
     if (dateStart)       params.set("dateStart", dateStart);
     if (dateEnd)         params.set("dateEnd",   dateEnd);
 
@@ -235,7 +236,7 @@ function PersonaInsightsContent() {
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [campaign, dateStart, dateEnd]);
+  }, [campaign, asset, dateStart, dateEnd]);
 
   // Client-side filters: state (index 2), district (index 0), domain (index 1), job function (index 3).
   useEffect(() => {

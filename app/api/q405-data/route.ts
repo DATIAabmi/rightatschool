@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
+import { assetFilterClause } from "@/lib/assetFilter";
 
 export const maxDuration = 60;
 
@@ -37,6 +38,7 @@ async function fetchData(
   districts: string[],
   domains: string[],
   states: string[],
+  assets: string[],
   dateStart: string,
   dateEnd: string,
 ): Promise<{ cols: unknown[]; rows: unknown[][] }> {
@@ -50,6 +52,8 @@ async function fetchData(
   if (districts.length) where.push(`topic_district IN (${districts.map(sqlStr).join(", ")})`);
   if (domains.length)   where.push(`email_domain IN (${domains.map(sqlStr).join(", ")})`);
   if (states.length)    where.push(`state IN (${states.map(sqlStr).join(", ")})`);
+  const assetClause = assetFilterClause(assets);
+  if (assetClause) where.push(assetClause);
   if (dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd)) {
     where.push(`DATE(date_max_for_intent_scoring) BETWEEN '${dateStart}' AND '${dateEnd}'`);
   }
@@ -119,17 +123,18 @@ export async function GET(req: NextRequest) {
     const districts = parseList(searchParams.get("district"));
     const domains   = parseList(searchParams.get("domain"));
     const states    = parseList(searchParams.get("state"));
+    const assets    = parseList(searchParams.get("asset"));
     const dateStart = searchParams.get("dateStart") ?? "";
     const dateEnd   = searchParams.get("dateEnd")   ?? "";
 
-    const cacheKey = JSON.stringify({ campaigns, districts, domains, states, dateStart, dateEnd });
+    const cacheKey = JSON.stringify({ campaigns, districts, domains, states, assets, dateStart, dateEnd });
     const cached = memCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
       return cachedJson(cached.data);
     }
 
     if (!inflight.has(cacheKey)) {
-      const p = fetchData(campaigns, districts, domains, states, dateStart, dateEnd)
+      const p = fetchData(campaigns, districts, domains, states, assets, dateStart, dateEnd)
         .then((result) => {
           memCache.set(cacheKey, { data: result, ts: Date.now() });
           inflight.delete(cacheKey);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { assetFilterClause } from "@/lib/assetFilter";
 
 export const maxDuration = 60;
 
@@ -32,6 +33,7 @@ function normaliseCols(rawCols: { base_type: string }[]) {
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const campaigns = parseList(searchParams.get("campaign"));
+  const assets    = parseList(searchParams.get("asset"));
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
   const hasDate   = !!(dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd));
@@ -46,6 +48,8 @@ export async function GET(req: NextRequest) {
   ];
 
   if (campaigns.length) where.push(`sc.Abmi_Campaign IN ${sqlInList(campaigns)}`);
+  const assetClause = assetFilterClause(assets, "sc");
+  if (assetClause) where.push(assetClause);
 
   // Each row has a unique date_max_for_intent_scoring (weekly engagement date).
   // The table has a single batch load, so no last_updated deduplication is needed.

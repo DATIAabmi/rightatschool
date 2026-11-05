@@ -7,25 +7,27 @@ import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
-// Async source for the Asset # dropdown. Distinct engagement[].asset_name
-// values come back from filter-search in whatever shape the scoring sheet
-// stores them ("Asset 1", "C1.Asset1.Display", "asset_01", …). We pull the
-// asset number out of each row, dedupe, and present a clean "assetNN"
-// label — Phase 2 routes will reverse this when they build their SQL.
+// Async source for the Asset # dropdown. Shows every distinct
+// engagement[].asset_name value from the scoring table — deduped
+// case-insensitively, sorted alphabetically. If the sheet names them
+// "Asset 1" or "C1.Asset1.Display" or "asset_01", users will see exactly
+// that and can select the ones they want. Phase 2 routes build their
+// WHERE clause from the raw string the user selected.
 async function searchAssets(query: string): Promise<string[]> {
-  const res = await fetch(`/api/filter-search?field=content_name&q=`);
+  const res = await fetch(`/api/filter-search?field=content_name&q=${encodeURIComponent(query)}`);
   const data = await res.json().catch(() => ({ values: [] }));
   const raw: string[] = Array.isArray(data.values) ? data.values : [];
-  const numbers = new Set<number>();
+  const seen = new Set<string>();
+  const out: string[] = [];
   for (const v of raw) {
-    const m = String(v).match(/asset[\s_.-]*0*(\d+)/i);
-    if (m) numbers.add(parseInt(m[1], 10));
+    const s = String(v ?? "").trim();
+    if (!s || s.toLowerCase() === "null") continue;
+    const k = s.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
   }
-  const labels = Array.from(numbers)
-    .sort((a, b) => a - b)
-    .map((n) => `asset${String(n).padStart(2, "0")}`);
-  const ql = query.trim().toLowerCase();
-  return ql ? labels.filter((l) => l.includes(ql)) : labels;
+  return out.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
 }
 
 export default function DashboardHeader({ legend, onExport, exportLabel, hideDateRange, hideAsset }: { legend?: string; onExport?: () => Promise<void>; exportLabel?: string; hideDateRange?: boolean; hideAsset?: boolean }) {

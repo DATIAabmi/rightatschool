@@ -127,9 +127,9 @@ const NUMBER_TYPES = new Set(["type/Integer","type/BigInteger","type/Float","typ
 const GEO_LEFT_ALIGN_COLS = new Set<string>();
 
 function GeographyTable({
-  campaign, dateStart, dateEnd, filterDistrict, filterState, selectedState, setSelectedState, sort, setSort,
+  campaign, dateStart, dateEnd, asset, filterDistrict, filterState, selectedState, setSelectedState, sort, setSort,
 }: {
-  campaign: string[]; dateStart: string; dateEnd: string;
+  campaign: string[]; dateStart: string; dateEnd: string; asset: string[];
   filterDistrict: string[]; filterState: string[];
   selectedState: string | null; setSelectedState: (s: string | null) => void;
   sort: SortState; setSort: (s: SortState) => void;
@@ -145,6 +145,7 @@ function GeographyTable({
     const params = new URLSearchParams();
     if (dateStart) params.set("dateStart", dateStart);
     if (dateEnd)   params.set("dateEnd", dateEnd);
+    if (asset.length) params.set("asset", asset.join(","));
 
     if (filterDistrict.length > 0) {
       // District filter active — fetch district-level data, then aggregate by state.
@@ -193,7 +194,7 @@ function GeographyTable({
       .then((r) => r.json())
       .then((d) => { setCols(d.cols ?? []); setRows(d.rows ?? []); setLoading(false); })
       .catch((err: Error) => { setError(err.message ?? "Failed to load"); setLoading(false); });
-  }, [campaign, dateStart, dateEnd, filterDistrict]);
+  }, [campaign, dateStart, dateEnd, asset, filterDistrict]);
 
   const stateCol = cols.findIndex((c) => c.display_name === "State");
 
@@ -341,7 +342,7 @@ function GeographyTable({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function GeoInsightsContent() {
-  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
+  const { campaign, dateStart, dateEnd, asset, resetSignal } = useFilter();
 
   const [filterDistrict, setFilterDistrict] = useState<string[]>([]);
   const [filterState, setFilterState] = useState<string[]>([]);
@@ -382,6 +383,7 @@ function GeoInsightsContent() {
           campaign={campaign}
           dateStart={dateStart}
           dateEnd={dateEnd}
+          asset={asset}
           filterDistrict={filterDistrict}
           filterState={filterState}
           selectedState={selectedState}

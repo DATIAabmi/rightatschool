@@ -282,7 +282,7 @@ function DataTable({
 
 function EngagedUsersContent() {
   const router = useRouter();
-  const { campaign, dateStart, dateEnd, resetSignal } = useFilter();
+  const { campaign, dateStart, dateEnd, asset, resetSignal } = useFilter();
 
   const [district, setDistrict] = useState<string[]>([]);
   const [domain, setDomain] = useState<string[]>([]);
@@ -318,6 +318,7 @@ function EngagedUsersContent() {
     if (district.length)      params.set("district",   district.join(","));
     if (domain.length)        params.set("domain",     domain.join(","));
     if (state.length)         params.set("state",      state.join(","));
+    if (asset.length)         params.set("asset",      asset.join(","));
     if (dateStart)            params.set("dateStart",  dateStart);
     if (dateEnd)              params.set("dateEnd",    dateEnd);
 
@@ -330,7 +331,7 @@ function EngagedUsersContent() {
         setLoading(false);
       })
       .catch((err) => { setError(err.message ?? "Failed to load data"); setLoading(false); });
-  }, [campaign, district, domain, state, dateStart, dateEnd]);
+  }, [campaign, district, domain, state, asset, dateStart, dateEnd]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

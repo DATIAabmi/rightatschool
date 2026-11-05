@@ -156,12 +156,17 @@ function AIOpportunityFeedContent() {
   const { campaign, resetSignal } = useFilter();
   const searchParams = useSearchParams();
   const urlDistrict = searchParams.get("district");
+  const urlDomain   = searchParams.get("domain");
   const [rows, setRows]       = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
   const [sort, setSort]       = useState<SortState>({ col: "Strength", dir: "desc" });
   const [filterDistrict, setFilterDistrict] = useState<string[]>(urlDistrict ? [urlDistrict] : []);
-  const [filterDomain,   setFilterDomain]   = useState<string[]>([]);
+  const [filterDomain,   setFilterDomain]   = useState<string[]>(urlDomain ? [urlDomain] : []);
+  // When BOTH district + domain come in from a drill-down URL, treat the
+  // filter as "either matches" so a signal sheet that spells the district
+  // differently still shows via the domain path (and vice-versa).
+  const drillInOr = Boolean(urlDistrict && urlDomain);
   const [filterState,    setFilterState]    = useState<string[]>([]);
   const [filterKeywords, setFilterKeywords] = useState<string[]>([]);
   const [filterCategory, setFilterCategory] = useState<string[]>([]);
@@ -273,8 +278,20 @@ function AIOpportunityFeedContent() {
     }
     if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (filterMarket.length   && !filterMarket.includes((r["Market"] as string) ?? ""))     return false;
-    if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd))) return false;
-    if (filterDomain.length   && !filterDomain.includes(domainOf(r)))     return false;
+    if (drillInOr && filterDistrict.length && filterDomain.length) {
+      // Drill-down: any signal matching EITHER the district (fuzzy) OR
+      // the scoring-table domain (substring) is a candidate. Signals
+      // sheet often spells districts differently, so matching one side
+      // is enough.
+      const dOk   = filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd));
+      const domL  = domainOf(r).toLowerCase();
+      const fdomL = filterDomain.map((d) => d.toLowerCase());
+      const domOk = fdomL.some((fd) => fd === domL || domL.includes(fd) || fd.includes(domL));
+      if (!dOk && !domOk) return false;
+    } else {
+      if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd))) return false;
+      if (filterDomain.length   && !filterDomain.includes(domainOf(r)))     return false;
+    }
     if (filterState.length    && !filterState.includes(stateOf(r)))       return false;
     return true;
   });

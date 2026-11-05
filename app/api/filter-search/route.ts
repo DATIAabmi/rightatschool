@@ -16,7 +16,16 @@ const FIELD_MAP: Record<string, string> = {
 
 const UNNEST_FIELD_MAP: Record<string, { unnest: string; col: string }> = {
   content_name: { unnest: "sc.engagement", col: "eng.asset_name" },
-  asset_code:   { unnest: "sc.engagement", col: "eng.asset_name" },
+};
+
+// Fields that live on a non-scoring table. asset_code is the clean short
+// code ("asset01", "asset02", …) in the ad-performance table, parallel
+// to the longer asset_name title.
+const ALT_TABLE_FIELDS: Record<string, { table: string; col: string }> = {
+  asset_code: {
+    table: "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_ad_performance`",
+    col: "asset_code",
+  },
 };
 
 export async function GET(req: NextRequest) {
@@ -30,6 +39,25 @@ export async function GET(req: NextRequest) {
     const values = q
       ? allLabels.filter((l) => l.toLowerCase().includes(q.toLowerCase()))
       : allLabels;
+    return cachedJson({ values });
+  }
+
+  // Alternate-table queries — e.g. asset_code on ad_performance.
+  if (field in ALT_TABLE_FIELDS) {
+    const { table, col } = ALT_TABLE_FIELDS[field];
+    const safeQ = q.replace(/"/g, "");
+    const where = safeQ
+      ? `WHERE ${col} IS NOT NULL AND ${col} != '' AND LOWER(${col}) LIKE LOWER("%${safeQ}%")`
+      : `WHERE ${col} IS NOT NULL AND ${col} != ''`;
+    const sql = `SELECT DISTINCT ${col} FROM ${table} ${where} ORDER BY ${col} LIMIT 200`;
+    const res = await fetch(`${METABASE_URL}/api/dataset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      body: JSON.stringify({ database: DB_ID, type: "native", native: { query: sql }, middleware: { "js-int-to-string?": true } }),
+    });
+    const data = await res.json();
+    if (data?.error) return NextResponse.json({ values: [], error: String(data.error).slice(0, 300) });
+    const values: string[] = (data?.data?.rows ?? []).map((r: string[]) => r[0]).filter(Boolean);
     return cachedJson({ values });
   }
 

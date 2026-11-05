@@ -8,6 +8,12 @@ const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 const DB_ID = 34;
 const TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
+// Account Intelligence source — the raw signals sheet. Intel = Y is
+// recomputed from this so it only lights up when the AI Feed has rows
+// to show for the district (match on normalized org name OR shared
+// email_domain, same rule the Intent Report uses).
+const SIGNALS_TABLE =
+  "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_schools_2025`";
 
 // Maps SQL alias → display name shown in the UI
 const DISPLAY_NAMES: Record<string, string> = {
@@ -58,24 +64,57 @@ async function fetchData(
     where.push(`DATE(date_max_for_intent_scoring) BETWEEN '${dateStart}' AND '${dateEnd}'`);
   }
 
+  // Scope signals to the same campaigns we're viewing so Intel reflects
+  // only signals tied to those campaigns (matches Intent Report).
+  const signalsWhere = campaigns.length
+    ? `WHERE UPPER(TRIM(campaign)) IN (${campaigns.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
+    : "";
+
+  // Org-name normalization: strip trailing ", XX" state suffix and
+  // every apostrophe variant so "Alief ISD" matches "Alief ISD, TX".
+  const normalizeExpr = (col: string) =>
+    `UPPER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE(REGEXP_REPLACE(IFNULL(${col}, ''), r",\\s*[A-Z]{2}\\s*$", ""), "'", ""), "‘", ""), "’", ""), "\`", "")))`;
+
   const sql = `
+WITH signals_orgs AS (
+  SELECT DISTINCT ${normalizeExpr("organization")} AS org_up
+  FROM ${SIGNALS_TABLE}
+  ${signalsWhere}
+),
+signals_domains AS (
+  SELECT DISTINCT LOWER(TRIM(domain)) AS dom
+  FROM ${SIGNALS_TABLE}
+  ${signalsWhere}${signalsWhere ? " AND " : "WHERE "}domain IS NOT NULL AND domain != ''
+),
+agg AS (
+  SELECT
+    topic_district AS District,
+    ANY_VALUE(email_domain) AS Domain,
+    ARRAY_AGG(DISTINCT NULLIF(LOWER(TRIM(email_domain)), '') IGNORE NULLS) AS Domains,
+    ANY_VALUE(state) AS ST,
+    ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Camp,
+    IF(MAX(CASE WHEN topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
+    SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
+    COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS EngagedUser,
+    COUNT(NULLIF(CAST(leads AS STRING), '')) AS UniqueLeads,
+    SUM(IFNULL(SAFE_CAST(downloads AS FLOAT64), 0)) AS Down,
+    SUM(IFNULL(SAFE_CAST(cumulative_score AS FLOAT64), 0)) AS \`Intent Score\`,
+    SUM(IFNULL(SAFE_CAST(cumulative_score_trend AS FLOAT64), 0)) AS \`Score Trend\`
+  FROM ${TABLE}
+  WHERE ${where.join("\n    AND ")}
+  GROUP BY topic_district
+)
 SELECT
-  topic_district AS District,
-  ANY_VALUE(email_domain) AS Domain,
-  ANY_VALUE(state) AS ST,
-  ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Camp,
-  IF(MAX(CASE WHEN SBM_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Intel,
-  IF(MAX(CASE WHEN topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
-  SUM(IFNULL(SAFE_CAST(engagements AS FLOAT64), 0)) AS Engagements,
-  COUNT(CASE WHEN SAFE_CAST(engagements AS FLOAT64) > 0 THEN 1 ELSE NULL END) AS EngagedUser,
-  COUNT(NULLIF(CAST(leads AS STRING), '')) AS UniqueLeads,
-  SUM(IFNULL(SAFE_CAST(downloads AS FLOAT64), 0)) AS Down,
-  SUM(IFNULL(SAFE_CAST(cumulative_score AS FLOAT64), 0)) AS \`Intent Score\`,
-  SUM(IFNULL(SAFE_CAST(cumulative_score_trend AS FLOAT64), 0)) AS \`Score Trend\`
-FROM ${TABLE}
-WHERE ${where.join("\n  AND ")}
-GROUP BY topic_district
-ORDER BY \`Intent Score\` DESC`;
+  a.District, a.Domain, a.ST, a.Camp,
+  IF(
+    EXISTS (SELECT 1 FROM signals_orgs    o WHERE o.org_up = ${normalizeExpr("a.District")})
+    OR EXISTS (SELECT 1 FROM signals_domains d WHERE d.dom IN UNNEST(a.Domains)),
+    'Y', 'N'
+  ) AS Intel,
+  a.Topic, a.Engagements, a.EngagedUser, a.UniqueLeads, a.Down,
+  a.\`Intent Score\`, a.\`Score Trend\`
+FROM agg a
+ORDER BY a.\`Intent Score\` DESC`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55000);

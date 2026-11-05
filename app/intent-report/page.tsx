@@ -1138,8 +1138,8 @@ export default function IntentReportPage() {
               </div>
 
               {/* ── Main table ── */}
-              <div className="ir-table-box" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, overflowX: "auto", overflowY: "hidden", marginBottom: 40, WebkitOverflowScrolling: "touch" }}>
-                <table style={{ width: "100%", minWidth: 960, borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--f-body)" }}>
+              <div className="ir-table-box" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, overflowX: "auto", overflowY: "visible", marginBottom: 40, WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", minWidth: 1200, borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--f-body)" }}>
                   <thead>
                     <tr style={{ background: "var(--surface)" }}>
                       {COL_HEADERS.map(({ label, key, align }) => (

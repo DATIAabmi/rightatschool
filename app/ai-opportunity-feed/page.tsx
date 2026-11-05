@@ -300,7 +300,7 @@ function AIOpportunityFeedContent() {
                   display: "flex", flexDirection: "column", background: "#f9fafb", zIndex: 1 }}>
       {/* Filters */}
       <div style={{ flexShrink: 0, padding: "16px 24px 0" }}>
-        <DashboardHeader />
+        <DashboardHeader hideAsset />
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             <MultiSelectDropdown label="District" value={filterDistrict} onChange={setFilterDistrict} options={districtOptions} searchable />

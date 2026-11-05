@@ -13,6 +13,11 @@ interface FilterState {
   setCampaign: (c: string[]) => void;
   district: string[];
   setDistrict: (d: string[]) => void;
+  /** Creative asset names (engagement[].asset_name values). Empty = all. Not
+   *  honored by Account Intelligence / Topic Insights / Intent Report, which
+   *  are asset-agnostic. */
+  asset: string[];
+  setAsset: (a: string[]) => void;
   /** Increments each time resetAll() is called. Pages watch this to reset local state. */
   resetSignal: number;
   resetAll: () => void;
@@ -28,6 +33,8 @@ const FilterContext = createContext<FilterState>({
   setCampaign: () => {},
   district: [],
   setDistrict: () => {},
+  asset: [],
+  setAsset: () => {},
   resetSignal: 0,
   resetAll: () => {},
 });
@@ -37,6 +44,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const [dateEnd, setDateEnd] = useState("");
   const [campaign, setCampaign] = useState<string[]>([CAMPAIGNS[0]]);
   const [district, setDistrict] = useState<string[]>([]);
+  const [asset, setAsset] = useState<string[]>([]);
   const [resetSignal, setResetSignal] = useState(0);
 
   const metabaseDateRange =
@@ -47,12 +55,13 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     setDateStart("");
     setDateEnd("");
     setDistrict([]);
+    setAsset([]);
     setResetSignal((s) => s + 1);
   }
 
   return (
     <FilterContext.Provider
-      value={{ dateStart, dateEnd, setDateStart, setDateEnd, metabaseDateRange, campaign, setCampaign, district, setDistrict, resetSignal, resetAll }}
+      value={{ dateStart, dateEnd, setDateStart, setDateEnd, metabaseDateRange, campaign, setCampaign, district, setDistrict, asset, setAsset, resetSignal, resetAll }}
     >
       {children}
     </FilterContext.Provider>

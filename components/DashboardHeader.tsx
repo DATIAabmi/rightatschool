@@ -7,8 +7,17 @@ import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
-export default function DashboardHeader({ legend, onExport, exportLabel, hideDateRange }: { legend?: string; onExport?: () => Promise<void>; exportLabel?: string; hideDateRange?: boolean }) {
-  const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd, resetAll } = useFilter();
+// Async source for the Asset # dropdown — distinct engagement[].asset_name
+// values pulled from the scoring table via the existing filter-search route.
+async function searchAssets(query: string): Promise<string[]> {
+  const res = await fetch(`/api/filter-search?field=content_name&q=${encodeURIComponent(query)}`);
+  const data = await res.json().catch(() => ({ values: [] }));
+  const values: string[] = Array.isArray(data.values) ? data.values : [];
+  return values.filter((v) => v && v !== "null").sort();
+}
+
+export default function DashboardHeader({ legend, onExport, exportLabel, hideDateRange, hideAsset }: { legend?: string; onExport?: () => Promise<void>; exportLabel?: string; hideDateRange?: boolean; hideAsset?: boolean }) {
+  const { campaign, setCampaign, dateStart, dateEnd, setDateStart, setDateEnd, asset, setAsset, resetAll } = useFilter();
   const [exporting, setExporting] = useState(false);
 
   function handleSignOut() {
@@ -80,7 +89,7 @@ export default function DashboardHeader({ legend, onExport, exportLabel, hideDat
         </div>
       </div>
 
-      {/* Global filters — Campaign + Date Range */}
+      {/* Global filters — Campaign + Asset + Date Range */}
       <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-2 flex-wrap">
         <MultiSelectDropdown
           label="Campaign"
@@ -89,6 +98,15 @@ export default function DashboardHeader({ legend, onExport, exportLabel, hideDat
           options={[...CAMPAIGNS]}
           minWidth={220}
         />
+        {!hideAsset && (
+          <MultiSelectDropdown
+            label="Asset #"
+            value={asset}
+            onChange={setAsset}
+            search={searchAssets}
+            minWidth={180}
+          />
+        )}
         {!hideDateRange && <div className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg bg-white">
           <CalendarSearch size={14} className="text-orange-400 shrink-0" />
           <span className="text-gray-700 text-xs font-bold uppercase shrink-0">Date Range:</span>

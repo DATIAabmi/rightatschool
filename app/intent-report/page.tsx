@@ -791,6 +791,14 @@ export default function IntentReportPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .ir-row:hover td { background: var(--sunk) !important; }
         .ir-row:focus-within td { outline: 2px solid var(--accent); outline-offset: -2px; }
+        /* Always-visible horizontal scrollbar so users on narrow viewports
+           can tell they can swipe right. macOS hides overflow:auto scrollbars
+           by default; the WebKit rules force the track + thumb to render. */
+        .ir-table-box { scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+        .ir-table-box::-webkit-scrollbar { height: 10px; -webkit-appearance: none; }
+        .ir-table-box::-webkit-scrollbar-track { background: var(--sunk); border-radius: 0 0 12px 12px; }
+        .ir-table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 2px solid var(--sunk); }
+        .ir-table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
         .ir-print-cover { display: none; }
         @media print {
           @page { size: letter landscape; margin: 1.2cm 2cm; }

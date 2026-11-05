@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
+import { assetFilterClause } from "@/lib/assetFilter";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -30,7 +31,7 @@ async function runSQL(sql: string): Promise<unknown[] | null> {
   return rows[0] ?? null;
 }
 
-async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateEnd: string): Promise<FunnelResult> {
+async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateEnd: string, assets: string[]): Promise<FunnelResult> {
   const campaignClause = campaign ? `AND abmi_campaign = ${sqlStr(campaign)}` : "";
   const dateClause = dateStart && dateEnd
     ? `AND DATE(date) BETWEEN ${sqlStr(dateStart)} AND ${sqlStr(dateEnd)}`
@@ -38,12 +39,20 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
 
   const scoringCampaignClause = campaign ? `AND sc.Abmi_Campaign = ${sqlStr(campaign)}` : "";
 
+  // ad_performance carries asset_code as a direct column — filter inline.
+  // scoring joins to ad_performance via assetFilterClause's EXISTS subquery.
+  const adAssetClause = assets.length
+    ? `AND LOWER(asset_code) IN (${assets.map((a) => sqlStr(a.toLowerCase())).join(", ")})`
+    : "";
+  const scAssetPredicate = assetFilterClause(assets, "sc");
+  const scAssetClause = scAssetPredicate ? `AND ${scAssetPredicate}` : "";
+
   const [r_imp, r_eng, r_ctr, r_egu, r_leads] = await Promise.all([
-    runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause}`),
-    runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause}`),
-    runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause}`),
-    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc WHERE sc.engaged_user IS NOT NULL ${scoringCampaignClause}`),
-    runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause}`),
+    runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
+    runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
+    runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
+    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc WHERE sc.engaged_user IS NOT NULL ${scoringCampaignClause} ${scAssetClause}`),
+    runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause} ${scAssetClause}`),
   ]);
 
   return {
@@ -69,17 +78,17 @@ function avgPct(values: (string | number | null)[]): string | null {
   return `${(nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2)}%`;
 }
 
-async function getResult(campaigns: string[], dateStart: string, dateEnd: string): Promise<FunnelResult> {
-  const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}`;
+async function getResult(campaigns: string[], dateStart: string, dateEnd: string, assets: string[]): Promise<FunnelResult> {
+  const key = `${campaigns.join(",")}|${dateStart}|${dateEnd}|${assets.join(",")}`;
   const cached = memCache.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return cached.data;
   if (!inflight.has(key)) {
     const p = (async () => {
       let result: FunnelResult;
       if (campaigns.length <= 1) {
-        result = await fetchFunnelForCampaign(campaigns[0] ?? "", dateStart, dateEnd);
+        result = await fetchFunnelForCampaign(campaigns[0] ?? "", dateStart, dateEnd, assets);
       } else {
-        const perCampaign = await Promise.all(campaigns.map((c) => fetchFunnelForCampaign(c, dateStart, dateEnd)));
+        const perCampaign = await Promise.all(campaigns.map((c) => fetchFunnelForCampaign(c, dateStart, dateEnd, assets)));
         result = {
           impressions:  sum(perCampaign.map((r) => r.impressions  as string | number | null)),
           engagements:  sum(perCampaign.map((r) => r.engagements  as string | number | null)),
@@ -101,9 +110,10 @@ async function getResult(campaigns: string[], dateStart: string, dateEnd: string
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const campaigns = (searchParams.get("campaign") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const assets    = (searchParams.get("asset")    ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const dateStart = searchParams.get("dateStart") ?? "";
   const dateEnd   = searchParams.get("dateEnd")   ?? "";
-  const result = await getResult(campaigns, dateStart, dateEnd);
+  const result = await getResult(campaigns, dateStart, dateEnd, assets);
   const hasData = result.impressions !== null || result.engagements !== null;
   return hasData ? cachedJson(result) : NextResponse.json(result);
 }

@@ -75,7 +75,7 @@ export function EcosystemFilterBar() {
 }
 
 export default function EcosystemFunnel() {
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, asset } = useFilter();
   const [data, setData] = useState<FunnelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -84,6 +84,7 @@ export default function EcosystemFunnel() {
     setLoading(true);
     const params = new URLSearchParams();
     if (campaign.length) params.set("campaign", campaign.join(","));
+    if (asset.length) params.set("asset", asset.join(","));
     if (dateStart) params.set("dateStart", dateStart);
     if (dateEnd) params.set("dateEnd", dateEnd);
     const qs = params.toString();
@@ -91,7 +92,7 @@ export default function EcosystemFunnel() {
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => { setError("Failed to load"); setLoading(false); });
-  }, [campaign, dateStart, dateEnd]);
+  }, [campaign, dateStart, dateEnd, asset]);
 
   if (loading) {
     return (

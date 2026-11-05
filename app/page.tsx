@@ -28,11 +28,12 @@ function downloadCsv(filename: string, rows: (string | number | null)[][]) {
 export default function Home() {
   const [filterChannel, setFilterChannel] = useState<string[]>([]);
   const [channelOptions, setChannelOptions] = useState<string[]>([]);
-  const { campaign, dateStart, dateEnd } = useFilter();
+  const { campaign, dateStart, dateEnd, asset } = useFilter();
 
   async function handleEcosystemExport() {
     const params = new URLSearchParams();
     if (campaign.length) params.set("campaign", campaign.join(","));
+    if (asset.length)    params.set("asset",    asset.join(","));
     if (dateStart)       params.set("dateStart", dateStart);
     if (dateEnd)         params.set("dateEnd",   dateEnd);
     const qs = params.toString();

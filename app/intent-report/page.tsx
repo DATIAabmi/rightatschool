@@ -791,14 +791,28 @@ export default function IntentReportPage() {
         @keyframes spin { to { transform: rotate(360deg); } }
         .ir-row:hover td { background: var(--sunk) !important; }
         .ir-row:focus-within td { outline: 2px solid var(--accent); outline-offset: -2px; }
-        /* Always-visible horizontal scrollbar so users on narrow viewports
-           can tell they can swipe right. macOS hides overflow:auto scrollbars
-           by default; the WebKit rules force the track + thumb to render. */
-        .ir-table-box { scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-        .ir-table-box::-webkit-scrollbar { height: 10px; -webkit-appearance: none; }
+        /* Thick, accent-colored horizontal scrollbar so overflow is obvious
+           on every device. iOS hides touch scrollbars no matter what CSS
+           says, so the swipe-hint badge above also renders on narrow views. */
+        .ir-table-box { scrollbar-width: auto; scrollbar-color: var(--accent) var(--sunk); }
+        .ir-table-box::-webkit-scrollbar { height: 14px; -webkit-appearance: none; }
         .ir-table-box::-webkit-scrollbar-track { background: var(--sunk); border-radius: 0 0 12px 12px; }
-        .ir-table-box::-webkit-scrollbar-thumb { background: var(--line); border-radius: 6px; border: 2px solid var(--sunk); }
-        .ir-table-box::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+        .ir-table-box::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 7px; border: 2px solid var(--sunk); min-width: 60px; }
+        .ir-table-box::-webkit-scrollbar-thumb:hover { background: var(--ink); }
+        /* Swipe-hint pill — shown only on viewports too narrow for the full
+           table (same ~1200px threshold as the table's min-width). Hidden on
+           wide screens so power users don't see noise. */
+        .ir-scroll-hint { display: none; }
+        @media (max-width: 1280px) {
+          .ir-scroll-hint {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-bottom: 8px; padding: 6px 12px;
+            background: var(--accent-soft); color: var(--accent);
+            border: 1px solid var(--accent); border-radius: 999px;
+            font-family: var(--f-body); font-size: 12px; font-weight: 700;
+            letter-spacing: .04em; text-transform: uppercase;
+          }
+        }
         .ir-print-cover { display: none; }
         @media print {
           @page { size: letter landscape; margin: 1.2cm 2cm; }
@@ -1146,7 +1160,10 @@ export default function IntentReportPage() {
               </div>
 
               {/* ── Main table ── */}
-              <div className="ir-table-box" style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, overflowX: "auto", overflowY: "visible", marginBottom: 40, WebkitOverflowScrolling: "touch" }}>
+              <div className="ir-scroll-hint ir-no-print" aria-hidden="true">
+                <span>←</span><span>Scroll horizontally for more</span><span>→</span>
+              </div>
+              <div className="ir-table-box" style={{ position: "relative", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, overflowX: "scroll", overflowY: "visible", marginBottom: 40 }}>
                 <table style={{ width: "100%", minWidth: 1200, borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--f-body)" }}>
                   <thead>
                     <tr style={{ background: "var(--surface)" }}>

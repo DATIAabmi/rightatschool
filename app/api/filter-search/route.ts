@@ -16,6 +16,7 @@ const FIELD_MAP: Record<string, string> = {
 
 const UNNEST_FIELD_MAP: Record<string, { unnest: string; col: string }> = {
   content_name: { unnest: "sc.engagement", col: "eng.asset_name" },
+  asset_code:   { unnest: "sc.engagement", col: "eng.asset_code" },
 };
 
 export async function GET(req: NextRequest) {

@@ -7,14 +7,13 @@ import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
-// Async source for the Asset # dropdown. Shows every distinct
-// engagement[].asset_name value from the scoring table — deduped
-// case-insensitively, sorted alphabetically. If the sheet names them
-// "Asset 1" or "C1.Asset1.Display" or "asset_01", users will see exactly
-// that and can select the ones they want. Phase 2 routes build their
-// WHERE clause from the raw string the user selected.
+// Async source for the Asset # dropdown. Lists every distinct
+// engagement[].asset_code value from the scoring table — this is the
+// short code column ("asset01", "asset02", …) alongside the longer
+// asset_name title. We dedupe case-insensitively and sort naturally;
+// routes compare on asset_code directly, no normalization in between.
 async function searchAssets(query: string): Promise<string[]> {
-  const res = await fetch(`/api/filter-search?field=content_name&q=${encodeURIComponent(query)}`);
+  const res = await fetch(`/api/filter-search?field=asset_code&q=${encodeURIComponent(query)}`);
   const data = await res.json().catch(() => ({ values: [] }));
   const raw: string[] = Array.isArray(data.values) ? data.values : [];
   const seen = new Set<string>();

@@ -1,8 +1,8 @@
 // Build a BigQuery predicate that keeps only scoring-table rows whose
-// engagement[] array contains at least one entry whose asset_name matches
-// one of the selected values. The Asset # dropdown passes through the raw
-// asset_name strings exactly as the sheet stores them, so we compare
-// case-insensitively on the exact value — no regex interpretation needed.
+// engagement[] array contains at least one entry whose asset_code
+// matches one of the selected values. asset_code is the short-code
+// column ("asset01", "asset02", …) separate from the long asset_name
+// title. The dropdown passes asset_code strings verbatim.
 //
 // Returns just the predicate (no leading AND / WHERE), so callers can plug
 // it into their existing WHERE-clause composition. Empty when no filter.
@@ -14,7 +14,7 @@ export function assetFilterClause(assets: string[], tableAlias: string = ""): st
   if (!assets.length) return "";
   const vals = assets.map((a) => sqlEscape(a.toLowerCase())).join(", ");
   const prefix = tableAlias ? `${tableAlias}.` : "";
-  return `EXISTS (SELECT 1 FROM UNNEST(${prefix}engagement) e WHERE LOWER(CAST(e.asset_name AS STRING)) IN (${vals}))`;
+  return `EXISTS (SELECT 1 FROM UNNEST(${prefix}engagement) e WHERE LOWER(CAST(e.asset_code AS STRING)) IN (${vals}))`;
 }
 
 // Standard `?asset=foo,bar` parser matching parseList in each route.

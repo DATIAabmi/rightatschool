@@ -523,24 +523,73 @@ function ExpandedCard({ district, row, campaigns }: { district: string; row: Dis
             })()}
           </div>
 
-          {/* Topic insights — Bombora composite scores */}
+          {/* Topic Intelligence — ranked list with numbered rows, full-width
+              bars, trend badges. Trend values are derived placeholders until
+              the backend exposes real period-over-period scores. */}
           {data.topics.length > 0 && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "14px 18px" }}>
-              <h4 style={{ margin: "0 0 12px", fontSize: 14, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--f-body)" }}>Topic Insights ({data.topics.length})</h4>
-              <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: "20px 24px" }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "var(--ink)", fontFamily: "var(--f-display)", lineHeight: 1.2 }}>Topic Intelligence</div>
+                  <div style={{ fontSize: 12.5, color: "var(--muted)", fontFamily: "var(--f-body)", marginTop: 3 }}>
+                    {data.topics.length} topic{data.topics.length !== 1 ? "s" : ""} ranked by relevance score
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", background: "var(--sunk)", padding: "4px 10px", borderRadius: 999, whiteSpace: "nowrap", fontFamily: "var(--f-body)" }}>
+                  Top {data.topics.length}
+                </span>
+              </div>
+
+              {/* Column label */}
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 14, fontFamily: "var(--f-body)" }}>
+                Topic / Relevance
+              </div>
+
+              {/* Ranked rows */}
+              <div style={{ display: "grid", gap: 18 }}>
                 {data.topics.map((t, i) => {
                   const pct = Math.min(100, Math.max(0, t.Score));
-                  const color = pct >= 66 ? "var(--hot)" : pct >= 36 ? "var(--warm)" : "var(--act)";
+                  const barColor = i === 0 ? "var(--hot)" : "var(--warm)";
+                  // Deterministic placeholder trend: stable per topic name,
+                  // range -3..+9. Keeps rows from re-shuffling color on every
+                  // reload while the real trend column lands upstream.
+                  let h = 0;
+                  for (let k = 0; k < t.Topic.length; k++) h = ((h * 31) + t.Topic.charCodeAt(k)) | 0;
+                  const trend = (((h % 13) + 13) % 13) - 3;
+                  const trendColor = trend >= 0 ? "#16a34a" : "#dc2626";
+                  const trendSign = trend >= 0 ? "+" : "";
                   return (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, fontFamily: "var(--f-body)" }}>
-                      <span style={{ color: "var(--ink)", flex: "0 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{t.Topic}</span>
-                      <div style={{ flex: "0 0 160px", height: 7, background: "var(--sunk)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ width: `${pct}%`, height: "100%", background: color }} />
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "28px minmax(0,1fr)", gap: 14, alignItems: "start" }}>
+                      <div style={{ fontSize: 13, color: "var(--muted)", fontFamily: "var(--f-body)", fontVariantNumeric: "tabular-nums", paddingTop: 2 }}>
+                        {String(i + 1).padStart(2, "0")}
                       </div>
-                      <span style={{ flex: "0 0 32px", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{t.Score}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
+                          <span style={{ fontSize: 14.5, fontWeight: 700, color: "var(--ink)", fontFamily: "var(--f-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
+                            {t.Topic}
+                          </span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                            <span style={{ fontSize: 12.5, fontWeight: 600, color: trendColor, fontFamily: "var(--f-body)", fontVariantNumeric: "tabular-nums" }}>
+                              {trendSign}{trend}%
+                            </span>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: "var(--ink)", fontFamily: "var(--f-display)", fontVariantNumeric: "tabular-nums", minWidth: 28, textAlign: "right" }}>
+                              {t.Score}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ height: 6, background: "var(--sunk)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 3 }} />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Disclosure — trend placeholder */}
+              <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--f-body)", marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
+                Trend values are placeholders until period-over-period data is available.
               </div>
             </div>
           )}

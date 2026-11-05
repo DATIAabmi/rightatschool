@@ -7,13 +7,25 @@ import { useFilter } from "@/components/FilterContext";
 import { CAMPAIGNS, campaignDateRange } from "@/lib/campaigns";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 
-// Async source for the Asset # dropdown — distinct engagement[].asset_name
-// values pulled from the scoring table via the existing filter-search route.
+// Async source for the Asset # dropdown. Distinct engagement[].asset_name
+// values come back from filter-search in whatever shape the scoring sheet
+// stores them ("Asset 1", "C1.Asset1.Display", "asset_01", …). We pull the
+// asset number out of each row, dedupe, and present a clean "assetNN"
+// label — Phase 2 routes will reverse this when they build their SQL.
 async function searchAssets(query: string): Promise<string[]> {
-  const res = await fetch(`/api/filter-search?field=content_name&q=${encodeURIComponent(query)}`);
+  const res = await fetch(`/api/filter-search?field=content_name&q=`);
   const data = await res.json().catch(() => ({ values: [] }));
-  const values: string[] = Array.isArray(data.values) ? data.values : [];
-  return values.filter((v) => v && v !== "null").sort();
+  const raw: string[] = Array.isArray(data.values) ? data.values : [];
+  const numbers = new Set<number>();
+  for (const v of raw) {
+    const m = String(v).match(/asset[\s_.-]*0*(\d+)/i);
+    if (m) numbers.add(parseInt(m[1], 10));
+  }
+  const labels = Array.from(numbers)
+    .sort((a, b) => a - b)
+    .map((n) => `asset${String(n).padStart(2, "0")}`);
+  const ql = query.trim().toLowerCase();
+  return ql ? labels.filter((l) => l.includes(ql)) : labels;
 }
 
 export default function DashboardHeader({ legend, onExport, exportLabel, hideDateRange, hideAsset }: { legend?: string; onExport?: () => Promise<void>; exportLabel?: string; hideDateRange?: boolean; hideAsset?: boolean }) {

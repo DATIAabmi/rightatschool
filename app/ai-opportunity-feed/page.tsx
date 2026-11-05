@@ -208,7 +208,10 @@ function AIOpportunityFeedContent() {
   }, []);
 
   const keywordsOptions = [...new Set(rows.flatMap((r) => String(r["Keywords"] ?? "").split(",").map((k) => k.trim())).filter(Boolean))].sort();
-  const categoryOptions = [...new Set(rows.map((r) => String(r["Category"] ?? "")).filter(Boolean))].sort();
+  // Signals can carry multiple categories joined by comma (e.g. "Vendor
+  // Selection, Bonds / Grants"). List each atomic category once in the
+  // dropdown rather than every combination that happens to appear.
+  const categoryOptions = [...new Set(rows.flatMap((r) => String(r["Category"] ?? "").split(",").map((c) => c.trim())).filter(Boolean))].sort();
   const sourceOptions   = [...new Set(rows.map((r) => String(r["Source"]   ?? "")).filter(Boolean))].sort();
   const marketOptions   = [...new Set(rows.map((r) => String(r["Market"]   ?? "")).filter(Boolean))].sort();
 
@@ -257,7 +260,10 @@ function AIOpportunityFeedContent() {
       const rowKws = String(r["Keywords"] ?? "").split(",").map((k) => k.trim());
       if (!filterKeywords.some((kw) => rowKws.includes(kw))) return false;
     }
-    if (filterCategory.length && !filterCategory.includes((r["Category"] as string) ?? "")) return false;
+    if (filterCategory.length) {
+      const rowCats = String(r["Category"] ?? "").split(",").map((c) => c.trim());
+      if (!filterCategory.some((c) => rowCats.includes(c))) return false;
+    }
     if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (filterMarket.length   && !filterMarket.includes((r["Market"] as string) ?? ""))     return false;
     if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), fd))) return false;
@@ -404,9 +410,15 @@ function AIOpportunityFeedContent() {
                         {(row["Keywords"] as string) || "—"}
                       </div>
 
-                      {/* Category */}
-                      <div className="text-xs text-gray-700 leading-snug pt-0.5 break-words">
-                        {(row["Category"] as string) || "—"}
+                      {/* Category — split multi-category rows into individual pills */}
+                      <div className="pt-0.5 flex flex-wrap gap-1">
+                        {(() => {
+                          const cats = String(row["Category"] ?? "").split(",").map((c) => c.trim()).filter(Boolean);
+                          if (cats.length === 0) return <span className="text-xs text-gray-700">—</span>;
+                          return cats.map((c, i) => (
+                            <span key={i} className="text-xs text-gray-700 bg-gray-100 rounded px-1.5 py-0.5 leading-snug">{c}</span>
+                          ));
+                        })()}
                       </div>
 
                       {/* Date */}

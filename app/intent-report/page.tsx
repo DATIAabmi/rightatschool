@@ -532,12 +532,12 @@ function ExpandedCard({ district, row, campaigns }: { district: string; row: Dis
                   const pct = Math.min(100, Math.max(0, t.Score));
                   const color = pct >= 66 ? "var(--hot)" : pct >= 36 ? "var(--warm)" : "var(--act)";
                   return (
-                    <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(140px, 1fr) 40px", gap: 14, alignItems: "center", fontSize: 13.5, fontFamily: "var(--f-body)" }}>
-                      <span style={{ color: "var(--ink)" }}>{t.Topic}</span>
-                      <div style={{ height: 7, background: "var(--sunk)", borderRadius: 4, overflow: "hidden" }}>
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13.5, fontFamily: "var(--f-body)" }}>
+                      <span style={{ color: "var(--ink)", flex: "0 1 auto", minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>{t.Topic}</span>
+                      <div style={{ flex: "0 0 160px", height: 7, background: "var(--sunk)", borderRadius: 4, overflow: "hidden" }}>
                         <div style={{ width: `${pct}%`, height: "100%", background: color }} />
                       </div>
-                      <span style={{ textAlign: "right", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{t.Score}</span>
+                      <span style={{ flex: "0 0 32px", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 700 }}>{t.Score}</span>
                     </div>
                   );
                 })}

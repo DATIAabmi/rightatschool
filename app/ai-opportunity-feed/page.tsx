@@ -410,14 +410,19 @@ function AIOpportunityFeedContent() {
                         {(row["Keywords"] as string) || "—"}
                       </div>
 
-                      {/* Category — split multi-category rows into individual pills */}
-                      <div className="pt-0.5 flex flex-wrap gap-1">
+                      {/* Category — show the primary atomic category only, never
+                           a comma-joined combination of two. The multi-select
+                           filter still matches on ANY of the row's categories. */}
+                      <div className="pt-0.5">
                         {(() => {
-                          const cats = String(row["Category"] ?? "").split(",").map((c) => c.trim()).filter(Boolean);
-                          if (cats.length === 0) return <span className="text-xs text-gray-700">—</span>;
-                          return cats.map((c, i) => (
-                            <span key={i} className="text-xs text-gray-700 bg-gray-100 rounded px-1.5 py-0.5 leading-snug">{c}</span>
-                          ));
+                          const primary = String(row["Category"] ?? "")
+                            .split(",")
+                            .map((c) => c.trim())
+                            .find(Boolean);
+                          if (!primary) return <span className="text-xs text-gray-700">—</span>;
+                          return (
+                            <span className="text-xs text-gray-700 bg-gray-100 rounded px-1.5 py-0.5 leading-snug inline-block">{primary}</span>
+                          );
                         })()}
                       </div>
 

@@ -20,7 +20,7 @@ function parseList(v: string | null): string[] {
 }
 
 function sqlStr(v: string): string {
-  return `'${v.replace(/'/g, "''")}'`;
+  return `'${v.replace(/[\u2018\u2019\u201B]/g, "'").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
 // ── Section definitions (title + header fill colour matching ASSA ABLOY) ─────

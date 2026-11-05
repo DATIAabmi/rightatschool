@@ -9,13 +9,13 @@ const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
 const DB_ID = 34;
 const TABLE = "`prj-datia-prod-e530.df_gcp_campaign_cbl_prod.prod_cbl_rightatschool_2025_scoring`";
 
-function sqlStr(v: string): string { return `'${v.replace(/'/g, "''")}'`; }
+function sqlStr(v: string): string { return `'${v.replace(/[\u2018\u2019\u201B]/g, "'").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`; }
 
 // Returns a map of lowercase district name → "Y" | "N"
 async function fetchSBMByDistrict(campaigns: string[]): Promise<Map<string, string>> {
   const where = ["topic_district IS NOT NULL", "topic_district != ''"];
   if (campaigns.length) {
-    const likeExprs = campaigns.map((c) => `LOWER(abm_campaign) LIKE LOWER('%${c.replace(/'/g, "''")}%')`);
+    const likeExprs = campaigns.map((c) => `LOWER(abm_campaign) LIKE LOWER('%${c.replace(/[\u2018\u2019\u201B]/g, "'").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}%')`);
     where.push(`(${likeExprs.join(" OR ")})`);
   }
   const sql = `

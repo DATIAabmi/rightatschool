@@ -14,7 +14,7 @@ const memCache = new Map<string, { data: FunnelResult; ts: number }>();
 const inflight = new Map<string, Promise<FunnelResult>>();
 
 function sqlStr(v: string): string {
-  return `'${v.replace(/'/g, "''")}'`;
+  return `'${v.replace(/[\u2018\u2019\u201B]/g, "'").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
 async function runSQL(sql: string): Promise<unknown[] | null> {

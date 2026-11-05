@@ -21,7 +21,7 @@ const inflight = new Map<string, Promise<SummaryResult>>();
 
 /** Escape a value for safe inline SQL string substitution. */
 function sqlStr(v: string): string {
-  return `'${v.replace(/'/g, "''")}'`;
+  return `'${v.replace(/[\u2018\u2019\u201B]/g, "'").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
 }
 
 /** Build the shared WHERE clause for a given filter combination. */

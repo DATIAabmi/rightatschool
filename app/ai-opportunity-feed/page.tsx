@@ -235,11 +235,19 @@ function AIOpportunityFeedContent() {
   // District name matching: reconciles slightly-different spellings between
   // the scoring table's topic_district and the signals sheet's Organization
   // (e.g. "Greenfield Union School District" ↔ "Greenfield Union Elementary
-  // School District"). "union", "elementary", etc. are kept as significant
-  // words so we can REQUIRE multiple overlaps — a single shared word like
-  // "union" is not enough (that pulled in Baldwin Union, Weaver Union,
-  // Hempstead Union when filtering Greenfield Union).
+  // School District"). The rule requires at least one DISTINCTIVE shared
+  // word (a city/district proper name, not a generic descriptor like
+  // "union" or "elementary"), otherwise every "Union Elementary School
+  // District" in the state would match every other.
   const STOP_WORDS = new Set(["school", "schools", "district", "the", "of", "and", "usd", "isd", "csd", "cusd", "k12"]);
+  // Generic descriptors that appear in many district names and therefore
+  // cannot carry a match on their own, even when 2+ overlap.
+  const GENERIC_DISTRICT_WORDS = new Set([
+    "union", "unified", "elementary", "secondary", "high", "middle", "primary",
+    "central", "consolidated", "independent", "public", "county", "city",
+    "township", "intermediate", "regional", "metropolitan", "joint", "free",
+    "area",
+  ]);
   const sigWords = (s: string) =>
     s.toLowerCase().split(/[\s,.()\-/]+/).filter((w) => w.length > 3 && !STOP_WORDS.has(w));
 
@@ -252,18 +260,16 @@ function AIOpportunityFeedContent() {
     const fw = sigWords(filter);
     const ow = sigWords(org);
     if (fw.length === 0) return false;
-    // Require AT LEAST min(2, fw.length) shared significant words. A single
-    // common word like "union" is not enough — many districts share it.
-    const needed = Math.min(2, fw.length);
-    const shared = fw.filter((w) => ow.includes(w)).length;
-    if (shared >= needed) return true;
-    // Domain-based fallback: at least one of the filter's sigWords must
-    // appear in the row's domain hostname. This is how signals keyed only
-    // by email_domain get matched when the Organization text doesn't name
-    // the district (e.g. a news-site row whose domain was set to the
-    // district's hostname). Still requires the filter sigWord (specific),
-    // not just any word, so Baldwin's "union" doesn't drag in Greenfield.
-    return domL !== "" && fw.some((w) => domL.includes(w));
+    const shared = fw.filter((w) => ow.includes(w));
+    const distinctiveShared = shared.filter((w) => !GENERIC_DISTRICT_WORDS.has(w));
+    // Require at least one DISTINCTIVE shared word (the city/district proper
+    // name). "union" + "elementary" alone is not a match — "greenfield" or
+    // "menifee" has to overlap too.
+    if (distinctiveShared.length >= 1 && shared.length >= Math.min(2, fw.length)) return true;
+    // Domain fallback: a DISTINCTIVE filter sigword must appear in the
+    // row's domain hostname. Catches signals keyed only by email_domain
+    // where the Organization text doesn't name the district.
+    return domL !== "" && fw.some((w) => !GENERIC_DISTRICT_WORDS.has(w) && domL.includes(w));
   };
 
   const searchOptions = (get: (r: Signal) => string) => (query: string): Promise<string[]> => {

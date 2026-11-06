@@ -328,7 +328,13 @@ function AIOpportunityFeedContent() {
 
       if (!domOk && !districtExact && !districtFuzzy) return false;
     } else {
-      if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd))) return false;
+      // The District dropdown's options come straight from the signals
+      // sheet (same source as the rows we're filtering), so a user-picked
+      // value is an exact match — anything looser pulls in neighbors that
+      // just happen to share a word like "Union". Fuzzy match is reserved
+      // for drill-in (above), where scoring and signals may spell the
+      // same district differently.
+      if (filterDistrict.length && !filterDistrict.includes(districtOf(r))) return false;
       if (filterDomain.length   && !filterDomain.includes(domainOf(r)))     return false;
     }
     if (filterState.length    && !filterState.includes(stateOf(r)))       return false;

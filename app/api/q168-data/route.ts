@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assetFilterClause } from "@/lib/assetFilter";
+import { assetFilterClause, resolveAssetNames } from "@/lib/assetFilter";
 
 export const maxDuration = 60;
 
@@ -48,7 +48,9 @@ export async function GET(req: NextRequest) {
   ];
 
   if (campaigns.length) where.push(`sc.Abmi_Campaign IN ${sqlInList(campaigns)}`);
-  const assetClause = assetFilterClause(assets, "sc");
+  const assetNames = await resolveAssetNames(assets);
+  if (assets.length && !assetNames.length) where.push("1=0");
+  const assetClause = assetFilterClause(assetNames, "sc");
   if (assetClause) where.push(assetClause);
 
   // Each row has a unique date_max_for_intent_scoring (weekly engagement date).

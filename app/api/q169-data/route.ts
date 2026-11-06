@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { assetFilterClause } from "@/lib/assetFilter";
+import { assetFilterClause, resolveAssetNames } from "@/lib/assetFilter";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -34,7 +34,9 @@ export async function GET(req: NextRequest) {
 
   if (campaigns.length)     where.push(`Abmi_Campaign IN ${sqlInList(campaigns)}`);
   if (states.length)        where.push(`State IN ${sqlInList(states)}`);
-  const assetClause = assetFilterClause(assets);
+  const assetNames = await resolveAssetNames(assets);
+  if (assets.length && !assetNames.length) where.push("1=0");
+  const assetClause = assetFilterClause(assetNames);
   if (assetClause)          where.push(assetClause);
   if (dateStart && dateEnd) where.push(`DATE(date_max_for_intent_scoring) BETWEEN ${sqlStr(dateStart)} AND ${sqlStr(dateEnd)}`);
 

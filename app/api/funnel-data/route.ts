@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
-import { assetFilterClause } from "@/lib/assetFilter";
+import { assetFilterClause, resolveAssetNames } from "@/lib/assetFilter";
 
 const METABASE_URL = process.env.NEXT_PUBLIC_METABASE_URL!;
 const API_KEY = process.env.METABASE_ADMIN_API_KEY!;
@@ -40,12 +40,17 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
   const scoringCampaignClause = campaign ? `AND sc.Abmi_Campaign = ${sqlStr(campaign)}` : "";
 
   // ad_performance carries asset_code as a direct column — filter inline.
-  // scoring joins to ad_performance via assetFilterClause's EXISTS subquery.
+  // scoring joins via asset_name in engagement array (asset_code lives in
+  // ad_performance only), so we resolve codes → names once and feed the
+  // engagement-level predicate.
   const adAssetClause = assets.length
     ? `AND LOWER(asset_code) IN (${assets.map((a) => sqlStr(a.toLowerCase())).join(", ")})`
     : "";
-  const scAssetPredicate = assetFilterClause(assets, "sc");
-  const scAssetClause = scAssetPredicate ? `AND ${scAssetPredicate}` : "";
+  const assetNames = await resolveAssetNames(assets);
+  const scAssetPredicate = assetFilterClause(assetNames, "sc");
+  // Picked a code that resolves to no name → force empty engaged/leads.
+  const forceEmpty = assets.length && !assetNames.length ? "AND 1=0" : "";
+  const scAssetClause = scAssetPredicate ? `AND ${scAssetPredicate}` : forceEmpty;
 
   const [r_imp, r_eng, r_ctr, r_egu, r_leads] = await Promise.all([
     runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),

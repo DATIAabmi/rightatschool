@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cachedJson } from "@/lib/apiCache";
-import { assetFilterClause } from "@/lib/assetFilter";
+import { assetFilterClause, resolveAssetNames } from "@/lib/assetFilter";
 
 export const maxDuration = 60;
 
@@ -58,7 +58,10 @@ async function fetchData(
   if (districts.length) where.push(`topic_district IN (${districts.map(sqlStr).join(", ")})`);
   if (domains.length)   where.push(`email_domain IN (${domains.map(sqlStr).join(", ")})`);
   if (states.length)    where.push(`state IN (${states.map(sqlStr).join(", ")})`);
-  const assetClause = assetFilterClause(assets);
+  const assetNames = await resolveAssetNames(assets);
+  // User picked codes but none mapped to a real asset_name — force empty.
+  if (assets.length && !assetNames.length) where.push("1=0");
+  const assetClause = assetFilterClause(assetNames);
   if (assetClause) where.push(assetClause);
   if (dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd)) {
     where.push(`DATE(date_max_for_intent_scoring) BETWEEN '${dateStart}' AND '${dateEnd}'`);

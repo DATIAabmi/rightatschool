@@ -157,12 +157,16 @@ function AIOpportunityFeedContent() {
   const searchParams = useSearchParams();
   const urlDistrict = searchParams.get("district");
   const urlDomain   = searchParams.get("domain");
+  // The drill-down from Engaged Users now sends every email_domain the
+  // district owns, pipe-joined, so a signal keyed to any one of them
+  // (not just the single ANY_VALUE'd display domain) matches.
+  const urlDomainList = urlDomain ? urlDomain.split(/[|,]/).map((d) => d.trim()).filter(Boolean) : [];
   const [rows, setRows]       = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
   const [sort, setSort]       = useState<SortState>({ col: "Strength", dir: "desc" });
   const [filterDistrict, setFilterDistrict] = useState<string[]>(urlDistrict ? [urlDistrict] : []);
-  const [filterDomain,   setFilterDomain]   = useState<string[]>(urlDomain ? [urlDomain] : []);
+  const [filterDomain,   setFilterDomain]   = useState<string[]>(urlDomainList);
   // When BOTH district + domain come in from a drill-down URL, treat the
   // filter as "either matches" so a signal sheet that spells the district
   // differently still shows via the domain path (and vice-versa).
@@ -228,10 +232,14 @@ function AIOpportunityFeedContent() {
   const domainOf   = (r: Signal) => String((r["Domain"] as string) || extractDomain(r["Source Link"] as string) || "");
   const stateOf    = (r: Signal) => String(r["State"] ?? "");
 
-  // District name matching: handles exact, case-insensitive, contains, and
-  // significant-word overlap so topic_district values like "Portland USD" match
-  // Organization values like "Portland Public Schools".
-  const STOP_WORDS = new Set(["school", "schools", "district", "unified", "public", "independent", "county", "city", "the", "of", "and", "usd", "isd", "csd", "cusd", "k12"]);
+  // District name matching: reconciles slightly-different spellings between
+  // the scoring table's topic_district and the signals sheet's Organization
+  // (e.g. "Greenfield Union School District" ↔ "Greenfield Union Elementary
+  // School District"). "union", "elementary", etc. are kept as significant
+  // words so we can REQUIRE multiple overlaps — a single shared word like
+  // "union" is not enough (that pulled in Baldwin Union, Weaver Union,
+  // Hempstead Union when filtering Greenfield Union).
+  const STOP_WORDS = new Set(["school", "schools", "district", "the", "of", "and", "usd", "isd", "csd", "cusd", "k12"]);
   const sigWords = (s: string) =>
     s.toLowerCase().split(/[\s,.()\-/]+/).filter((w) => w.length > 3 && !STOP_WORDS.has(w));
 
@@ -243,13 +251,19 @@ function AIOpportunityFeedContent() {
     if (orgL.includes(filterL) || filterL.includes(orgL)) return true;
     const fw = sigWords(filter);
     const ow = sigWords(org);
-    if (fw.length > 0 && fw.some((w) => ow.includes(w))) return true;
-    // Also match on domain substring — Intent Report's Account Intel flag
-    // can be driven purely by a shared email_domain even when the signals
-    // sheet's Organization value doesn't mention the district by name
-    // (e.g. Broward's signals tagged by domain only). Without this check
-    // a district drill-down into the AI Feed returns 0 rows for those.
-    return fw.length > 0 && domL !== "" && fw.some((w) => domL.includes(w));
+    if (fw.length === 0) return false;
+    // Require AT LEAST min(2, fw.length) shared significant words. A single
+    // common word like "union" is not enough — many districts share it.
+    const needed = Math.min(2, fw.length);
+    const shared = fw.filter((w) => ow.includes(w)).length;
+    if (shared >= needed) return true;
+    // Domain-based fallback: at least one of the filter's sigWords must
+    // appear in the row's domain hostname. This is how signals keyed only
+    // by email_domain get matched when the Organization text doesn't name
+    // the district (e.g. a news-site row whose domain was set to the
+    // district's hostname). Still requires the filter sigWord (specific),
+    // not just any word, so Baldwin's "union" doesn't drag in Greenfield.
+    return domL !== "" && fw.some((w) => domL.includes(w));
   };
 
   const searchOptions = (get: (r: Signal) => string) => (query: string): Promise<string[]> => {

@@ -112,7 +112,12 @@ SELECT
     'Y', 'N'
   ) AS Intel,
   a.Topic, a.Engagements, a.EngagedUser, a.UniqueLeads, a.Down,
-  a.\`Intent Score\`, a.\`Score Trend\`
+  a.\`Intent Score\`, a.\`Score Trend\`,
+  -- Hidden column for drill-down: every email_domain the district uses,
+  -- pipe-joined. Lets the Account Intelligence tab match a signal keyed
+  -- to ANY of the district's domains, not just the one ANY_VALUE picked
+  -- for the row.
+  ARRAY_TO_STRING(a.Domains, '|') AS \`_AllDomains\`
 FROM agg a
 ORDER BY a.\`Intent Score\` DESC`;
 

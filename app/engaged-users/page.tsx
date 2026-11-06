@@ -255,14 +255,14 @@ function DataTable({
                       className={`px-3 py-2.5 tabular-nums flex items-center ${cd.align === "center" ? "justify-center" : cd.align === "right" ? "justify-end" : "justify-start"} ${trend ? "" : "text-gray-800"}`}
                       style={{ color: trend?.text, overflow: "hidden", whiteSpace: j === 0 ? "normal" : "nowrap", textOverflow: j === 0 ? "unset" : "ellipsis" }}>
                   {j === 0 ? (
-                    <button onClick={() => onDistrictClick(display, String(row[1] ?? ""))}
+                    <button onClick={() => onDistrictClick(display, String(row[12] ?? row[1] ?? ""))}
                       className="block w-full text-left hover:underline font-medium"
                       style={{ color: trend?.text ?? "#2563eb" }}>
                       {display}
                     </button>
                   ) : j === 4 && display === "Y" ? (
                     <button
-                      onClick={() => onDistrictClick(String(row[0] ?? ""), String(row[1] ?? ""))}
+                      onClick={() => onDistrictClick(String(row[0] ?? ""), String(row[12] ?? row[1] ?? ""))}
                       className="text-xs font-bold text-blue-600 hover:underline"
                       title="View Account Intelligence">
                       Y

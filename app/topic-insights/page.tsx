@@ -403,6 +403,7 @@ function TopicInsightsContent() {
     if (dateEnd)               params.set("dateEnd",    dateEnd);
     if (filterState.length)    params.set("state",      filterState.join(","));
     if (filterTopic.length)    params.set("topic",      filterTopic.join(","));
+    params.set("v", "per-domain-2");
 
     fetch(`/api/q181-data?${params.toString()}`)
       .then((r) => r.json())

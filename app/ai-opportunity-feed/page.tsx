@@ -213,10 +213,14 @@ function AIOpportunityFeedContent() {
   }, []);
 
   const keywordsOptions = [...new Set(rows.flatMap((r) => String(r["Keywords"] ?? "").split(",").map((k) => k.trim())).filter(Boolean))].sort();
-  // Signals can carry multiple categories joined by comma (e.g. "Vendor
-  // Selection, Bonds / Grants"). List each atomic category once in the
-  // dropdown rather than every combination that happens to appear.
-  const categoryOptions = [...new Set(rows.flatMap((r) => String(r["Category"] ?? "").split(",").map((c) => c.trim())).filter(Boolean))].sort();
+  // Signals can carry multiple categories joined by comma. The column
+  // displays only the primary (first) atomic category, so the dropdown
+  // and filter also key off the primary — otherwise filtering by
+  // "Bonds / Grants" would pull in rows whose visible category is
+  // "Vendor Selection" because Bonds/Grants is their secondary.
+  const primaryCategoryOf = (r: Signal) =>
+    String(r["Category"] ?? "").split(",").map((c) => c.trim()).find(Boolean) ?? "";
+  const categoryOptions = [...new Set(rows.map(primaryCategoryOf).filter(Boolean))].sort();
   const sourceOptions   = [...new Set(rows.map((r) => String(r["Source"]   ?? "")).filter(Boolean))].sort();
   const marketOptions   = [...new Set(rows.map((r) => String(r["Market"]   ?? "")).filter(Boolean))].sort();
 
@@ -272,10 +276,7 @@ function AIOpportunityFeedContent() {
       const rowKws = String(r["Keywords"] ?? "").split(",").map((k) => k.trim());
       if (!filterKeywords.some((kw) => rowKws.includes(kw))) return false;
     }
-    if (filterCategory.length) {
-      const rowCats = String(r["Category"] ?? "").split(",").map((c) => c.trim());
-      if (!filterCategory.some((c) => rowCats.includes(c))) return false;
-    }
+    if (filterCategory.length && !filterCategory.includes(primaryCategoryOf(r))) return false;
     if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (filterMarket.length   && !filterMarket.includes((r["Market"] as string) ?? ""))     return false;
     if (drillInOr && filterDistrict.length && filterDomain.length) {

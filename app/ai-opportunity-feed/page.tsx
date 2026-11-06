@@ -298,15 +298,19 @@ function AIOpportunityFeedContent() {
     if (filterSource.length   && !filterSource.includes((r["Source"] as string) ?? ""))     return false;
     if (filterMarket.length   && !filterMarket.includes((r["Market"] as string) ?? ""))     return false;
     if (drillInOr && filterDistrict.length && filterDomain.length) {
-      // Drill-down: domain is the authoritative identifier. Require
-      // either (a) an exact / either-way substring domain match (keeps
-      // tusd.net ↔ www.tusd.net etc.) OR (b) an exact normalized
-      // district name match (handles signals whose domain is empty but
-      // whose organization string equals the district after stripping
-      // state suffix + punctuation). Fuzzy word-overlap is deliberately
-      // NOT used here — it drags in neighbors like "Jefferson
-      // Elementary School District (Tracy)" when drilling Tracy
-      // Unified, because "tracy" is a shared significant word.
+      // Drill-down: try domain match first (handles signals keyed by the
+      // district's hostname), then exact normalized district match
+      // (handles signals whose Organization text is literally the
+      // district name), then fall back to the tightened fuzzy match
+      // which requires 2+ shared significant words. The scoring sheet
+      // and the signals sheet routinely spell the same district
+      // differently (e.g. "GREENFIELD UNION SCHOOL DISTRICT" in scoring
+      // vs. "Greenfield Union Elementary School District" in signals;
+      // domain greenfield.k12.ca.us in scoring vs. gfusd.net in
+      // signals) — without the fuzzy fallback, Intel=Y lands on an
+      // empty feed. The 2-sigword rule still keeps Tracy Unified ↔
+      // Jefferson Elementary (Tracy) separate: they share only
+      // "tracy".
       const domL  = domainOf(r).toLowerCase().trim();
       const fdomL = filterDomain.map((d) => d.toLowerCase().trim()).filter(Boolean);
       const domOk = domL !== "" && fdomL.some((fd) => fd === domL || domL.includes(fd) || fd.includes(domL));
@@ -320,7 +324,9 @@ function AIOpportunityFeedContent() {
       const rowNormalized = normalizeDistrict(districtOf(r));
       const districtExact = filterDistrict.some((f) => normalizeDistrict(f) === rowNormalized && rowNormalized !== "");
 
-      if (!domOk && !districtExact) return false;
+      const districtFuzzy = filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd));
+
+      if (!domOk && !districtExact && !districtFuzzy) return false;
     } else {
       if (filterDistrict.length && !filterDistrict.some((fd) => districtMatch(districtOf(r), domainOf(r), fd))) return false;
       if (filterDomain.length   && !filterDomain.includes(domainOf(r)))     return false;

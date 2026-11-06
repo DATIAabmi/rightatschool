@@ -89,8 +89,7 @@ signals_domains AS (
 agg AS (
   SELECT
     topic_district AS District,
-    ANY_VALUE(email_domain) AS Domain,
-    ARRAY_AGG(DISTINCT NULLIF(LOWER(TRIM(email_domain)), '') IGNORE NULLS) AS Domains,
+    IFNULL(email_domain, '') AS Domain,
     ANY_VALUE(state) AS ST,
     ANY_VALUE(CONCAT('C', CAST(abm_campaign_num AS STRING))) AS Camp,
     IF(MAX(CASE WHEN topic_Y_N = 'Y' THEN 1 ELSE 0 END) = 1, 'Y', 'N') AS Topic,
@@ -102,22 +101,21 @@ agg AS (
     SUM(IFNULL(SAFE_CAST(cumulative_score_trend AS FLOAT64), 0)) AS \`Score Trend\`
   FROM ${TABLE}
   WHERE ${where.join("\n    AND ")}
-  GROUP BY topic_district
+  -- One row per (district, email_domain) pair — matches the per-domain
+  -- split the Intent Report uses and the two-row view in Looker.
+  GROUP BY topic_district, IFNULL(email_domain, '')
 )
 SELECT
   a.District, a.Domain, a.ST, a.Camp,
   IF(
     EXISTS (SELECT 1 FROM signals_orgs    o WHERE o.org_up = ${normalizeExpr("a.District")})
-    OR EXISTS (SELECT 1 FROM signals_domains d WHERE d.dom IN UNNEST(a.Domains)),
+    OR EXISTS (SELECT 1 FROM signals_domains d WHERE d.dom = LOWER(TRIM(a.Domain)) AND a.Domain != ''),
     'Y', 'N'
   ) AS Intel,
   a.Topic, a.Engagements, a.EngagedUser, a.UniqueLeads, a.Down,
   a.\`Intent Score\`, a.\`Score Trend\`,
-  -- Hidden column for drill-down: every email_domain the district uses,
-  -- pipe-joined. Lets the Account Intelligence tab match a signal keyed
-  -- to ANY of the district's domains, not just the one ANY_VALUE picked
-  -- for the row.
-  ARRAY_TO_STRING(a.Domains, '|') AS \`_AllDomains\`
+  -- Drill-down carries this row's domain only (per-domain split above).
+  a.Domain AS \`_AllDomains\`
 FROM agg a
 ORDER BY a.\`Intent Score\` DESC`;
 

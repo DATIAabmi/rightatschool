@@ -1237,9 +1237,6 @@ export default function IntentReportPage() {
                             <td style={{ padding: "12px 14px", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>
                               <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--ink)", lineHeight: 1.3 }}>
                                 {row.District}
-                                {row.Leads > 1 && <span style={{ display:"inline-block", fontSize:10.5, fontWeight:700, letterSpacing:".06em", textTransform:"uppercase", padding:"2px 7px", borderRadius:4, marginLeft:6, verticalAlign:1, whiteSpace:"nowrap", background:"var(--hot-soft)", color:"var(--hot)" }}>Multiple known leads</span>}
-                                {row.Leads === 1 && <span style={{ display:"inline-block", fontSize:10.5, fontWeight:700, letterSpacing:".06em", textTransform:"uppercase", padding:"2px 7px", borderRadius:4, marginLeft:6, verticalAlign:1, whiteSpace:"nowrap", background:"var(--warm-soft)", color:"var(--warm)" }}>Known lead</span>}
-                                {row.Leads === 0 && row.EngagedUsers > 0 && <span style={{ display:"inline-block", fontSize:10.5, fontWeight:700, letterSpacing:".06em", textTransform:"uppercase", padding:"2px 7px", borderRadius:4, marginLeft:6, verticalAlign:1, whiteSpace:"nowrap", background:"var(--accent-soft)", color:"var(--accent)" }}>Engaged</span>}
                               </div>
                               {row.Domain && <div style={{ color:"var(--muted)", fontSize:12, marginTop:2 }}>{row.Domain}</div>}
                             </td>

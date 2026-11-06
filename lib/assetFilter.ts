@@ -1,9 +1,12 @@
 // Build a BigQuery predicate that keeps only scoring-table rows whose
-// abm_campaign has at least one matching ad-performance row with one of
-// the selected asset_codes. Scoring + ad_performance relate on
-// abm_campaign (scoring has no asset_code of its own); we do the
-// equivalent of a LEFT JOIN as a correlated EXISTS so scoring rows
-// don't fan out when a campaign has multiple ads.
+// engagement array contains at least one item for one of the selected
+// asset_codes. The engagement items carry asset_name; ad_performance
+// is the lookup from asset_code → asset_name, so we resolve the picked
+// codes to names once and check membership on the engagement side.
+//
+// Previous implementation keyed only on abm_campaign, which meant every
+// scoring row in a campaign survived as long as the campaign had ANY
+// ad for the asset — the filter did nothing within one campaign.
 //
 // Returns just the predicate (no leading AND / WHERE), so callers can
 // plug it into their existing WHERE-clause composition. Empty when no
@@ -20,9 +23,12 @@ export function assetFilterClause(assets: string[], tableAlias: string = ""): st
   const vals = assets.map((a) => sqlEscape(a.toLowerCase())).join(", ");
   const prefix = tableAlias ? `${tableAlias}.` : "";
   return `EXISTS (
-    SELECT 1 FROM ${AD_PERF_TABLE} ap
-    WHERE ap.abm_campaign = ${prefix}abm_campaign
-      AND LOWER(CAST(ap.asset_code AS STRING)) IN (${vals})
+    SELECT 1 FROM UNNEST(${prefix}engagement) AS _asset_e
+    WHERE LOWER(CAST(_asset_e.asset_name AS STRING)) IN (
+      SELECT DISTINCT LOWER(CAST(ap.asset_name AS STRING))
+      FROM ${AD_PERF_TABLE} ap
+      WHERE LOWER(CAST(ap.asset_code AS STRING)) IN (${vals})
+    )
   )`;
 }
 

@@ -323,7 +323,7 @@ function EngagedUsersContent() {
     if (dateEnd)              params.set("dateEnd",    dateEnd);
     // Bump this when q405's SQL schema changes — the CDN caches per-URL
     // for 1h/24h and would otherwise serve the pre-schema-change JSON.
-    params.set("v", "per-domain-2");
+    params.set("v", "asset-engagement-1");
 
     fetch(`/api/q405-data?${params.toString()}`)
       .then((r) => r.json())

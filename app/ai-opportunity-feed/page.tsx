@@ -269,9 +269,13 @@ function AIOpportunityFeedContent() {
     return Promise.resolve((ql ? keywordsOptions.filter((k) => k.toLowerCase().includes(ql)) : keywordsOptions).slice(0, 200));
   };
 
-  const campPrefixes = campaign.map((c) => c.split(":")[0].trim());
+  // Normalize campaign comparison the same way q405 scopes signals
+  // (UPPER + TRIM). Without this, a row whose sheet value is " C7 " or
+  // "c7" survives q405's Intel=Y check but gets dropped here, which is
+  // exactly how a drill-down from Engaged Users lands on an empty feed.
+  const campPrefixes = campaign.map((c) => c.split(":")[0].trim().toUpperCase());
   const filtered = rows.filter((r) => {
-    if (campPrefixes.length   && !campPrefixes.includes(String(r["Campaign #"] ?? "")))      return false;
+    if (campPrefixes.length   && !campPrefixes.includes(String(r["Campaign #"] ?? "").trim().toUpperCase())) return false;
     if (filterKeywords.length) {
       const rowKws = String(r["Keywords"] ?? "").split(",").map((k) => k.trim());
       if (!filterKeywords.some((kw) => rowKws.includes(kw))) return false;

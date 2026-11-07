@@ -36,7 +36,7 @@ export default function Home() {
     if (asset.length)    params.set("asset",    asset.join(","));
     if (dateStart)       params.set("dateStart", dateStart);
     if (dateEnd)         params.set("dateEnd",   dateEnd);
-    params.set("v", "engaged-users-fix-2");
+    params.set("v", "engaged-users-fix-3");
     const qs = params.toString();
 
     const [funnelRes, channelRes] = await Promise.all([

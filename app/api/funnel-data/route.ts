@@ -56,17 +56,19 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
     runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
-    // Looker's "Unique users who viewed your content from all sources" counts
-    // users with at least one real content interaction in engagement[].
-    // engaged_user alone (or engagements > 0) also fires for bombora signal
-    // matches without any content view — those inflate the count.
-    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc
-      WHERE sc.engaged_user IS NOT NULL
-        AND EXISTS (
-          SELECT 1 FROM UNNEST(sc.engagement) AS _item
-          WHERE _item.asset_name IS NOT NULL AND _item.asset_name != 'null' AND _item.asset_name != ''
-        )
-        ${scoringCampaignClause} ${scAssetClause}`),
+    // Looker's "Unique users who viewed your content from all sources":
+    // count users whose TOTAL engagement sum across the campaign is >= 1.
+    // Each scoring row is a weekly slice; row-level engagements can be
+    // fractional for bombora signal matches. Filtering at the per-row level
+    // (engagements > 0) leaves signal-only users in; summing per user and
+    // requiring >= 1 keeps only users whose engagements reach a real event.
+    runSQL(`SELECT COUNT(*) FROM (
+      SELECT sc.engaged_user
+      FROM ${SC_TABLE} sc
+      WHERE sc.engaged_user IS NOT NULL ${scoringCampaignClause} ${scAssetClause}
+      GROUP BY sc.engaged_user
+      HAVING SUM(IFNULL(SAFE_CAST(sc.engagements AS FLOAT64), 0)) >= 1
+    )`),
     runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause} ${scAssetClause}`),
   ]);
 

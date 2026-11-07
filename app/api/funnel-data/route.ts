@@ -56,7 +56,17 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
     runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
-    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc WHERE sc.engaged_user IS NOT NULL AND SAFE_CAST(sc.engagements AS FLOAT64) > 0 ${scoringCampaignClause} ${scAssetClause}`),
+    // Looker's "Unique users who viewed your content from all sources" counts
+    // users with at least one real content interaction in engagement[].
+    // engaged_user alone (or engagements > 0) also fires for bombora signal
+    // matches without any content view — those inflate the count.
+    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc
+      WHERE sc.engaged_user IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM UNNEST(sc.engagement) AS _item
+          WHERE _item.asset_name IS NOT NULL AND _item.asset_name != 'null' AND _item.asset_name != ''
+        )
+        ${scoringCampaignClause} ${scAssetClause}`),
     runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause} ${scAssetClause}`),
   ]);
 

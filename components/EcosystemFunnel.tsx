@@ -87,7 +87,7 @@ export default function EcosystemFunnel() {
     if (asset.length) params.set("asset", asset.join(","));
     if (dateStart) params.set("dateStart", dateStart);
     if (dateEnd) params.set("dateEnd", dateEnd);
-    params.set("v", "engaged-users-fix-1");
+    params.set("v", "engaged-users-fix-2");
     const qs = params.toString();
     fetch(`/api/funnel-data${qs ? `?${qs}` : ""}`)
       .then((r) => r.json())

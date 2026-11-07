@@ -722,11 +722,11 @@ export default function IntentReportPage() {
   const kpiLeads        = filteredRows.reduce((s, r) => s + r.Leads, 0);
   const kpiLeadDistricts = filteredRows.filter((r) => r.Leads > 0).length;
 
-  // State bar chart (top 12, valid US codes only)
+  // State bar chart (top 10, valid US codes only)
   const stateBarData = (() => {
     const counts: Record<string, number> = {};
     filteredRows.forEach((r) => { if (r.State && US_STATES.has(r.State)) counts[r.State] = (counts[r.State] ?? 0) + 1; });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
   })();
   const maxStateCount = stateBarData[0]?.[1] ?? 1;
 
@@ -786,10 +786,10 @@ export default function IntentReportPage() {
     { label: "Account Intel",   key: "AccountIntel",  align: "center" },
     { label: "Topic Insights",  key: "TopicInsights", align: "center" },
     ...(hideTrend ? [] : [{ label: "Trend", key: "Trend" as SortKey, align: "right" as const }]),
-    { label: "Engagements",     key: "Engagements",   align: "right" },
-    { label: "Engaged Users",   key: "EngagedUsers",  align: "right" },
-    { label: "Leads",           key: "Leads",         align: "right" },
-    { label: "Latest Activity", key: "LastActivity" },
+    { label: "Engagements",     key: "Engagements",   align: "center" },
+    { label: "Engaged Users",   key: "EngagedUsers",  align: "center" },
+    { label: "Leads",           key: "Leads",         align: "center" },
+    { label: "Latest Activity", key: "LastActivity",  align: "center" },
   ];
 
   return (
@@ -903,14 +903,11 @@ export default function IntentReportPage() {
           {/* ── Page header ── */}
           <div className="ir-screen-header" style={{ padding: "32px 0 20px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
             <div>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--muted)", fontFamily: "var(--f-body)", marginBottom: 6 }}>
-                ABMxi · DATIA K12
-              </div>
-              <h1 style={{ fontFamily: "var(--f-display)", fontSize: 36, fontWeight: 800, color: "var(--ink)", margin: 0, lineHeight: 1.1 }}>
-                District Intent Report
+              <h1 style={{ fontFamily: "var(--f-display)", fontSize: 32, fontWeight: 800, color: "var(--ink)", margin: 0, lineHeight: 1.1 }}>
+                DATIA ABMxi <span style={{ color: "var(--low)", fontWeight: 400 }}>|</span> Intent Report
               </h1>
               <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8, fontFamily: "var(--f-body)" }}>
-                Districts showing before- and after-school care intent, ranked by intent score.
+                Organizations ranked by engagement and buying signals.
               </p>
             </div>
             {/* Export actions */}
@@ -951,7 +948,7 @@ export default function IntentReportPage() {
                   color: "var(--accent-ink)", fontFamily: "var(--f-body)",
                 }}
               >
-                <Printer size={14} /> Print / Export PDF
+                <Printer size={14} /> Print PDF
               </button>
             </div>
           </div>
@@ -1099,11 +1096,11 @@ export default function IntentReportPage() {
                   { k: "Districts",       v: fmt(kpiDistricts) },
                   { k: "Engagements",     v: fmt(kpiEngagements) },
                   { k: "Engaged Users",   v: fmt(kpiEngagedUsers) },
-                  { k: `Leads · ${kpiLeadDistricts} districts`, v: fmt(kpiLeads) },
+                  { k: "Leads",           v: fmt(kpiLeads) },
                 ].map(({ k, v }, i) => (
-                  <div key={k} style={{ padding:"16px 18px", borderLeft: i === 0 ? "none" : "1px solid var(--line)" }}>
-                    <div style={{ fontFamily:"var(--f-display)", fontWeight:800, fontSize:28, lineHeight:1, color:"var(--accent)" }}>{v}</div>
-                    <div style={{ fontSize:12, color:"var(--muted)", marginTop:6, fontFamily:"var(--f-body)" }}>{k}</div>
+                  <div key={k} style={{ padding:"11px 18px", borderLeft: i === 0 ? "none" : "1px solid var(--line)" }}>
+                    <div style={{ fontFamily:"var(--f-display)", fontWeight:800, fontSize:26, lineHeight:1, color:"var(--accent)" }}>{v}</div>
+                    <div style={{ fontSize:12, color:"var(--muted)", marginTop:4, fontFamily:"var(--f-body)" }}>{k}</div>
                   </div>
                 ))}
               </div>
@@ -1112,12 +1109,14 @@ export default function IntentReportPage() {
               <div className="ir-split-section" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, marginTop: 24, marginBottom: 28 }}>
                 {/* Districts by state bar chart */}
                 <div>
-                  <h2 style={{ fontFamily:"var(--f-display)", fontWeight:700, fontSize:17, margin:"0 0 4px", color:"var(--ink)" }}>Districts by state</h2>
-                  <p style={{ color:"var(--muted)", fontSize:12.5, margin:"0 0 12px", fontFamily:"var(--f-body)" }}>Top 12 states in the current view. Click a bar to filter.</p>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:10, margin:"0 0 12px", flexWrap:"wrap" }}>
+                    <h2 style={{ fontFamily:"var(--f-display)", fontWeight:700, fontSize:17, margin:0, color:"var(--ink)" }}>Organizations by State</h2>
+                    <p style={{ color:"var(--muted)", fontSize:12.5, margin:0, fontFamily:"var(--f-body)" }}>Top 10 states in current results. Click a bar to filter.</p>
+                  </div>
                   {stateBarData.length === 0 ? (
                     <div style={{ fontSize: 12, color: "var(--muted)" }}>No data.</div>
                   ) : (
-                    <div style={{ display: "grid", gap: 5 }}>
+                    <div style={{ display: "grid", gap: 2 }}>
                       {stateBarData.map(([state, count]) => {
                         const pct = (count / maxStateCount) * 100;
                         const active = stateFilter.includes(state);
@@ -1127,10 +1126,10 @@ export default function IntentReportPage() {
                             type="button"
                             onClick={() => setStateFilter(active ? stateFilter.filter((s) => s !== state) : [...stateFilter, state])}
                             aria-pressed={active}
-                            style={{ display:"grid", gridTemplateColumns:"34px 1fr 56px", gap:8, alignItems:"center", background:"none", border:"none", cursor:"pointer", padding:"2px 0", textAlign:"left", borderRadius:4, width:"100%" }}
+                            style={{ display:"grid", gridTemplateColumns:"34px 1fr 56px", gap:8, alignItems:"center", background:"none", border:"none", cursor:"pointer", padding:"1px 0", textAlign:"left", borderRadius:4, width:"100%" }}
                           >
                             <span style={{ fontSize:12.5, fontWeight:700, color: active ? "var(--accent)" : "var(--ink)" }}>{state}</span>
-                            <div style={{ height:16, background:"var(--sunk)", borderRadius:3, overflow:"hidden" }}>
+                            <div style={{ height:10, background:"var(--sunk)", borderRadius:3, overflow:"hidden" }}>
                               <div style={{ width:`${pct}%`, height:"100%", background: active ? "var(--accent)" : "var(--accent)", borderRadius:3, opacity: active ? 1 : 0.65 }} />
                             </div>
                             <span style={{ fontSize:12.5, color:"var(--muted)", textAlign:"right", fontVariantNumeric:"tabular-nums" }}>{count}</span>
@@ -1143,8 +1142,10 @@ export default function IntentReportPage() {
 
                 {/* Intent score distribution */}
                 <div>
-                  <h2 style={{ fontFamily:"var(--f-display)", fontWeight:700, fontSize:17, margin:"0 0 4px", color:"var(--ink)" }}>Intent score distribution</h2>
-                  <p style={{ color:"var(--muted)", fontSize:12.5, margin:"0 0 12px", fontFamily:"var(--f-body)" }}>Districts in the current view, grouped by intent band.</p>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:10, margin:"0 0 12px", flexWrap:"wrap" }}>
+                    <h2 style={{ fontFamily:"var(--f-display)", fontWeight:700, fontSize:17, margin:0, color:"var(--ink)" }}>Intent Score Distribution</h2>
+                    <p style={{ color:"var(--muted)", fontSize:12.5, margin:0, fontFamily:"var(--f-body)" }}>Organizations grouped by intent score.</p>
+                  </div>
                   <div style={{ border:"1px solid var(--line)", borderRadius:8, background:"var(--surface)", overflow:"hidden" }}>
                     <table style={{ width:"100%", borderCollapse:"collapse" }}>
                       <thead>
@@ -1179,13 +1180,6 @@ export default function IntentReportPage() {
                       </tbody>
                     </table>
                   </div>
-                  <p style={{ fontSize:12.5, color:"var(--muted)", margin:"10px 0 0", fontFamily:"var(--f-body)" }}>
-                    {campFilter.length === 1
-                      ? `All dates: full-campaign totals for ${campFilter[0]}, matching the live dashboard.`
-                      : campFilter.length > 1
-                      ? `All dates: full-campaign totals for ${campFilter.join(", ")}, matching the live dashboard.`
-                      : "All dates: full-campaign totals across all campaigns, matching the live dashboard."}
-                  </p>
                 </div>
               </div>
 
@@ -1279,13 +1273,13 @@ export default function IntentReportPage() {
                               </td>
                             )}
                             {/* Engagements */}
-                            <td style={{ padding: "12px 14px", textAlign: "right", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>{fmt(row.Engagements)}</td>
+                            <td style={{ padding: "12px 14px", textAlign: "center", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>{fmt(row.Engagements)}</td>
                             {/* Engaged Users */}
-                            <td style={{ padding: "12px 14px", textAlign: "right", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>{fmt(row.EngagedUsers)}</td>
+                            <td style={{ padding: "12px 14px", textAlign: "center", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)" }}>{fmt(row.EngagedUsers)}</td>
                             {/* Leads */}
-                            <td style={{ padding: "12px 14px", textAlign: "right", background: expanded ? "var(--accent-soft)" : "var(--surface)", fontWeight: row.Leads > 0 ? 700 : 400, color: row.Leads > 0 ? "var(--ink)" : "var(--muted)" }}>{fmt(row.Leads)}</td>
+                            <td style={{ padding: "12px 14px", textAlign: "center", background: expanded ? "var(--accent-soft)" : "var(--surface)", fontWeight: row.Leads > 0 ? 700 : 400, color: row.Leads > 0 ? "var(--ink)" : "var(--muted)" }}>{fmt(row.Leads)}</td>
                             {/* Latest Activity */}
-                            <td style={{ padding: "12px 14px", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)", fontSize: 12 }}>{fmtDate(row.LastActivity)}</td>
+                            <td style={{ padding: "12px 14px", textAlign: "center", color: "var(--muted)", background: expanded ? "var(--accent-soft)" : "var(--surface)", fontSize: 12 }}>{fmtDate(row.LastActivity)}</td>
                           </tr>
                           {expanded && (
                             <tr>
@@ -1319,9 +1313,6 @@ export default function IntentReportPage() {
                 )}
               </div>
 
-              <footer style={{ color:"var(--muted)", fontSize:12, paddingBlock:"24px 40px", fontFamily:"var(--f-body)" }}>
-                Source: live Right At School scoring table, pulled from the ABMxi dashboard. Intent bands: High 80+, Elevated 50–79, Moderate 25–49, Early 1–24.
-              </footer>
             </>
           )}
         </div>

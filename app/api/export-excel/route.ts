@@ -272,7 +272,7 @@ interface EcosystemData {
 
 async function loadEcosystemData(campaigns: string[], dateStart: string, dateEnd: string): Promise<EcosystemData> {
   const adWhere: string[] = ["1=1"];
-  const scWhere: string[] = ["engaged_user IS NOT NULL"];
+  const scWhere: string[] = ["engaged_user IS NOT NULL", "SAFE_CAST(engagements AS FLOAT64) > 0"];
   const ldWhere: string[] = ["leads IS NOT NULL", "leads != ''"];
   if (campaigns.length) {
     const inList = `(${campaigns.map(sqlStr).join(", ")})`;

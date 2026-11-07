@@ -56,7 +56,7 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
     runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
-    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc WHERE sc.engaged_user IS NOT NULL ${scoringCampaignClause} ${scAssetClause}`),
+    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc WHERE sc.engaged_user IS NOT NULL AND SAFE_CAST(sc.engagements AS FLOAT64) > 0 ${scoringCampaignClause} ${scAssetClause}`),
     runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause} ${scAssetClause}`),
   ]);
 

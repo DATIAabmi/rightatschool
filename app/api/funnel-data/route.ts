@@ -56,7 +56,19 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
     runSQL(`SELECT SUM(impressions) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
-    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc WHERE sc.engaged_user IS NOT NULL AND SAFE_CAST(sc.engagements AS FLOAT64) > 0 ${scoringCampaignClause} ${scAssetClause}`),
+    // Match Looker's UEU definition: user has a complete record (domain,
+    // state, job_title, district all populated) AND at least one non-zero
+    // engagement. Without the clean-record filters, seed/incomplete rows
+    // inflate the count (saw 2,021 vs Looker's 595 on C1).
+    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc
+      WHERE sc.engaged_user IS NOT NULL
+        AND SAFE_CAST(sc.engagements AS FLOAT64) > 0
+        AND sc.topic_district IS NOT NULL AND sc.topic_district != ''
+        AND sc.email_domain   IS NOT NULL AND sc.email_domain   != ''
+        AND sc.state          IS NOT NULL AND sc.state          != '' AND sc.state != 'cState'
+        AND sc.job_title      IS NOT NULL AND sc.job_title      != ''
+        AND sc.abm_campaign   IS NOT NULL AND sc.abm_campaign   != ''
+        ${scoringCampaignClause} ${scAssetClause}`),
     runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause} ${scAssetClause}`),
   ]);
 

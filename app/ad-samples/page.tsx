@@ -15,47 +15,50 @@ interface Creative {
 }
 
 // Add new campaign assets here — no other code needs to change.
-// Campaign and asset number are derived from the Cloudinary filename titles (e.g. C1.Asset1, C2.Asset1).
+// assetNum uses the zero-padded form ("01", "02", …) so it matches the
+// asset_code values the ad_performance table filter dropdown shows.
+// Campaign → asset mapping follows the Cloudinary filename titles (e.g.
+// RightAtSchool.C3.asset02.Display → C3 Asset 02).
 const CREATIVES: Creative[] = [
-  // ── C1 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C1", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278437/RightAtSchool.C1.Asset1.Display_f7invz.png",  alt: "C1 Asset 1 Display" },
-  { campaign: "C1", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278437/RightAtSchool.C1.Asset1.Email_l5cyon.png",    alt: "C1 Asset 1 Email" },
-  { campaign: "C1", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C1.Asset1.Social_n176mg.png",   alt: "C1 Asset 1 Social" },
+  // ── C1 · Asset 01 ───────────────────────────────────────────────
+  { campaign: "C1", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167625/RightAtSchool.C1.asset01.Display_iz0a0f.png", alt: "C1 Asset 01 Display" },
+  { campaign: "C1", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167625/RightAtSchool.C1.asset01.Email_hqhax5.png",   alt: "C1 Asset 01 Email" },
+  { campaign: "C1", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167625/RightAtSchool.C1.asset01.Social_hsa7ow.png",  alt: "C1 Asset 01 Social" },
 
-  // ── C2 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C2", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C2.Asset1.Display_xagjbc.png",  alt: "C2 Asset 1 Display" },
-  { campaign: "C2", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C2.Asset1.Social_cdp8wc.png",   alt: "C2 Asset 1 Social" },
-  { campaign: "C2", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C2.Asset1.Email_gzkc7l.png",    alt: "C2 Asset 1 Email" },
+  // ── C2 · Asset 01 ───────────────────────────────────────────────
+  { campaign: "C2", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C2.asset01.Display_yw2vql.png", alt: "C2 Asset 01 Display" },
+  { campaign: "C2", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C2.asset01.Email_hmubvc.png",   alt: "C2 Asset 01 Email" },
+  { campaign: "C2", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C2.asset01.Social_ek0hvo.png",  alt: "C2 Asset 01 Social" },
 
-  // ── C3 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C3", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C3.Asset1.Display_jvxats.png",  alt: "C3 Asset 1 Display" },
-  { campaign: "C3", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C3.Asset1.Email_zad1sf.png",    alt: "C3 Asset 1 Email" },
-  { campaign: "C3", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C3.Asset1.Social_adzi0b.png",   alt: "C3 Asset 1 Social" },
+  // ── C3 · Asset 02 ───────────────────────────────────────────────
+  { campaign: "C3", assetNum: "02", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167625/RightAtSchool.C3.asset02.Display_da3vzt.png", alt: "C3 Asset 02 Display" },
+  { campaign: "C3", assetNum: "02", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167625/RightAtSchool.C3.asset02.Email_wxqs11.png",   alt: "C3 Asset 02 Email" },
+  { campaign: "C3", assetNum: "02", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C3.asset02.Social_wptvag.png",  alt: "C3 Asset 02 Social" },
 
-  // ── C4 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C4", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C4.Asset1.Display_qzvdeg.png",  alt: "C4 Asset 1 Display" },
-  { campaign: "C4", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C4.Asset1.Email_scb3nd.png",    alt: "C4 Asset 1 Email" },
-  { campaign: "C4", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C4.Asset1.Social_g98hew.png",   alt: "C4 Asset 1 Social" },
+  // ── C4 · Asset 03 ───────────────────────────────────────────────
+  { campaign: "C4", assetNum: "03", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C4.asset03.Display_m82s2y.png", alt: "C4 Asset 03 Display" },
+  { campaign: "C4", assetNum: "03", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C4.asset03.Email_zqnoyg.png",   alt: "C4 Asset 03 Email" },
+  { campaign: "C4", assetNum: "03", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C4.asset03.Social_chjzsh.png",  alt: "C4 Asset 03 Social" },
 
-  // ── C5 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C5", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C5.Asset1.Display_xlpbn2.png",  alt: "C5 Asset 1 Display" },
-  { campaign: "C5", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Email_wom14m.png",    alt: "C5 Asset 1 Email" },
-  { campaign: "C5", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Social_j2g3iv.png",   alt: "C5 Asset 1 Social" },
+  // ── C5 · Asset 01 ───────────────────────────────────────────────
+  { campaign: "C5", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C5.Asset1.Display_xlpbn2.png",  alt: "C5 Asset 01 Display" },
+  { campaign: "C5", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Email_wom14m.png",    alt: "C5 Asset 01 Email" },
+  { campaign: "C5", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Social_j2g3iv.png",   alt: "C5 Asset 01 Social" },
 
-  // ── C6 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C6", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Display_mgfphu.png",  alt: "C6 Asset 1 Display" },
-  { campaign: "C6", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Email_upsyj4.png",    alt: "C6 Asset 1 Email" },
-  { campaign: "C6", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Social_z2xcqc.png",   alt: "C6 Asset 1 Social" },
+  // ── C6 · Asset 01 ───────────────────────────────────────────────
+  { campaign: "C6", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Display_mgfphu.png",  alt: "C6 Asset 01 Display" },
+  { campaign: "C6", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Email_upsyj4.png",    alt: "C6 Asset 01 Email" },
+  { campaign: "C6", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Social_z2xcqc.png",   alt: "C6 Asset 01 Social" },
 
-  // ── C7 · Asset 1 ────────────────────────────────────────────────
-  { campaign: "C7", assetNum: "1", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Social_t3mod3.png",   alt: "C7 Asset 1 Social" },
-  { campaign: "C7", assetNum: "1", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Display_a6xco0.png",  alt: "C7 Asset 1 Display" },
-  { campaign: "C7", assetNum: "1", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Email_kecrld.png",    alt: "C7 Asset 1 Email" },
+  // ── C7 · Asset 01 ───────────────────────────────────────────────
+  { campaign: "C7", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Social_t3mod3.png",   alt: "C7 Asset 01 Social" },
+  { campaign: "C7", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Display_a6xco0.png",  alt: "C7 Asset 01 Display" },
+  { campaign: "C7", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Email_kecrld.png",    alt: "C7 Asset 01 Email" },
 
-  // ── C7 · Asset 2 ────────────────────────────────────────────────
-  { campaign: "C7", assetNum: "2", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Social_czki55.png",   alt: "C7 Asset 2 Social" },
-  { campaign: "C7", assetNum: "2", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Display_o3x5qf.png",  alt: "C7 Asset 2 Display" },
-  { campaign: "C7", assetNum: "2", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Email_amw8qt.png",    alt: "C7 Asset 2 Email" },
+  // ── C7 · Asset 02 ───────────────────────────────────────────────
+  { campaign: "C7", assetNum: "02", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Social_czki55.png",   alt: "C7 Asset 02 Social" },
+  { campaign: "C7", assetNum: "02", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Display_o3x5qf.png",  alt: "C7 Asset 02 Display" },
+  { campaign: "C7", assetNum: "02", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Email_amw8qt.png",    alt: "C7 Asset 02 Email" },
 ];
 
 // ── Sub-components ────────────────────────────────────────────────
@@ -106,11 +109,11 @@ export default function Page() {
     [activeCampaign],
   );
 
-  const [activeAsset, setActiveAsset] = useState<string>("2");
+  const [activeAsset, setActiveAsset] = useState<string>("02");
 
   // Keep activeAsset valid when campaign changes
   useEffect(() => {
-    if (!assetNums.includes(activeAsset)) setActiveAsset(assetNums[0] ?? "1");
+    if (!assetNums.includes(activeAsset)) setActiveAsset(assetNums[0] ?? "01");
   }, [activeCampaign, assetNums, activeAsset]);
 
   const filtered = CREATIVES.filter(

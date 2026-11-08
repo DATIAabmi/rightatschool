@@ -40,25 +40,25 @@ const CREATIVES: Creative[] = [
   { campaign: "C4", assetNum: "03", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C4.asset03.Email_zqnoyg.png",   alt: "C4 Asset 03 Email" },
   { campaign: "C4", assetNum: "03", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1794167626/RightAtSchool.C4.asset03.Social_chjzsh.png",  alt: "C4 Asset 03 Social" },
 
-  // ── C5 · Asset 01 ───────────────────────────────────────────────
-  { campaign: "C5", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C5.Asset1.Display_xlpbn2.png",  alt: "C5 Asset 01 Display" },
-  { campaign: "C5", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Email_wom14m.png",    alt: "C5 Asset 01 Email" },
-  { campaign: "C5", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Social_j2g3iv.png",   alt: "C5 Asset 01 Social" },
+  // ── C5 · Asset 04 ───────────────────────────────────────────────
+  { campaign: "C5", assetNum: "04", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278436/RightAtSchool.C5.Asset1.Display_xlpbn2.png",  alt: "C5 Asset 04 Display" },
+  { campaign: "C5", assetNum: "04", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Email_wom14m.png",    alt: "C5 Asset 04 Email" },
+  { campaign: "C5", assetNum: "04", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C5.Asset1.Social_j2g3iv.png",   alt: "C5 Asset 04 Social" },
 
-  // ── C6 · Asset 01 ───────────────────────────────────────────────
-  { campaign: "C6", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Display_mgfphu.png",  alt: "C6 Asset 01 Display" },
-  { campaign: "C6", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Email_upsyj4.png",    alt: "C6 Asset 01 Email" },
-  { campaign: "C6", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Social_z2xcqc.png",   alt: "C6 Asset 01 Social" },
+  // ── C6 · Asset 05 ───────────────────────────────────────────────
+  { campaign: "C6", assetNum: "05", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Display_mgfphu.png",  alt: "C6 Asset 05 Display" },
+  { campaign: "C6", assetNum: "05", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Email_upsyj4.png",    alt: "C6 Asset 05 Email" },
+  { campaign: "C6", assetNum: "05", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C6.Asset1.Social_z2xcqc.png",   alt: "C6 Asset 05 Social" },
 
-  // ── C7 · Asset 01 ───────────────────────────────────────────────
-  { campaign: "C7", assetNum: "01", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Social_t3mod3.png",   alt: "C7 Asset 01 Social" },
-  { campaign: "C7", assetNum: "01", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Display_a6xco0.png",  alt: "C7 Asset 01 Display" },
-  { campaign: "C7", assetNum: "01", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Email_kecrld.png",    alt: "C7 Asset 01 Email" },
+  // ── C7 · Asset 06 ───────────────────────────────────────────────
+  { campaign: "C7", assetNum: "06", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Social_t3mod3.png",   alt: "C7 Asset 06 Social" },
+  { campaign: "C7", assetNum: "06", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Display_a6xco0.png",  alt: "C7 Asset 06 Display" },
+  { campaign: "C7", assetNum: "06", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset1.Email_kecrld.png",    alt: "C7 Asset 06 Email" },
 
-  // ── C7 · Asset 02 ───────────────────────────────────────────────
-  { campaign: "C7", assetNum: "02", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Social_czki55.png",   alt: "C7 Asset 02 Social" },
-  { campaign: "C7", assetNum: "02", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Display_o3x5qf.png",  alt: "C7 Asset 02 Display" },
-  { campaign: "C7", assetNum: "02", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Email_amw8qt.png",    alt: "C7 Asset 02 Email" },
+  // ── C7 · Asset 07 ───────────────────────────────────────────────
+  { campaign: "C7", assetNum: "07", type: "Social",  src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Social_czki55.png",   alt: "C7 Asset 07 Social" },
+  { campaign: "C7", assetNum: "07", type: "Display", src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Display_o3x5qf.png",  alt: "C7 Asset 07 Display" },
+  { campaign: "C7", assetNum: "07", type: "Email",   src: "https://res.cloudinary.com/dkfcflgtp/image/upload/v1792278435/RightAtSchool.C7.Asset2.Email_amw8qt.png",    alt: "C7 Asset 07 Email" },
 ];
 
 // ── Sub-components ────────────────────────────────────────────────
@@ -109,7 +109,7 @@ export default function Page() {
     [activeCampaign],
   );
 
-  const [activeAsset, setActiveAsset] = useState<string>("02");
+  const [activeAsset, setActiveAsset] = useState<string>("06");
 
   // Keep activeAsset valid when campaign changes
   useEffect(() => {

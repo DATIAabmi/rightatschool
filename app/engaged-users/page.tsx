@@ -260,12 +260,12 @@ function DataTable({
                       style={{ color: trend?.text ?? "#2563eb" }}>
                       {display}
                     </button>
-                  ) : j === 4 && display === "Y" ? (
+                  ) : j === 4 ? (
                     <button
                       onClick={() => onDistrictClick(String(row[0] ?? ""), String(row[12] ?? row[1] ?? ""))}
                       className="text-xs font-bold text-blue-600 hover:underline"
-                      title="View Account Intelligence">
-                      Y
+                      title="View Intent Report">
+                      {display}
                     </button>
                   ) : display}
                 </span>
@@ -432,7 +432,9 @@ function EngagedUsersContent() {
                   const params = new URLSearchParams();
                   if (d)   params.set("district", d);
                   if (dom) params.set("domain",   dom);
-                  router.push(`/ai-opportunity-feed?${params.toString()}`);
+                  const campCode = campaign[0]?.split(":")[0].trim();
+                  if (campCode) params.set("campaign", campCode);
+                  router.push(`/intent-report?${params.toString()}`);
                 }} />
             </div>
           </>

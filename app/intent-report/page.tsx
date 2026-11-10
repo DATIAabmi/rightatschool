@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Download, ExternalLink, Filter, Landmark, Loader2, MousePointerClick, Printer, Target, Users, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useFilter } from "@/components/FilterContext";
@@ -588,8 +589,14 @@ function ExpandedCard({ district, row, campaigns }: { district: string; row: Dis
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function IntentReportPage() {
+function IntentReportInner() {
   const { resetSignal } = useFilter();
+  // Deep-link params from Engaged Users: ?campaign=C7&district=...&domain=...
+  // The domain is folded into the district search because it also matches
+  // the free-text search filter.
+  const searchParams = useSearchParams();
+  const initialCampaign = searchParams.get("campaign");
+  const initialDistrict = searchParams.get("district") ?? searchParams.get("domain") ?? "";
 
   // All rows from API
   const [allRows, setAllRows] = useState<DistrictRow[]>([]);
@@ -597,8 +604,8 @@ export default function IntentReportPage() {
   const [error, setError] = useState("");
 
   // Filters (client-side except date)
-  const [campFilter, setCampFilter] = useState<string[]>(["C7"]);
-  const [districtSearch, setDistrictSearch] = useState("");
+  const [campFilter, setCampFilter] = useState<string[]>(initialCampaign ? [initialCampaign] : ["C7"]);
+  const [districtSearch, setDistrictSearch] = useState(initialDistrict);
   const [stateFilter, setStateFilter] = useState<string[]>([]);
   const [scoreMin, setScoreMin] = useState("");
   const [scoreMax, setScoreMax] = useState("");
@@ -1318,5 +1325,13 @@ export default function IntentReportPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function IntentReportPage() {
+  return (
+    <Suspense fallback={null}>
+      <IntentReportInner />
+    </Suspense>
   );
 }

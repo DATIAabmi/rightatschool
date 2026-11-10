@@ -57,18 +57,18 @@ async function fetchFunnelForCampaign(campaign: string, dateStart: string, dateE
     runSQL(`SELECT COALESCE(SUM(clicks), 0) FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     runSQL(`SELECT CONCAT(ROUND(SAFE_DIVIDE(SUM(clicks), SUM(impressions)) * 100, 2), '%') FROM ${AD_TABLE} WHERE 1=1 ${campaignClause} ${dateClause} ${adAssetClause}`),
     // Looker's "Unique users who viewed your content from all sources":
-    // count users whose TOTAL engagement sum across the campaign is >= 1.
-    // Each scoring row is a weekly slice; row-level engagements can be
-    // fractional for bombora signal matches. Filtering at the per-row level
-    // (engagements > 0) leaves signal-only users in; summing per user and
-    // requiring >= 1 keeps only users whose engagements reach a real event.
-    runSQL(`SELECT COUNT(*) FROM (
-      SELECT sc.engaged_user
-      FROM ${SC_TABLE} sc
-      WHERE sc.engaged_user IS NOT NULL ${scoringCampaignClause} ${scAssetClause}
-      GROUP BY sc.engaged_user
-      HAVING SUM(IFNULL(SAFE_CAST(sc.engagements AS FLOAT64), 0)) >= 1
-    )`),
+    // count users with at least one engagement[] record tagged
+    // scoring_type = 'User' (real user-level content view). Rows with
+    // null or 'District' scoring_type are district-level intent signals
+    // and don't belong in a user-level count. Verified against Looker:
+    // C1=595, C2=631 match exactly.
+    runSQL(`SELECT COUNT(DISTINCT sc.engaged_user) FROM ${SC_TABLE} sc
+      WHERE sc.engaged_user IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM UNNEST(sc.engagement) AS _item
+          WHERE _item.scoring_type = 'User'
+        )
+        ${scoringCampaignClause} ${scAssetClause}`),
     runSQL(`SELECT COUNT(DISTINCT sc.leads) FROM ${SC_TABLE} sc WHERE sc.leads IS NOT NULL AND sc.leads != '' ${scoringCampaignClause} ${scAssetClause}`),
   ]);
 

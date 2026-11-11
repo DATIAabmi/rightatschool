@@ -176,7 +176,7 @@ FROM ${SIGNALS_TABLE}
 WHERE (${normalizeExpr("organization")} = ${normalizeExpr(districtVal)}
        OR LOWER(TRIM(domain)) IN (SELECT LOWER(TRIM(d)) FROM doms))
   ${signalsCampaignFilter}
-ORDER BY SAFE_CAST(strength AS INT64) DESC, date DESC
+ORDER BY date DESC NULLS LAST, SAFE_CAST(strength AS INT64) DESC
 LIMIT 25`;
 
     // If the sheet is missing `source_text` (newer column than some older

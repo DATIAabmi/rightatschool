@@ -223,7 +223,7 @@ function DataTable({
 }: {
   rows: Row[];
   sort: SortState; onSort: (s: SortState) => void;
-  onDistrictClick: (district: string, domain: string) => void;
+  onDistrictClick: (district: string, domain: string, campaign: string) => void;
 }) {
   if (rows.length === 0) {
     return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">No results</div>;
@@ -255,14 +255,14 @@ function DataTable({
                       className={`px-3 py-2.5 tabular-nums flex items-center ${cd.align === "center" ? "justify-center" : cd.align === "right" ? "justify-end" : "justify-start"} ${trend ? "" : "text-gray-800"}`}
                       style={{ color: trend?.text, overflow: "hidden", whiteSpace: j === 0 ? "normal" : "nowrap", textOverflow: j === 0 ? "unset" : "ellipsis" }}>
                   {j === 0 ? (
-                    <button onClick={() => onDistrictClick(display, String(row[12] ?? row[1] ?? ""))}
+                    <button onClick={() => onDistrictClick(display, String(row[1] ?? ""), String(row[3] ?? ""))}
                       className="block w-full text-left hover:underline font-medium"
                       style={{ color: trend?.text ?? "#2563eb" }}>
                       {display}
                     </button>
                   ) : j === 4 ? (
                     <button
-                      onClick={() => onDistrictClick(String(row[0] ?? ""), String(row[12] ?? row[1] ?? ""))}
+                      onClick={() => onDistrictClick(String(row[0] ?? ""), String(row[1] ?? ""), String(row[3] ?? ""))}
                       className="text-xs font-bold text-blue-600 hover:underline"
                       title="View Intent Report">
                       {display}
@@ -428,11 +428,16 @@ function EngagedUsersContent() {
             </div>
             <div className="border border-t-0 border-gray-200 rounded-b-xl shadow-sm" style={{ overflow: "clip" }}>
               <DataTable rows={rows} sort={sort} onSort={setSort}
-                onDistrictClick={(d, dom) => {
+                onDistrictClick={(d, dom, rowCamp) => {
                   const params = new URLSearchParams();
                   if (d)   params.set("district", d);
                   if (dom) params.set("domain",   dom);
-                  const campCode = campaign[0]?.split(":")[0].trim();
+                  // Prefer the clicked row's own campaign — the global filter
+                  // may be empty (all campaigns) or point at a different one
+                  // than the row the user actually clicked, which would then
+                  // land the Intent Report on an empty default campaign.
+                  const campCode = (rowCamp && rowCamp.split(":")[0].trim())
+                    || campaign[0]?.split(":")[0].trim();
                   if (campCode) params.set("campaign", campCode);
                   router.push(`/intent-report?${params.toString()}`);
                 }} />

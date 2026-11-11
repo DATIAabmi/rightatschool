@@ -906,16 +906,16 @@ function IntentReportInner() {
           <div className="ir-print-cover">
             <div style={{ background:"#0B6E78", color:"white", padding:"18px 28px 16px", borderRadius:"8px 8px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <div>
-                <div style={{ fontSize:10, letterSpacing:".14em", textTransform:"uppercase", opacity:.75, fontFamily:"\"Public Sans\",sans-serif", marginBottom:6 }}>ABMxi · DATIA K12</div>
-                <div style={{ fontFamily:"\"Archivo\",sans-serif", fontSize:26, fontWeight:800, lineHeight:1.1 }}>District Intent Report</div>
+                <div style={{ fontSize:10, letterSpacing:".14em", textTransform:"uppercase", opacity:.75, fontFamily:"\"Public Sans\",sans-serif", marginBottom:6 }}>DATIA ABMxi</div>
+                <div style={{ fontFamily:"\"Archivo\",sans-serif", fontSize:26, fontWeight:800, lineHeight:1.1 }}>Intent Report</div>
                 <div style={{ fontSize:12.5, marginTop:6, opacity:.85, fontFamily:"\"Public Sans\",sans-serif" }}>
-                  Districts showing before- and after-school care intent, ranked by intent score.
+                  Organizations ranked by engagement and buying signals.
                 </div>
               </div>
               <div style={{ textAlign:"right", fontFamily:"\"Public Sans\",sans-serif", fontSize:12, lineHeight:1.7 }}>
                 <div style={{ opacity:.9 }}>Generated {new Date().toLocaleDateString("en-US", { year:"numeric", month:"long", day:"numeric" })}</div>
                 {campFilter.length > 0 && <div style={{ opacity:.9 }}>Campaign: {campFilter.join(" · ")}</div>}
-                <div style={{ opacity:.75 }}>Showing {fmt(filteredRows.length)} of {fmt(allRows.length)} districts</div>
+                <div style={{ opacity:.75 }}>Showing {fmt(filteredRows.length)} of {fmt(allRows.length)} organizations</div>
               </div>
             </div>
             {chips.length > 0 && (

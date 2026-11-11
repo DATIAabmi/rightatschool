@@ -619,6 +619,9 @@ function IntentReportInner() {
   const [visibleCount, setVisibleCount] = useState(50);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [printAll, setPrintAll] = useState(false);
+  // Only auto-expand the deep-linked row once, so re-sorts or manual
+  // collapses afterwards aren't undone by this effect.
+  const autoExpandedRef = useRef(false);
 
   // Compute API date params
   const getApiDates = useCallback((): { dateStart: string; dateEnd: string } => {
@@ -676,6 +679,26 @@ function IntentReportInner() {
   }, [campFilter, stateFilter, getApiDates]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // When a deep-link lands with ?district=… (and optionally ?domain=…),
+  // auto-expand the matching row the first time rows arrive so the user
+  // doesn't have to click again to see the drill-down.
+  useEffect(() => {
+    if (autoExpandedRef.current) return;
+    if (!initialDistrict || allRows.length === 0) return;
+    const distQ = initialDistrict.toLowerCase();
+    const domainQ = (searchParams.get("domain") ?? "").toLowerCase();
+    const match = allRows.find((r) => {
+      const d = r.District.toLowerCase();
+      const dom = (r.Domain ?? "").toLowerCase();
+      if (domainQ) return d.includes(distQ) && dom === domainQ;
+      return d.includes(distQ);
+    });
+    if (match) {
+      setExpandedRow(`${match.District}|${match.Domain}`);
+      autoExpandedRef.current = true;
+    }
+  }, [allRows, initialDistrict, searchParams]);
 
   // Unique campaign options from data
   const campaignOptions = [...new Set(allRows.map((r) => r.Campaign).filter(Boolean))].sort();

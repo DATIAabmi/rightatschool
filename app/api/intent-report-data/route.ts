@@ -125,7 +125,7 @@ agg AS (
   FROM ${TABLE}
   WHERE ${where.join("\n    AND ")}
   GROUP BY topic_district, IFNULL(email_domain, '')
-)
+),
 main_rows AS (
   SELECT
     a.District, a.Domain, a.State, a.Campaign, a.Intel,

@@ -806,7 +806,7 @@ function IntentReportInner() {
       r.District, r.Domain, r.State, r.Campaign, r.IntentScore, r.AccountIntel, r.TopicInsights,
       r.Engagements, r.EngagedUsers, r.Leads, r.Trend, r.LastActivity,
     ]);
-    exportToCsv("DATIA-District-Intent-Report", cols as never, rows as never);
+    exportToCsv("DATIA ABMxi Intent Report", cols as never, rows as never);
   }
 
   const COL_HEADERS: { label: string; key: SortKey; align?: "right" | "center" }[] = [
@@ -906,8 +906,7 @@ function IntentReportInner() {
           <div className="ir-print-cover">
             <div style={{ background:"#0B6E78", color:"white", padding:"18px 28px 16px", borderRadius:"8px 8px 0 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <div>
-                <div style={{ fontSize:10, letterSpacing:".14em", textTransform:"uppercase", opacity:.75, fontFamily:"\"Public Sans\",sans-serif", marginBottom:6 }}>DATIA ABMxi</div>
-                <div style={{ fontFamily:"\"Archivo\",sans-serif", fontSize:26, fontWeight:800, lineHeight:1.1 }}>Intent Report</div>
+                <div style={{ fontFamily:"\"Archivo\",sans-serif", fontSize:26, fontWeight:800, lineHeight:1.1 }}>DATIA ABMxi <span style={{ fontWeight: 400, opacity: 0.6 }}>|</span> Intent Report</div>
                 <div style={{ fontSize:12.5, marginTop:6, opacity:.85, fontFamily:"\"Public Sans\",sans-serif" }}>
                   Organizations ranked by engagement and buying signals.
                 </div>

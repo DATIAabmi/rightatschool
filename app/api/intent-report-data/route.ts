@@ -12,7 +12,7 @@ const SIGNALS_TABLE = "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_s
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 // Bump when the SQL template changes so warm-lambda caches drop stale results.
-const CACHE_VERSION = "ri-v4-split-by-domain";
+const CACHE_VERSION = "ri-v5-signal-only-rows";
 
 interface DistrictRow {
   District: string;
@@ -65,6 +65,20 @@ async function fetchData(
     ? `WHERE UPPER(TRIM(campaign)) IN (${campaigns.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
     : "";
 
+  // Same campaign scope, as a bare condition (no WHERE prefix) for composing
+  // into a WHERE that may already carry state/date filters.
+  const signalsCampaignCond = campaigns.length
+    ? `UPPER(TRIM(campaign)) IN (${campaigns.map((c) => sqlStr(c.toUpperCase())).join(", ")})`
+    : "";
+  const signalsStateCond = states.length
+    ? `UPPER(TRIM(state)) IN (${states.map((s) => sqlStr(s.toUpperCase())).join(", ")})`
+    : "";
+  const signalsDateCond = (dateStart && dateEnd && DATE_REGEX.test(dateStart) && DATE_REGEX.test(dateEnd))
+    ? `SAFE.PARSE_DATE('%Y-%m-%d', SUBSTR(CAST(date AS STRING), 1, 10)) BETWEEN DATE '${dateStart}' AND DATE '${dateEnd}'`
+    : "";
+  const signalOnlyConds = [signalsCampaignCond, signalsStateCond, signalsDateCond].filter(Boolean);
+  const signalOnlyWhere = signalOnlyConds.length ? `WHERE ${signalOnlyConds.join(" AND ")}` : "";
+
   // Same org-name normalization the per-district card uses: strip trailing
   // ", XX" state suffix and every apostrophe variant (Sheets autocorrects ' →
   // '), with plain REPLACE for the apostrophes to avoid regex class edge cases.
@@ -112,22 +126,59 @@ agg AS (
   WHERE ${where.join("\n    AND ")}
   GROUP BY topic_district, IFNULL(email_domain, '')
 )
-SELECT
-  a.District, a.Domain, a.State, a.Campaign, a.Intel,
-  IF(
-    EXISTS (SELECT 1 FROM signals_orgs o WHERE o.org_up = ${normalizeExpr("a.District")})
-    OR (a.Domain != '' AND LOWER(TRIM(a.Domain)) IN (SELECT dom FROM signals_domains)),
-    'Y', 'N'
-  ) AS AccountIntel,
-  IF(
-    EXISTS (SELECT 1 FROM topic_cohorts t
-            WHERE t.district = a.District
-              AND t.dom = IFNULL(LOWER(TRIM(a.Domain)), '')),
-    'Y', 'N'
-  ) AS TopicInsights,
-  a.Engagements, a.EngagedUsers, a.Leads, a.IntentScore, a.Trend, a.LastActivity
-FROM agg a
-ORDER BY a.IntentScore DESC`;
+main_rows AS (
+  SELECT
+    a.District, a.Domain, a.State, a.Campaign, a.Intel,
+    IF(
+      EXISTS (SELECT 1 FROM signals_orgs o WHERE o.org_up = ${normalizeExpr("a.District")})
+      OR (a.Domain != '' AND LOWER(TRIM(a.Domain)) IN (SELECT dom FROM signals_domains)),
+      'Y', 'N'
+    ) AS AccountIntel,
+    IF(
+      EXISTS (SELECT 1 FROM topic_cohorts t
+              WHERE t.district = a.District
+                AND t.dom = IFNULL(LOWER(TRIM(a.Domain)), '')),
+      'Y', 'N'
+    ) AS TopicInsights,
+    a.Engagements, a.EngagedUsers, a.Leads, a.IntentScore, a.Trend, a.LastActivity
+  FROM agg a
+),
+-- Districts that exist ONLY in the AI signals sheet (no scored engagements
+-- in the scoring table). Surface them as zero-metric rows so Account
+-- Intelligence coverage isn't silently hidden.
+agg_district_norms AS (
+  SELECT DISTINCT ${normalizeExpr("District")} AS norm FROM main_rows
+),
+agg_domains_all AS (
+  SELECT DISTINCT Domain AS dom FROM main_rows WHERE Domain != ''
+),
+signal_only AS (
+  SELECT
+    ANY_VALUE(organization) AS District,
+    IFNULL(LOWER(TRIM(ANY_VALUE(domain))), '') AS Domain,
+    ANY_VALUE(state) AS State,
+    UPPER(TRIM(campaign)) AS Campaign,
+    'N' AS Intel,
+    'Y' AS AccountIntel,
+    'N' AS TopicInsights,
+    CAST(0 AS FLOAT64) AS Engagements,
+    0 AS EngagedUsers,
+    0 AS Leads,
+    CAST(0 AS FLOAT64) AS IntentScore,
+    CAST(0 AS FLOAT64) AS Trend,
+    FORMAT_DATE('%Y-%m-%d', MAX(SAFE.PARSE_DATE('%Y-%m-%d', SUBSTR(CAST(date AS STRING), 1, 10)))) AS LastActivity
+  FROM ${SIGNALS_TABLE}
+  ${signalOnlyWhere}
+  ${signalOnlyWhere ? "AND" : "WHERE"} organization IS NOT NULL AND organization != ''
+    AND ${normalizeExpr("organization")} NOT IN (SELECT norm FROM agg_district_norms)
+    AND (domain IS NULL OR domain = ''
+         OR LOWER(TRIM(domain)) NOT IN (SELECT dom FROM agg_domains_all))
+  GROUP BY ${normalizeExpr("organization")}, UPPER(TRIM(campaign))
+)
+SELECT * FROM main_rows
+UNION ALL
+SELECT * FROM signal_only
+ORDER BY IntentScore DESC`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55000);

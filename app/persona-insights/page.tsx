@@ -7,6 +7,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
+import { buildIntentReportHref } from "@/lib/intentReportLink";
 import { normalizeJobTitle } from "@/lib/jobFunctionCategories";
 function fetchFieldOptions(field: "district" | "state" | "job_function") {
   return (q: string) =>
@@ -171,10 +172,17 @@ function DataTable({ rows, sort, onSort }: {
           {PI_COLS.slice(1).map((cd) => {
             const j = cd.colIdx;
             const cell = row[j];
+            const display = cell === null || cell === undefined ? "" : String(cell);
             return (
               <span key={j} className="px-3 py-1.5 text-gray-800"
                     style={{ textAlign: cd.align }}>
-                {cell === null || cell === undefined ? "" : String(cell)}
+                {j === 0 && display ? (
+                  <a href={buildIntentReportHref(display, String(row[1] ?? ""), String(row[4] ?? ""))}
+                     className="text-blue-600 hover:underline font-medium"
+                     title="View Intent Report">
+                    {display}
+                  </a>
+                ) : display}
               </span>
             );
           })}

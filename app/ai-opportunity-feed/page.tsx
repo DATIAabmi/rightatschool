@@ -8,6 +8,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
 import { fmtDate } from "@/lib/fmtDate";
+import { buildIntentReportHref } from "@/lib/intentReportLink";
 import { useFilter } from "@/components/FilterContext";
 
 type Signal = Record<string, unknown>;
@@ -462,7 +463,23 @@ function AIOpportunityFeedContent() {
 
                       {/* District (Organization in DB) — wraps instead of truncating */}
                       <div className="text-xs text-gray-700 leading-snug pt-0.5 break-words">
-                        {(row["Organization"] as string) || "—"}
+                        {(() => {
+                          const org = (row["Organization"] as string) || "";
+                          if (!org) return "—";
+                          return (
+                            <a
+                              href={buildIntentReportHref(
+                                org,
+                                (row["Domain"] as string) || domain,
+                                (row["Campaign #"] as string) || "",
+                              )}
+                              className="text-blue-600 hover:underline font-medium"
+                              title="View Intent Report"
+                            >
+                              {org}
+                            </a>
+                          );
+                        })()}
                       </div>
 
                       {/* Domain */}

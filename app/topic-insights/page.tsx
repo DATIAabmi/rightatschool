@@ -7,6 +7,7 @@ import DashboardHeader from "@/components/DashboardHeader";
 import { useFilter } from "@/components/FilterContext";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import { exportToCsv } from "@/lib/exportCsv";
+import { buildIntentReportHref } from "@/lib/intentReportLink";
 function fetchFieldOptions(field: "district" | "state") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
@@ -280,7 +281,13 @@ function DataTable({ rows, sort, onSort }: {
                       ? { textAlign: cd.align, overflowWrap: "anywhere" }
                       : { textAlign: cd.align, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}
                     title={text}>
-                {text}
+                {j === 0 && text ? (
+                  <a href={buildIntentReportHref(text, String(row[1] ?? ""), String(row[2] ?? ""))}
+                     className="text-blue-600 hover:underline font-medium"
+                     title="View Intent Report">
+                    {text}
+                  </a>
+                ) : text}
               </span>
             );
           })}

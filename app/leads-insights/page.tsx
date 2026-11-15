@@ -9,6 +9,7 @@ import MetabaseProviderWrapper from "@/components/MetabaseProvider";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown";
 import LeadsSummaryPanel from "@/components/LeadsSummaryPanel";
 import { exportToCsv } from "@/lib/exportCsv";
+import { buildIntentReportHref } from "@/lib/intentReportLink";
 function fetchFieldOptions(field: "district" | "state" | "job_function" | "content_name") {
   return (q: string) =>
     fetch(`/api/filter-search?field=${field}&q=${encodeURIComponent(q)}`)
@@ -162,11 +163,18 @@ function DataTable({ cols, rows, sort, onSort }: {
             const j = cd.colIdx;
             const cell = row[j];
             const isNum = NUMBER_TYPES.has(cols[j]?.base_type);
+            const display = cell === null || cell === undefined ? "" : String(cell);
             return (
               <span key={j}
                     className={`px-4 py-1.5 text-gray-800 flex items-center ${cd.align === "center" ? "justify-center" : cd.align === "right" ? "justify-end" : "justify-start"} ${isNum ? "tabular-nums" : ""}`}
                     style={{ overflowWrap: "anywhere" }}>
-                {cell === null || cell === undefined ? "" : String(cell)}
+                {j === 0 && display ? (
+                  <a href={buildIntentReportHref(display, String(row[1] ?? ""), String(row[2] ?? ""))}
+                     className="text-blue-600 hover:underline font-medium"
+                     title="View Intent Report">
+                    {display}
+                  </a>
+                ) : display}
               </span>
             );
           })}

@@ -11,7 +11,7 @@ export async function GET() {
 
   try {
     // Full campaign name as stored in abmi_campaign — must match exactly what the UI sends
-    const DEFAULT = encodeURIComponent("C7: July 2026 - June 2027");
+    const DEFAULT = encodeURIComponent("C7: July 2026 - December 2026");
     const results = await Promise.all([
       fetch(`${base}/api/funnel-data?campaign=${DEFAULT}`,   { cache: "no-store" }),
       fetch(`${base}/api/q363-data?campaign=${DEFAULT}`,     { cache: "no-store" }),

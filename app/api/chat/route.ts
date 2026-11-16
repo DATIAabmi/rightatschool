@@ -58,7 +58,7 @@ Columns:
 - email_domain         — district email domain
 - state                — US state abbreviation
 - job_title            — contact job title
-- Abmi_Campaign        — campaign identifier, e.g. "C7: July 2026 - June 2027"
+- Abmi_Campaign        — campaign identifier, e.g. "C7: July 2026 - December 2026"
 - engagements          — engagement count (STRING — use SAFE_CAST(engagements AS INT64))
 - engaged_user         — unique engaged user identifier
 - leads                — lead identifier
@@ -94,7 +94,7 @@ SBM sub-record fields (after UNNEST):
 - e.SBM_Context    — excerpt from the board meeting minutes mentioning the keyword
 - e.SBM_Link       — URL link to the full board meeting minutes document
 
-To filter SBM by campaign: add \`AND abmi_campaign = 'C7: July 2026 - June 2027'\`
+To filter SBM by campaign: add \`AND abmi_campaign = 'C7: July 2026 - December 2026'\`
 To filter by keyword topic: add \`AND e.curate_topic = 'after school'\`
 To count SBM records by district: \`SELECT topic_district, COUNT(*) AS sbm_count FROM ... GROUP BY 1 ORDER BY 2 DESC\`
 
@@ -105,7 +105,7 @@ C3: August–September 2025
 C4: October–November 2025
 C5: December 2025–January 2026
 C6: February–June 2026
-C7: July 2026–June 2027 (current)
+C7: July 2026–December 2026 (current)
 
 ## Rules
 - Use execute_sql for all data questions, targeting database ID 34.

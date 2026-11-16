@@ -1,6 +1,7 @@
-/** Ordered newest → oldest. */
+/** Ordered newest → oldest. Labels must match the BigQuery `abmi_campaign`
+ *  column exactly — the API filters by SQL equality on that string. */
 export const CAMPAIGNS = [
-  "C7: July 2026 - June 2027",
+  "C7: July 2026 - December 2026",
   "C6: April - May 2026",
   "C5: Nov 2025 - May 2026",
   "C4: Aug - Sept 2025",
@@ -10,7 +11,7 @@ export const CAMPAIGNS = [
 ] as const;
 
 // C6 is the most recently completed campaign — C7 only started July 1st and has minimal data.
-export const DEFAULT_CAMPAIGN = "C7: July 2026 - June 2027";
+export const DEFAULT_CAMPAIGN = "C7: July 2026 - December 2026";
 
 /** Strips the "C#: " prefix to get a display-friendly date range. */
 export function campaignDateRange(campaign: string): string {
@@ -29,7 +30,7 @@ const CAMPAIGN_GOALS: Record<string, Goals> = {
   "C4: Aug - Sept 2025":    { impressions:   345_000, leads:   412 },
   "C5: Nov 2025 - May 2026":{ impressions: 1_025_000, leads: 2_054 },
   "C6: April - May 2026":   { impressions:   300_000, leads:   300 },
-  "C7: July 2026 - June 2027": { impressions: 1_200_000, leads: 1_200 },
+  "C7: July 2026 - December 2026": { impressions: 1_200_000, leads: 1_200 },
 };
 
 const DEFAULT_GOALS: Goals = { impressions: 300_000, leads: 300 };

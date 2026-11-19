@@ -12,7 +12,7 @@ const SIGNALS_TABLE = "`prj-datia-prod-e530.raw_google_sheet.raw_ebcg_right_at_s
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const CACHE_TTL_MS = 30 * 60 * 1000;
 // Bump when the SQL template changes so warm-lambda caches drop stale results.
-const CACHE_VERSION = "ri-v5-signal-only-rows";
+const CACHE_VERSION = "ri-v6-latest-activity-not-future";
 
 interface DistrictRow {
   District: string;
@@ -121,7 +121,11 @@ agg AS (
     COUNT(NULLIF(CAST(leads AS STRING), '')) AS Leads,
     SUM(IFNULL(SAFE_CAST(cumulative_score AS FLOAT64), 0)) AS IntentScore,
     SUM(IFNULL(SAFE_CAST(cumulative_score_trend AS FLOAT64), 0)) AS Trend,
-    FORMAT_DATE('%Y-%m-%d', MAX(DATE(date_max_for_intent_scoring))) AS LastActivity
+    -- Latest Activity: a real activity date can't be in the future. The
+    -- RAS pipeline stamps a campaign-end sentinel (2026-12-31) on every
+    -- district, which would otherwise win every MAX; the CASE drops any
+    -- future-dated row so the newest real engagement wins instead.
+    FORMAT_DATE('%Y-%m-%d', MAX(CASE WHEN DATE(date_max_for_intent_scoring) <= CURRENT_DATE() THEN DATE(date_max_for_intent_scoring) END)) AS LastActivity
   FROM ${TABLE}
   WHERE ${where.join("\n    AND ")}
   GROUP BY topic_district, IFNULL(email_domain, '')
